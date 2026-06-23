@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Simulador MCMV 2026 — Caixa</title>
+<title>SimulaPro — Simulador de Financiamento Imobiliário</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 :root{
@@ -260,11 +260,10 @@ async function _confirmarTroca(){
 <header>
   <div class="header-inner">
     <div class="logo">
-      <div class="logo-icon">🏠</div>
-      <div><div class="logo-txt">Simulador de Financiamento</div><div class="logo-sub">MCMV 2026 · Caixa Econômica Federal</div></div>
+      <img src="logo.png" alt="SimulaPro" style="height:40px;width:auto;"/>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <div class="badge-header">MCMV 2026</div>
+      <div class="badge-header">SimulaPro</div>
       <span id="_userEmail" style="color:rgba(255,255,255,.6);font-size:11px;font-family:'DM Mono',monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
       <button onclick="_abrirModal()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.75);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:500">Trocar Senha</button>
       <button onclick="_logout()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.85);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:500">Sair</button>
@@ -562,10 +561,10 @@ async function _confirmarTroca(){
     📄 Exportar Proposta em PDF
   </button>
 
-  <div class="notice">⚠️ Simulação estimada com base nas taxas MCMV 2026. Consulte uma agência Caixa para proposta oficial.</div>
+  <div class="notice">⚠️ Simulação estimada com base nas taxas oficiais. Consulte uma agência bancária para proposta oficial.</div>
 </div>
 </main>
-<footer>Simulador MCMV 2026 · Caixa Econômica Federal · Uso profissional</footer>
+<footer>SimulaPro · Simulador de Financiamento Imobiliário · Uso profissional</footer>
 
 <script>
 /* ══════════════════════════════════════════════════════════
