@@ -20,13 +20,13 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Sora',sans-serif;background:var(--cinza1);color:var(--texto);min-height:100vh;}
-header{background:var(--azul);padding:0 1.5rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(11,61,145,.3);}
+header{background:#fff;padding:0 1.5rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(11,61,145,.1);border-bottom:2px solid var(--azulclaro);}
 .header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:80px;}
 .logo{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:32px;height:32px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
 .logo-txt{color:#fff;font-size:14px;font-weight:600;}
 .logo-sub{color:rgba(255,255,255,.55);font-size:11px;}
-.badge-header{background:rgba(255,255,255,.15);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace;}
+.badge-header{background:var(--azulclaro);color:var(--azul);font-size:11px;padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace;font-weight:600;}
 .hero{background:linear-gradient(135deg,#0B3D91,#1565C0 60%,#1976D2);padding:1.75rem 1.5rem 2.25rem;overflow:hidden;position:relative;}
 .hero::before{content:'';position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.05);}
 .hero-inner{max-width:960px;margin:0 auto;position:relative;z-index:1;}
@@ -260,15 +260,13 @@ async function _confirmarTroca(){
 <header>
   <div class="header-inner">
     <div class="logo">
-      <div style="background:#fff;border-radius:12px;padding:6px 14px;display:inline-flex;align-items:center;">
-        <img src="logo.png" alt="SimulaPro" style="height:58px;width:auto;display:block;"/>
-      </div>
+      <img src="logo.png" alt="SimulaPro" style="height:68px;width:auto;display:block;"/>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <div class="badge-header">SimulaPro</div>
-      <span id="_userEmail" style="color:rgba(255,255,255,.6);font-size:11px;font-family:'DM Mono',monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-      <button onclick="_abrirModal()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.75);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:500">Trocar Senha</button>
-      <button onclick="_logout()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.85);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:500">Sair</button>
+      <span id="_userEmail" style="color:var(--texto3);font-size:11px;font-family:'DM Mono',monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="_abrirModal()" style="background:var(--azulclaro);border:1px solid var(--cinza2);color:var(--azul);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600">Trocar Senha</button>
+      <button onclick="_logout()" style="background:var(--azul);border:1px solid var(--azul);color:#fff;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600">Sair</button>
     </div>
   </div>
 </header>
