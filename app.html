@@ -191,7 +191,70 @@ function _logout(){
     _sb.auth.signOut().then(function(){window.location.replace('index.html');});
   }else{window.location.replace('index.html');}
 }
+function _abrirModal(){
+  document.getElementById('_modalSenha').style.display='flex';
+  ['_senhaAtual','_senhaNova','_senhaConfirm'].forEach(function(id){document.getElementById(id).value='';});
+  var m=document.getElementById('_msgSenha');m.style.display='none';
+  var b=document.getElementById('_btnTrocar');b.disabled=false;b.textContent='Trocar Senha';
+}
+function _fecharModal(){document.getElementById('_modalSenha').style.display='none';}
+async function _confirmarTroca(){
+  var atual=document.getElementById('_senhaAtual').value;
+  var nova=document.getElementById('_senhaNova').value;
+  var conf=document.getElementById('_senhaConfirm').value;
+  var msg=document.getElementById('_msgSenha');
+  var btn=document.getElementById('_btnTrocar');
+  function showMsg(txt,ok){
+    msg.textContent=txt;msg.style.display='block';
+    msg.style.cssText='display:block;font-size:12px;padding:9px 12px;border-radius:8px;margin-bottom:14px;background:'+(ok?'#EAF4EE':'#FDE8E8')+';color:'+(ok?'#14522F':'#991B1B')+';border:1px solid '+(ok?'#B5D9C3':'#FCA5A5');
+  }
+  if(!atual||!nova||!conf){showMsg('Preencha todos os campos.',false);return;}
+  if(nova.length<6){showMsg('A nova senha deve ter pelo menos 6 caracteres.',false);return;}
+  if(nova!==conf){showMsg('As senhas não conferem.',false);return;}
+  btn.disabled=true;btn.textContent='Verificando...';
+  var s=window._session;
+  var r1=await _sb.auth.signInWithPassword({email:s.user.email,password:atual});
+  if(r1.error){btn.disabled=false;btn.textContent='Trocar Senha';showMsg('Senha atual incorreta.',false);return;}
+  btn.textContent='Trocando...';
+  var r2=await fetch('https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/admin-action',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
+    body:JSON.stringify({action:'change_password',payload:{novaSenha:nova}})
+  });
+  var d=await r2.json();
+  if(!d.success){btn.disabled=false;btn.textContent='Trocar Senha';showMsg(d.error||'Erro ao trocar senha.',false);return;}
+  showMsg('Senha trocada! Você receberá um e-mail de confirmação. Desconectando...',true);
+  setTimeout(function(){_sb.auth.signOut().then(function(){window.location.replace('index.html');});},2500);
+}
 </script>
+<!-- MODAL TROCAR SENHA -->
+<div id="_modalSenha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:100%;max-width:360px;margin:1rem;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="background:#0B3D91;padding:20px 24px;display:flex;align-items:center;justify-content:space-between">
+      <h3 style="color:#fff;margin:0;font-size:16px;font-family:'Sora',sans-serif;font-weight:700">Trocar Senha</h3>
+      <button onclick="_fecharModal()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0">×</button>
+    </div>
+    <div style="padding:24px">
+      <div id="_msgSenha"></div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:10px;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Senha Atual</label>
+        <input type="password" id="_senhaAtual" placeholder="••••••••" style="width:100%;height:40px;border:1.5px solid #E8ECF4;border-radius:8px;padding:0 12px;font-size:14px;font-family:'Sora',sans-serif;box-sizing:border-box;outline:none"/>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:10px;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Nova Senha</label>
+        <input type="password" id="_senhaNova" placeholder="mín. 6 caracteres" style="width:100%;height:40px;border:1.5px solid #E8ECF4;border-radius:8px;padding:0 12px;font-size:14px;font-family:'Sora',sans-serif;box-sizing:border-box;outline:none"/>
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:10px;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Confirmar Nova Senha</label>
+        <input type="password" id="_senhaConfirm" placeholder="repita a nova senha" style="width:100%;height:40px;border:1.5px solid #E8ECF4;border-radius:8px;padding:0 12px;font-size:14px;font-family:'Sora',sans-serif;box-sizing:border-box;outline:none"/>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="_fecharModal()" style="flex:1;padding:11px;background:#F4F6FA;border:1.5px solid #E8ECF4;border-radius:8px;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:#4B5563">Cancelar</button>
+        <button id="_btnTrocar" onclick="_confirmarTroca()" style="flex:2;padding:11px;background:#0B3D91;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:#fff">Trocar Senha</button>
+      </div>
+    </div>
+  </div>
+</div>
 </head>
 <body>
 <header>
@@ -203,6 +266,7 @@ function _logout(){
     <div style="display:flex;align-items:center;gap:8px">
       <div class="badge-header">MCMV 2026</div>
       <span id="_userEmail" style="color:rgba(255,255,255,.6);font-size:11px;font-family:'DM Mono',monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="_abrirModal()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.75);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:500">Trocar Senha</button>
       <button onclick="_logout()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.85);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:500">Sair</button>
     </div>
   </div>
