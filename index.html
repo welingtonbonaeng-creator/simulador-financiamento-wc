@@ -1,0 +1,2716 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Simulador MCMV 2026 — Caixa</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --azul:#0B3D91;--azul2:#1565C0;--azul3:#1976D2;--azulclaro:#E3F0FF;
+  --verde:#1B6E3F;--verdeClaro:#E6F4EC;
+  --laranja:#C05A00;--laranjaClaro:#FEF0E3;
+  --roxo:#4A2C8A;--roxoClaro:#EDE8FA;
+  --vermelho:#991B1B;--vermelhoClaro:#FDE8E8;
+  --amarelo:#92400E;--amareloClaro:#FEF9C3;
+  --cinza1:#F4F6FA;--cinza2:#E8ECF4;--cinza3:#C8CDD8;
+  --texto:#111827;--texto2:#4B5563;--texto3:#9CA3AF;
+  --branco:#FFFFFF;--sombra:0 2px 16px rgba(11,61,145,.09);
+  --radius:12px;--radius2:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sora',sans-serif;background:var(--cinza1);color:var(--texto);min-height:100vh;}
+header{background:var(--azul);padding:0 1.5rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(11,61,145,.3);}
+.header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:58px;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:32px;height:32px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-txt{color:#fff;font-size:14px;font-weight:600;}
+.logo-sub{color:rgba(255,255,255,.55);font-size:11px;}
+.badge-header{background:rgba(255,255,255,.15);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace;}
+.hero{background:linear-gradient(135deg,#0B3D91,#1565C0 60%,#1976D2);padding:1.75rem 1.5rem 2.25rem;overflow:hidden;position:relative;}
+.hero::before{content:'';position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.05);}
+.hero-inner{max-width:960px;margin:0 auto;position:relative;z-index:1;}
+.hero h1{color:#fff;font-size:22px;font-weight:700;margin-bottom:4px;}
+.hero p{color:rgba(255,255,255,.65);font-size:13px;}
+.hero-badges{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.hbadge{background:rgba(255,255,255,.15);color:#fff;font-size:10px;padding:4px 10px;border-radius:20px;font-weight:500;border:1px solid rgba(255,255,255,.2);}
+main{max-width:960px;margin:0 auto;padding:1.1rem 1.1rem 3rem;}
+.card{background:var(--branco);border-radius:var(--radius);box-shadow:var(--sombra);margin-bottom:.8rem;overflow:hidden;}
+.card-header{padding:.8rem 1.1rem;border-bottom:1px solid var(--cinza2);display:flex;align-items:center;gap:8px;}
+.ci{width:29px;height:29px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.ci-az{background:var(--azulclaro);} .ci-vd{background:var(--verdeClaro);} .ci-lr{background:var(--laranjaClaro);} .ci-rx{background:var(--roxoClaro);} .ci-vm{background:var(--vermelhoClaro);}
+.ct{font-size:13px;font-weight:600;color:var(--texto);}
+.cs{font-size:11px;color:var(--texto3);margin-top:1px;}
+.cb{padding:.95rem 1.1rem;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:9px;}
+@media(max-width:580px){.g2{grid-template-columns:1fr;}.g3{grid-template-columns:1fr 1fr;}}
+@media(max-width:360px){.g3{grid-template-columns:1fr;}}
+.field{display:flex;flex-direction:column;gap:3px;}
+.field label{font-size:10px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.05em;}
+.field input,.field select{height:36px;border:1.5px solid var(--cinza2);border-radius:var(--radius2);padding:0 10px;font-size:13px;font-family:'Sora',sans-serif;background:#fff;color:var(--texto);width:100%;transition:border-color .15s,box-shadow .15s;}
+.field input:focus,.field select:focus{outline:none;border-color:var(--azul3);box-shadow:0 0 0 3px rgba(25,118,210,.11);}
+.field input[readonly]{background:var(--cinza1);color:var(--texto2);}
+.field input::placeholder{color:var(--texto3);}
+.sep{border:none;border-top:1px solid var(--cinza2);margin:9px 0;}
+.sub{font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;margin-top:2px;}
+/* Faixa */
+.fcard{border-radius:var(--radius2);padding:9px 12px;margin-bottom:9px;border:1.5px solid;display:none;}
+.fcard.show{display:block;animation:fi .2s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+.f1{background:#EAF4EE;border-color:#1B6E3F;} .f1 .ft{color:#14522F;} .f1 .fx{color:#1B6E3F;}
+.f2{background:#FEF3E8;border-color:#C05A00;} .f2 .ft{color:#8A3F00;} .f2 .fx{color:#C05A00;}
+.f3{background:#FBE9F0;border-color:#A0264B;} .f3 .ft{color:#761A35;} .f3 .fx{color:#A0264B;}
+.f4{background:#EDE8FA;border-color:#4A2C8A;} .f4 .ft{color:#33196B;} .f4 .fx{color:#4A2C8A;}
+.fsbpe{background:#FDE8E8;border-color:#991B1B;} .fsbpe .ft{color:#7F1D1D;} .fsbpe .fx{color:#991B1B;}
+.ft{font-size:12px;font-weight:600;margin-bottom:2px;}
+.fx{font-size:11px;line-height:1.5;}
+/* Alertas */
+.av{font-size:12px;padding:7px 11px;border-radius:var(--radius2);margin-bottom:7px;display:none;line-height:1.5;}
+.av.show{display:block;animation:fi .2s ease;}
+.ok{background:#EAF4EE;color:#14522F;border:1px solid #B5D9C3;}
+.er{background:#FDE8E8;color:#991B1B;border:1px solid #FCA5A5;}
+.wn{background:#FEF3E8;color:#8A3F00;border:1px solid #FCD9A8;}
+.in{background:var(--azulclaro);color:#0B3D91;border:1px solid #BFDBFE;}
+.am{background:var(--amareloClaro);color:var(--amarelo);border:1px solid #FDE68A;}
+/* Cap box */
+.cap-box{background:var(--cinza1);border-radius:var(--radius2);padding:10px 13px;margin-bottom:9px;display:none;}
+.cap-box.show{display:block;animation:fi .2s ease;}
+.cap-grid{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.cap-i{background:#fff;border-radius:6px;padding:9px 12px;border:1px solid var(--cinza2);}
+.cap-l{font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+.cap-v{font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--texto);line-height:1.5;word-break:break-word;}
+.cv-az{color:var(--azul);} .cv-vd{color:var(--verde);} .cv-am{color:var(--laranja);} .cv-rd{color:var(--vermelho);}
+.regra-ouro{background:linear-gradient(135deg,#FEF9C3,#FFFDE7);border:1px solid #EAB308;border-radius:var(--radius2);padding:8px 11px;font-size:11px;color:#713F12;margin-top:5px;line-height:1.6;}
+/* FGTS Box */
+.fgts-box{background:#EDE8FA;border:1px solid #7C3AED;border-radius:var(--radius2);padding:10px 13px;margin-bottom:9px;display:none;}
+.fgts-box.show{display:block;animation:fi .2s ease;}
+.fgts-box-title{font-size:11px;font-weight:700;color:#3C1A80;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;}
+.fgts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;}
+.fgts-item{background:#fff;border-radius:6px;padding:7px 9px;border:1px solid #C4B5FD;}
+.fgts-lbl{font-size:10px;font-weight:600;color:#6D28D9;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;}
+.fgts-val{font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:#3C1A80;}
+/* Toggles */
+.trow{display:flex;gap:7px;margin-bottom:7px;}
+.ttog{flex:1;padding:7px;text-align:center;font-size:12px;font-weight:500;border:1.5px solid var(--cinza2);border-radius:var(--radius2);cursor:pointer;background:#fff;color:var(--texto2);transition:all .15s;}
+.ttog.ton-er{background:#FDE8E8;border-color:#EF4444;color:#991B1B;}
+.ttog.ton-ok{background:#EAF4EE;border-color:#1B6E3F;color:#14522F;}
+.ttabs{display:flex;gap:7px;margin-bottom:9px;}
+.ttab{flex:1;padding:6px;text-align:center;font-size:12px;font-weight:500;border:1.5px solid var(--cinza2);border-radius:var(--radius2);cursor:pointer;background:#fff;color:var(--texto2);transition:all .15s;}
+.ttab.ton{background:var(--azulclaro);border-color:var(--azul3);color:var(--azul);}
+/* Btn auto */
+.btn-auto{padding:7px 14px;background:var(--roxo);color:#fff;border:none;border-radius:var(--radius2);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.btn-auto:hover{background:#3C1A80;}
+/* Prazo */
+.prazo-box{background:var(--azulclaro);border:1px solid #BFDBFE;border-radius:var(--radius2);padding:9px 13px;margin-bottom:9px;display:none;align-items:center;gap:12px;flex-wrap:wrap;}
+.prazo-box.show{display:flex;}
+.prazo-num{font-size:20px;font-weight:700;color:var(--azul);font-family:'DM Mono',monospace;}
+.prazo-det{font-size:11px;color:var(--azul2);line-height:1.6;}
+.sl-wrap{margin-bottom:9px;}
+.sl-row{display:flex;align-items:center;gap:9px;}
+.sl-row input[type=range]{flex:1;accent-color:var(--azul);}
+.sl-val{font-size:14px;font-weight:700;color:var(--azul);font-family:'DM Mono',monospace;min-width:58px;}
+.sl-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--texto3);margin-top:2px;}
+.taxa-disp{background:var(--cinza1);border-radius:var(--radius2);padding:9px 13px;display:flex;align-items:center;gap:10px;}
+.taxa-val{font-size:21px;font-weight:700;color:var(--azul);font-family:'DM Mono',monospace;}
+/* Seguro obra */
+.seguro-timeline{margin-top:10px;}
+.st-header{display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:6px;font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;padding:0 4px;}
+.st-row{display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:6px;padding:6px 4px;border-radius:6px;margin-bottom:3px;align-items:center;font-size:12px;}
+.st-row.ativo{background:var(--azulclaro);font-weight:600;}
+.st-ano{font-weight:700;color:var(--texto2);}
+.st-range{color:var(--texto2);}
+.st-pct{color:var(--laranja);font-weight:600;}
+.prog-bar{height:8px;background:var(--cinza2);border-radius:4px;overflow:hidden;margin:6px 0;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--azul),var(--azul3));border-radius:4px;transition:width .6s ease;}
+/* Obra resumo */
+.obra-res{background:var(--cinza1);border-radius:var(--radius2);padding:10px 13px;display:none;}
+.obra-res.show{display:block;}
+.obra-linha{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--cinza2);font-size:12px;color:var(--texto2);}
+.obra-linha:last-child{border-bottom:none;}
+/* BTN SIMULAR */
+.btn-sim{width:100%;padding:13px;background:linear-gradient(135deg,var(--azul),var(--azul3));color:#fff;border:none;border-radius:var(--radius);font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;box-shadow:0 4px 20px rgba(11,61,145,.25);transition:all .2s;}
+.btn-sim:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(11,61,145,.33);}
+/* Resultado */
+#resultado{animation:fi .3s ease;}
+.res-tabs{display:flex;gap:7px;margin-bottom:.85rem;}
+.res-tab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:600;border:1.5px solid var(--cinza2);border-radius:var(--radius2);cursor:pointer;background:#fff;color:var(--texto2);transition:all .15s;}
+.res-tab.ton{background:var(--azulclaro);border-color:var(--azul3);color:var(--azul);}
+.mets{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:7px;margin-bottom:.85rem;}
+.met{background:var(--cinza1);border-radius:var(--radius2);padding:9px 10px;}
+.ml{font-size:10px;font-weight:600;color:var(--texto3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;}
+.mv{font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Mono',monospace;}
+.mv.bl{color:var(--azul);} .mv.gr{color:var(--verde);} .mv.am{color:var(--laranja);} .mv.rd{color:var(--vermelho);}
+.tw{overflow-x:auto;max-height:220px;overflow-y:auto;border-radius:var(--radius2);border:1px solid var(--cinza2);}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+th{position:sticky;top:0;background:var(--cinza2);color:var(--texto2);font-weight:600;padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.03em;}
+th:first-child{text-align:left;}
+td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--cinza2);font-family:'DM Mono',monospace;color:var(--texto);}
+td:first-child{text-align:left;color:var(--texto3);}
+tr:hover td{background:var(--cinza1);}
+.bonif{background:linear-gradient(135deg,#FEF3E8,#FFF8F2);border:1px solid #FCD9A8;border-radius:var(--radius2);padding:9px 12px;font-size:12px;color:#8A3F00;line-height:1.6;margin-bottom:9px;}
+.val-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:7px;}
+.val-item{background:linear-gradient(135deg,var(--verdeClaro),#F0FBF5);border:1px solid #B5D9C3;border-radius:var(--radius2);padding:10px;}
+.val-item.azul{background:linear-gradient(135deg,var(--azulclaro),#EEF5FF);border-color:#BFDBFE;}
+.vi-lbl{font-size:10px;font-weight:600;color:var(--texto3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+.vi-val{font-size:15px;font-weight:700;font-family:'DM Mono',monospace;color:var(--verde);}
+.vi-val.azul{color:var(--azul);}
+.notice{font-size:11px;color:var(--texto3);margin-top:.85rem;padding:9px 11px;background:var(--cinza1);border-radius:var(--radius2);border-left:3px solid var(--cinza3);line-height:1.6;}
+footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--texto3);}
+/* Ref table */
+.ref-table{width:100%;border-collapse:collapse;font-size:11px;}
+.ref-table th{background:var(--azul);color:#fff;padding:6px 9px;text-align:center;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+.ref-table td{padding:5px 9px;text-align:center;border-bottom:1px solid var(--cinza2);font-family:'DM Mono',monospace;font-size:11px;}
+.ref-table td:first-child{text-align:left;font-family:'Sora',sans-serif;font-weight:600;font-size:11px;}
+.ref-table tr:nth-child(even){background:var(--cinza1);}
+.tag{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;}
+.tg1{background:#EAF4EE;color:#14522F;} .tg2{background:#FEF3E8;color:#8A3F00;}
+.tg3{background:#FBE9F0;color:#761A35;} .tg4{background:#EDE8FA;color:#33196B;}
+.tgS{background:#FDE8E8;color:#7F1D1D;}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🏠</div>
+      <div><div class="logo-txt">Simulador de Financiamento</div><div class="logo-sub">MCMV 2026 · Caixa Econômica Federal</div></div>
+    </div>
+    <div class="badge-header">MCMV 2026</div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h1>Simulação de Proposta Imobiliária</h1>
+    <p>Taxas oficiais · Regra 80% · FGTS com teto · Seguro gradual · Capacidade 30%</p>
+    <div class="hero-badges">
+      <span class="hbadge">📊 Taxas Oficiais 2026</span>
+      <span class="hbadge">✅ Máx. 80% (MCMV)</span>
+      <span class="hbadge">💰 FGTS com teto de avaliação</span>
+      <span class="hbadge">🔒 Seguro gradual de obra</span>
+      <span class="hbadge">📅 Prazo por idade</span>
+    </div>
+  </div>
+</div>
+
+<main>
+
+<!-- TABELA REF -->
+<div class="card">
+  <div class="card-header"><div class="ci ci-az">📋</div><div><div class="ct">Tabela Oficial MCMV 2026</div><div class="cs">Parcela por R$100k financiados · PRICE 360 meses · Referência rápida</div></div></div>
+  <div class="cb" style="padding-top:.65rem">
+    <div style="overflow-x:auto">
+    <table class="ref-table">
+      <thead><tr><th>Faixa</th><th>Faixa de Renda</th><th>Imóvel Máx.</th><th>Máx. Financiado</th><th>Taxa Efetiva</th><th>Parcela/R$100k</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tg1">Faixa 1</span></td><td>Até R$ 2.850</td><td>R$ 275.000</td><td>80%</td><td>4,75% – 5,00%</td><td>R$ 525 – R$ 542</td></tr>
+        <tr><td><span class="tag tg2">Faixa 2</span></td><td>R$ 2.850 – R$ 5.000</td><td>R$ 275.000</td><td>80%</td><td>5,25% – 7,00%</td><td>R$ 560 – R$ 690</td></tr>
+        <tr><td><span class="tag tg3">Faixa 3</span></td><td>R$ 5.000 – R$ 9.600</td><td>R$ 400.000</td><td>80%</td><td>8,16%</td><td>R$ 776</td></tr>
+        <tr><td><span class="tag tg4">Faixa 4</span></td><td>R$ 9.600 – R$ 13.000</td><td>R$ 600.000</td><td>80%</td><td>10,00%</td><td>R$ 920 – R$ 940</td></tr>
+        <tr><td><span class="tag tgS">SBPE</span></td><td>Acima R$ 13.000</td><td>Acima R$ 600k</td><td>PRICE 80% / SAC 90%</td><td>11,49%</td><td>R$ 976 (P) / R$ 1.172 (S)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="regra-ouro" style="margin-top:9px">⭐ <strong>Regra de Ouro:</strong> O banco aprova o <strong>menor valor</strong> entre: (1) Capacidade = Renda × 30% ÷ parcela/R$100k × R$100k &nbsp;|&nbsp; (2) Limite = Valor imóvel × % máximo financiado.</div>
+  </div>
+</div>
+
+<!-- IDENTIFICAÇÃO -->
+<div class="card">
+  <div class="card-header"><div class="ci ci-az">📋</div><div><div class="ct">Identificação da Proposta</div><div class="cs">Dados do cliente e produto para exportar em PDF</div></div></div>
+  <div class="cb">
+    <div class="g2" style="grid-template-columns:1fr 1fr 1fr 1fr">
+      <div class="field"><label>Nome do cliente</label><input type="text" id="nomeCliente" placeholder="Ex: João da Silva"/></div>
+      <div class="field"><label>Produto / Empreendimento</label><input type="text" id="nomeProduto" placeholder="Ex: Porto Maravilha"/></div>
+      <div class="field"><label>Tipologia</label><input type="text" id="tipologia" placeholder="Ex: 2 quartos com suíte e vaga"/></div>
+      <div class="field"><label>Metragem</label><input type="text" id="metragem" placeholder="Ex: 52m²"/></div>
+    </div>
+  </div>
+</div>
+
+<!-- PERFIL -->
+<div class="card">
+  <div class="card-header"><div class="ci ci-az">👤</div><div><div class="ct">Perfil do Cliente</div><div class="cs">Renda, idade e enquadramento MCMV</div></div></div>
+  <div class="cb">
+    <div class="g3">
+      <div class="field"><label>Renda familiar bruta</label><input type="text" id="renda" placeholder="R$ 0,00" oninput="M(this);onRenda()"/></div>
+      <div class="field"><label>Data de nascimento</label><input type="date" id="nasc" onchange="onIdade()"/></div>
+      <div class="field"><label>Idade</label><input type="text" id="idadeDisplay" readonly placeholder="—"/></div>
+    </div>
+    <div id="fcCard" class="fcard"><div class="ft" id="fcTit"></div><div class="fx" id="fcInfo"></div>
+      <div id="redutorBox" style="display:none;margin-top:8px">
+        <div class="trow">
+          <div class="ttog" id="btnComRedutor" onclick="setRedutor(true)">✓ Com redutor</div>
+          <div class="ttog" id="btnSemRedutor" onclick="setRedutor(false)">Sem redutor</div>
+        </div>
+      </div>
+    </div>
+    <div id="capBox" class="cap-box">
+      <div class="sub" style="margin-bottom:6px">📊 Capacidade de pagamento — 30% da renda</div>
+      <div class="cap-grid" id="capGrid"></div>
+      <div id="capObs" class="regra-ouro"></div>
+    </div>
+  </div>
+</div>
+
+<!-- IMÓVEL -->
+<div class="card">
+  <div class="card-header"><div class="ci ci-az">🏢</div><div><div class="ct">Dados do Imóvel</div><div class="cs">Valor, avaliação Caixa e composição da entrada</div></div></div>
+  <div class="cb">
+    <div class="g3">
+      <div class="field"><label>Valor de venda</label><input type="text" id="vImovel" placeholder="R$ 0,00" oninput="M(this);onImovel()"/></div>
+      <div class="field"><label>Avaliação Caixa <span style="font-weight:400;font-size:10px">(auto +10% — editável)</span></label><input type="text" id="vAval" placeholder="Automático (+10%)" oninput="M(this);onImovel()"/></div>
+      <div class="field"><label id="lblMaxFin">Máx. financiado (80%)</label><input type="text" id="vFinanciavel" readonly placeholder="—"/></div>
+    </div>
+    <div id="avLimite" class="av"></div>
+
+    <hr class="sep"/>
+    <div class="sub">Composição da entrada</div>
+
+    <!-- FGTS elegibilidade -->
+    <div class="sub" style="margin-top:2px">Elegibilidade FGTS — mínimo 3 anos de carteira assinada</div>
+    <div class="trow">
+      <div class="ttog ton-er" id="btnFN" onclick="setFGTS(false)">❌ Menos de 3 anos</div>
+      <div class="ttog" id="btnFS" onclick="setFGTS(true)">✅ 3 ou mais anos de carteira</div>
+    </div>
+    <div id="avFGTS" class="av er show" style="display:block">⚠️ FGTS bloqueado — mínimo 3 anos de carteira assinada (somando todos os empregos).</div>
+
+    <div class="g3">
+      <div class="field"><label>Ato (assinatura)</label><input type="text" id="ato" placeholder="R$ 0,00" oninput="M(this);onEntrada()"/></div>
+      <div class="field">
+        <label>FGTS disponível</label>
+        <input type="text" id="fgtsDisp" placeholder="R$ 0,00" oninput="M(this);onEntrada()" disabled/>
+      </div>
+      <div class="field"><label>Total de entrada</label><input type="text" id="totalEnt" readonly placeholder="R$ 0,00"/></div>
+    </div>
+
+    <!-- FGTS teto box -->
+    <div id="fgtsBox" class="fgts-box">
+      <div class="fgts-box-title">🔒 Regra do FGTS — teto de avaliação</div>
+      <div class="fgts-grid" id="fgtsGrid"></div>
+    </div>
+
+    <!-- Botão preencher automaticamente -->
+    <div id="blocoAuto" style="display:none;margin-bottom:9px">
+      <div class="av in show" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span id="txtAuto">Preencher restante automaticamente para atingir entrada mínima</span>
+        <button class="btn-auto" onclick="preencherAuto()">⚡ Preencher automaticamente</button>
+      </div>
+    </div>
+
+    <div id="avEntrada" class="av"></div>
+    <div id="avFinanciado" class="av"></div>
+    <div id="avCapacidade" class="av"></div>
+    <div class="field" style="margin-top:7px"><label>Valor financiado aprovado <span style="font-weight:400;font-size:10px">(já aplicado limite de renda e banco)</span></label><input type="text" id="vFinanciado" readonly placeholder="R$ 0,00"/></div>
+  </div>
+</div>
+
+<!-- OBRA -->
+<div class="card">
+  <div class="card-header"><div class="ci ci-lr">🏗️</div><div><div class="ct">Período de Obra</div><div class="cs">Parcelamento e bonificação — saldo congelado sem INCC</div></div></div>
+  <div class="cb">
+    <div class="av in show" style="display:block;margin-bottom:10px">💡 <strong>Bonificação exclusiva:</strong> após assinatura com a CEF o saldo fica <strong>congelado sem INCC</strong> — economia média de R$ 211.600.</div>
+    <div class="g2" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="field"><label>Data de lançamento <span style="font-weight:400;font-size:10px;text-transform:none">(início das obras)</span></label><input type="date" id="dtLancamento" onchange="onObra()"/></div>
+      <div class="field"><label>Data de entrega prevista</label><input type="date" id="dtEntrega" onchange="onObra()"/></div>
+      <div class="field"><label>Meses de obra</label><input type="text" id="mesesObra" readonly placeholder="—"/></div>
+    </div>
+    <div id="avLancamento" class="av" style="margin-bottom:8px"></div>
+    <div class="sub">Reforços anuais durante a obra</div>
+    <div class="g2">
+      <div class="field"><label>Qtd. de reforços</label><input type="number" id="qtdRef" value="2" min="0" max="10" onchange="onObra()"/></div>
+      <div class="field"><label>Total reforços</label><input type="text" id="totalRef" readonly placeholder="R$ 0,00"/></div>
+    </div>
+    <div id="refDatasBox" style="display:none;margin-top:6px"></div>
+    <div class="sub">Parcelas mensais durante a obra <span style="font-weight:400;text-transform:none;font-size:10px;color:var(--verde)">— calculada automaticamente</span></div>
+    <div class="av in show" style="display:block;margin-bottom:8px;font-size:12px">
+      📐 Fórmula: <strong>(Valor imóvel − Financiado − Ato − FGTS − Reforços) ÷ Meses de obra</strong>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Parcela mensal de obra <span style="font-weight:400;font-size:10px">— máx. 80% da parcela do financiamento</span></label><input type="text" id="mensalObra" readonly placeholder="Calculado ao informar a data"/></div>
+      <div class="field"><label>Total mensais</label><input type="text" id="totalMensOb" readonly placeholder="R$ 0,00"/></div>
+    </div>
+
+    <!-- Botão preencher restante da parcela (oculto - agora é automático) -->
+    <div id="blocoAutoObra" style="display:none;margin-bottom:9px">
+      <div class="av in show" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span id="txtAutoObra">Calcular parcela mensal para cobrir o restante da entrada durante a obra</span>
+        <button class="btn-auto" onclick="preencherAutoObra()">⚡ Calcular parcela sugerida</button>
+      </div>
+    </div>
+
+    <div id="resumoObra" class="obra-res">
+      <div class="sub" style="margin-bottom:5px">Cronograma da obra</div>
+      <div id="obraLinhas"></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:9px;padding-top:8px;border-top:1px solid var(--cinza3);font-size:12px">
+        <span>Total pago na obra: <strong id="totalObraPago">—</strong></span>
+        <span style="color:var(--azul)">Saldo a financiar: <strong id="saldoFin">—</strong></span>
+      </div>
+    </div>
+    <div id="avObra" class="av"></div>
+  </div>
+</div>
+
+<!-- SEGURO DE OBRA -->
+<div class="card">
+  <div class="card-header"><div class="ci ci-vd">🔒</div><div><div class="ct">Seguro de Obra — Evolução Gradual</div><div class="cs">Aumenta conforme % de conclusão da obra · Máx. 95% da parcela do financiamento</div></div></div>
+  <div class="cb">
+    <div class="av in show" style="display:block;margin-bottom:10px">🔒 O seguro de obra é <strong>gradual</strong>: começa em <strong>12% da parcela no SAC (10% no PRICE)</strong> e sobe até <strong>95% da parcela</strong> no fim da obra, conforme o % de conclusão. O custo total acumulado é travado em um teto máximo de <strong>12% do valor financiado</strong> — mesmo que a obra atrase além do prazo previsto.</div>
+
+    <div class="g2">
+      <div class="field"><label>Custo total estimado do seguro <span style="font-weight:400;font-size:10px">(teto máximo: 12% SAC / 10% PRICE)</span></label><input type="text" id="seguroTotal" readonly placeholder="—"/></div>
+    </div>
+
+    <div id="seguroBox" style="display:none">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-bottom:10px;background:var(--cinza1);padding:9px 12px;border-radius:var(--radius2)">
+        <span>Parcela limite (95% financ.): <strong id="segLimite">—</strong></span>
+        <span>Status máx.: <strong id="segStatus">—</strong></span>
+      </div>
+
+      <!-- Timeline gradual -->
+      <div class="seguro-timeline">
+        <div class="st-header"><span>Período</span><span>Faixa mensal</span><span>% da obra</span><span>Progresso</span></div>
+        <div id="stRows"></div>
+      </div>
+
+      <div class="av am show" style="display:block;margin-top:10px" id="segMediaAviso"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PRAZO E TAXA -->
+<div class="card">
+  <div class="card-header"><div class="ci ci-rx">📅</div><div><div class="ct">Prazo e Taxa de Juros</div><div class="cs">Regra Caixa: 80 anos e 6 meses − idade do cliente</div></div></div>
+  <div class="cb">
+    <div id="prazoBox" class="prazo-box"><div><div style="font-size:10px;color:var(--azul2);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px">Prazo máximo</div><div class="prazo-num" id="prazoMaxTxt">—</div></div><div class="prazo-det" id="prazoDet"></div></div>
+    <div id="prazoWarn" class="av"></div>
+    <div id="blocoSlider" style="display:none">
+      <div class="sub">Prazo desejado para o financiamento</div>
+      <div class="sl-wrap">
+        <div class="sl-row"><input type="range" id="prazoSlider" min="1" max="35" step="1" value="30" oninput="onSlider()"/><span class="sl-val" id="prazoSliderVal">30 anos</span></div>
+        <div class="sl-labels"><span>1 ano</span><span id="prazoMaxLabel">35 anos (máx.)</span></div>
+      </div>
+    </div>
+    <div id="blocoTaxa" style="display:none">
+      <div class="taxa-disp">
+        <span style="font-size:12px;color:var(--texto2);font-weight:600" id="taxaLabel">Taxa aplicada (com redutor):</span>
+        <span class="taxa-val" id="taxaDisplay">—</span>
+        <span style="font-size:12px;color:var(--texto3)">ao ano</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="btn-sim" onclick="simular()">🏠 Simular Financiamento Completo</button>
+
+<!-- RESULTADO -->
+<div id="resultado" style="display:none;margin-top:.85rem">
+  <div class="card">
+    <div class="card-header"><div class="ci ci-lr">📐</div><div><div class="ct">Fase 1 — Durante a Obra</div><div class="cs">Custos mensais antes das chaves</div></div></div>
+    <div class="cb" id="fase1"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="ci ci-az">🏠</div><div><div class="ct">Fase 2 — Financiamento após Entrega</div><div class="cs">Parcelas bancárias</div></div></div>
+    <div class="cb">
+      <div class="res-tabs">
+        <div class="res-tab ton" onclick="setTab('sac')">SAC — Parcelas Decrescentes</div>
+        <div class="res-tab" onclick="setTab('price')">PRICE — Parcela Fixa</div>
+      </div>
+      <div id="pSAC"><div class="mets" id="mSAC"></div><div class="sub" style="margin-top:.4rem">Evolução</div><div id="bSAC"></div><div class="tw"><table><thead><tr><th>Mês</th><th>Parcela</th><th>Amortiz.</th><th>Juros</th><th>Saldo</th></tr></thead><tbody id="tSAC"></tbody></table></div></div>
+      <div id="pPRICE" style="display:none"><div class="mets" id="mPRICE"></div><div class="sub" style="margin-top:.4rem">Evolução</div><div id="bPRICE"></div><div class="tw"><table><thead><tr><th>Mês</th><th>Parcela</th><th>Amortiz.</th><th>Juros</th><th>Saldo</th></tr></thead><tbody id="tPRICE"></tbody></table></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="ci ci-vd">📈</div><div><div class="ct">Projeção de Valorização</div><div class="cs">Estimativa histórica da região</div></div></div>
+    <div class="cb">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600;color:var(--texto2);white-space:nowrap">% de valorização estimada:</label>
+        <input type="number" id="pctValorizacao" value="60" min="1" max="300" step="1"
+          style="width:80px;padding:6px 10px;border:1.5px solid var(--cinza3);border-radius:6px;font-size:14px;font-weight:700;color:var(--azul);text-align:center"
+          oninput="atualizarValorizacao();atualizarEconomia()">
+        <span style="font-size:14px;font-weight:700;color:var(--azul)">%</span>
+        <span style="font-size:11px;color:var(--texto3)">(histórico Porto Maravilha: ~60%)</span>
+      </div>
+      <div class="val-grid" id="valGrid"></div>
+      <p style="font-size:11px;color:var(--texto3);margin-top:9px">* Estimativa. Não é garantia de retorno.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="ci ci-vd">💰</div><div><div class="ct">Economia com o Programa</div><div class="cs">Benefícios por pagar o seguro de obra — sem INCC, sem documentações</div></div></div>
+    <div class="cb">
+      <div class="av in show" style="display:block;margin-bottom:12px">💡 <strong>Por pagar o seguro de obra, o cliente não paga INCC nem documentações.</strong> Configure os itens abaixo e veja o total economizado.</div>
+
+      <!-- Laudêmio toggle -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:600;color:var(--texto2)">Imóvel possui Laudêmio?</span>
+        <div class="trow" style="margin:0;gap:6px">
+          <div id="btnLdN" class="ttog ton-er" onclick="setLaudemio(false)" style="padding:5px 14px;font-size:12px">❌ Não</div>
+          <div id="btnLdS" class="ttog" onclick="setLaudemio(true)" style="padding:5px 14px;font-size:12px">✅ Sim</div>
+        </div>
+        <span style="font-size:11px;color:var(--texto3)">(Laudêmio: média 5% do valor do imóvel pronto)</span>
+      </div>
+
+      <!-- Taxa ligação -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:600;color:var(--texto2)">Taxa de ligação + decoração:</span>
+        <div class="trow" style="margin:0;gap:6px">
+          <div id="btnTxN" class="ttog ton-ok" onclick="setTaxaLig(false)" style="padding:5px 14px;font-size:12px">✅ Sem taxas (entregue pela construtora)</div>
+          <div id="btnTxS" class="ttog" onclick="setTaxaLig(true)" style="padding:5px 14px;font-size:12px">⚠️ Com taxas (6% do imóvel)</div>
+        </div>
+      </div>
+
+      <div id="econGrid" class="mets"></div>
+      <div id="econTotal" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- BOTÃO PDF -->
+  <button class="btn-sim" onclick="gerarPDF()" style="background:linear-gradient(135deg,#1B6E3F,#2D9D5C);margin-top:.5rem">
+    📄 Exportar Proposta em PDF
+  </button>
+
+  <div class="notice">⚠️ Simulação estimada com base nas taxas MCMV 2026. Consulte uma agência Caixa para proposta oficial.</div>
+</div>
+</main>
+<footer>Simulador MCMV 2026 · Caixa Econômica Federal · Uso profissional</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   SIMULADOR MCMV 2026 — CAIXA ECONÔMICA FEDERAL
+   Regras implementadas:
+   1. Prazo máximo = 80a 6m - idade do cliente (máx 35 anos)
+   2. MCMV: financia até 80% da AVALIAÇÃO
+   3. SBPE PRICE: financia até 80% | SBPE SAC: até 90%
+   4. Capacidade de pagamento = renda × 30%
+   5. Financiado aprovado = menor entre (cap. teórica, limite programa)
+   6. FGTS teto = entrada necessária − ato (ato + FGTS ≤ entrada necessária)
+   7. Seguro de obra gradual por fase
+   8. Botões de preenchimento automático
+   ══════════════════════════════════════════════════════════ */
+
+/* ── DADOS DAS FAIXAS ── */
+const FAIXAS = [
+  { nome:'Faixa 1', tag:'f1', rMax:2850,  iMax:275000, maxPct:0.80, sbpe:false,
+    subs:[{a:2160,n:4.25,e:4.75,p100k:525},{a:2850,n:4.50,e:5.00,p100k:542}] },
+  { nome:'Faixa 2', tag:'f2', rMax:5000,  iMax:275000, maxPct:0.80, sbpe:false,
+    subs:[{a:3200,n:4.75,e:5.25,p100k:560},{a:3500,n:5.00,e:5.50,p100k:575},{a:4000,n:5.50,e:6.00,p100k:620},{a:5000,n:6.50,e:7.00,p100k:690}] },
+  { nome:'Faixa 3', tag:'f3', rMax:9600,  iMax:400000, maxPct:0.80, sbpe:false,
+    subs:[{a:9600,n:7.66,e:8.16,p100k:776}] },
+  { nome:'Faixa 4', tag:'f4', rMax:13000, iMax:600000, maxPct:0.80, sbpe:false,
+    subs:[{a:13000,n:10.00,e:10.00,p100k:930}] },
+  { nome:'SBPE',   tag:'fsbpe', rMax:Infinity, iMax:Infinity, maxPct:0.80, maxPctSAC:0.90, sbpe:true,
+    subs:[{a:Infinity,n:11.49,e:11.49,p100k:976,p100k_sac:1172}] },
+];
+
+/* ── SEGURO DE OBRA GRADUAL ── */
+// Anos calculados dinamicamente a partir da data de entrega (não hardcoded)
+const SEGURO_FAIXAS = [
+  { fase:'início da obra',    mInicio:1,  mFim:12, minR:500,  maxR:1000, pctObra:'0% – 30%',  pctProg:30 },
+  { fase:'obra em andamento', mInicio:13, mFim:24, minR:1100, maxR:1500, pctObra:'30% – 60%', pctProg:60 },
+  { fase:'obra final',        mInicio:25, mFim:30, minR:1600, maxR:3000, pctObra:'60% – 80%', pctProg:80 },
+  { fase:'conclusão',         mInicio:31, mFim:36, minR:2200, maxR:3000, pctObra:'80% – 100%', pctProg:100 },
+];
+
+/* ── ESTADO GLOBAL ── */
+let fx = null, sub = null, tipoTaxa = 'n', prazoMaxAnos = 35, fgtsPode = false, usaRedutor = true;
+
+/* ══════════════════════════════════════
+   UTILITÁRIOS
+   ══════════════════════════════════════ */
+function M(el) {
+  // Extrai dígitos do campo. O sufixo ",00" é fixo e adicionado por ESTA
+  // função — por isso guardamos em el.dataset.lastMasked se já passamos
+  // por aqui antes, e só então descontamos os 2 dígitos do sufixo (senão
+  // eles se misturam com os dígitos novos digitados, causando o bug de
+  // valores embaralhados, ex: digitar "15000" e virar algo tipo "10.500,00").
+  const currentRaw = el.value;
+  const allDigits = currentRaw.replace(/\D/g, '');
+
+  if (!allDigits) { el.value = ''; el.dataset.intval = ''; el.dataset.lastMasked = ''; return; }
+
+  let semSufixo;
+  if (el.dataset.lastMasked) {
+    // Campo já passou por M() antes: o ",00" no fim é nosso sufixo fixo.
+    semSufixo = allDigits.length > 2 ? allDigits.slice(0, -2) : allDigits;
+  } else {
+    // Primeira vez (valor colado, ou pré-existente vindo já formatado).
+    // Só descontamos os 2 últimos dígitos como centavos SE o valor original
+    // já tinha vírgula decimal (ex: "529.000,00" vindo do servidor).
+    semSufixo = currentRaw.includes(',') && allDigits.length > 2
+      ? allDigits.slice(0, -2)
+      : allDigits;
+  }
+
+  const reais = parseInt(semSufixo || '0', 10);
+  const formatted = 'R$ ' + reais.toLocaleString('pt-BR') + ',00';
+  el.value = formatted;
+  el.dataset.intval = String(reais);
+  el.dataset.lastMasked = formatted;
+
+  // Cursor sempre antes do ",00" fixo — local natural para continuar digitando.
+  if (typeof el.setSelectionRange === 'function') {
+    const pos = formatted.length - 3;
+    el.setSelectionRange(pos, pos);
+  }
+}
+function pv(s) {
+  if (!s) return 0;
+  const str = String(s).trim();
+  // Remove prefixo R$ e espaços
+  const clean = str.replace(/R\$\s*/g, '').trim();
+  // Formato mascarado brasileiro: 1.234,56 → tem vírgula como decimal
+  if (clean.includes(',')) {
+    return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  // Sem vírgula: pode ser "1.500" (milhar mascarado, sem centavos) ou
+  // "322000" (número puro digitado/colado). Em ambos os casos os pontos
+  // presentes são separadores de milhar, não decimais — sempre removemos.
+  return parseFloat(clean.replace(/\./g, '')) || 0;
+}
+function setVal(id, v) {
+  const s = v.toFixed(2);
+  const p = s.split('.');
+  p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  document.getElementById(id).value = 'R$ ' + p[0] + ',' + p[1];
+}
+function fb(v) { if (isNaN(v) || v == null) return '—'; return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+function fi(v) { if (isNaN(v) || v == null) return '—'; return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
+function show(id, cls, html) {
+  const e = document.getElementById(id);
+  if (!e) return;
+  e.className = 'av ' + cls;
+  e.innerHTML = html;
+  e.style.display = html ? 'block' : 'none';
+}
+function getPct(isSACOverride) {
+  if (!fx) return 0.80;
+  if (fx.sbpe) {
+    // SBPE: PRICE → 80% | SAC → 90%
+    const isSAC = isSACOverride !== undefined ? isSACOverride : (() => {
+      const tabAtivo = document.querySelector('.res-tab.ton');
+      return !tabAtivo || tabAtivo.textContent.includes('SAC');
+    })();
+    return isSAC ? (fx.maxPctSAC || 0.90) : fx.maxPct;
+  }
+  return fx.maxPct; // MCMV sempre 80%
+}
+// Limite de comprometimento de renda para capacidade de pagamento.
+// Regra: SBPE + PRICE → 25% da renda | SBPE + SAC → 30% | MCMV (qualquer sistema) → 30%.
+// isSACOverride: passe true/false para forçar o sistema (usado quando se precisa
+// calcular SAC e PRICE separadamente, em vez de depender da aba ativa na tela).
+function getPctRenda(isSACOverride) {
+  if (fx && fx.sbpe) {
+    const isSAC = isSACOverride !== undefined ? isSACOverride : (() => {
+      const tabAtivo = document.querySelector('.res-tab.ton');
+      return !tabAtivo || tabAtivo.textContent.includes('SAC');
+    })();
+    return isSAC ? 0.30 : 0.25;
+  }
+  return 0.30;
+}
+function getP100k(isSACOverride) {
+  if (!sub) return 776;
+  // Regra de aprovação bancária: MCMV (Faixas 1-4) usa parcela PRICE como referência
+  // para o limite de 30% da renda; SBPE usa a parcela SAC (1ª, maior) — mais
+  // conservadora, evitando aprovar financiamento que a parcela real SAC não suporta.
+  if (fx && fx.sbpe && sub.p100k_sac) {
+    const isSAC = isSACOverride !== undefined ? isSACOverride : (() => {
+      const tabAtivo = document.querySelector('.res-tab.ton');
+      return !tabAtivo || tabAtivo.textContent.includes('SAC');
+    })();
+    return isSAC ? sub.p100k_sac : sub.p100k;
+  }
+  return sub.p100k; // MCMV: nominal/PRICE
+}
+
+/* ══════════════════════════════════════
+   FGTS — ELEGIBILIDADE
+   ══════════════════════════════════════ */
+function setFGTS(pode) {
+  fgtsPode = pode;
+  document.getElementById('btnFN').className = 'ttog' + (!pode ? ' ton-er' : '');
+  document.getElementById('btnFS').className = 'ttog' + (pode ? ' ton-ok' : '');
+  const inp = document.getElementById('fgtsDisp');
+  inp.disabled = !pode;
+  if (!pode) {
+    inp.value = '';
+    show('avFGTS', 'av er', '⚠️ FGTS bloqueado — cliente precisa de mínimo 3 anos de carteira assinada (somando todos os empregos).');
+  } else {
+    document.getElementById('avFGTS').style.display = 'none';
+  }
+  onEntrada();
+}
+
+/* ══════════════════════════════════════
+   RENDA → ENQUADRAMENTO NA FAIXA
+   Regra: faixa é definida pela RENDA.
+   Se o imóvel ultrapassar o limite da faixa,
+   o cliente pode migrar para SBPE (taxa maior).
+   ══════════════════════════════════════ */
+function onRenda() {
+  const r = pv(document.getElementById('renda').value);
+  const card = document.getElementById('fcCard');
+  const blocoTaxa = document.getElementById('blocoTaxa');
+  document.getElementById('capBox').className = 'cap-box';
+
+  if (!r) { card.className = 'fcard'; blocoTaxa.style.display = 'none'; fx = null; sub = null; return; }
+
+  fx = FAIXAS.find(f => r <= f.rMax) || FAIXAS[4];
+  sub = fx.subs.find(s => r <= s.a) || fx.subs[fx.subs.length - 1];
+  usaRedutor = true; // reset ao trocar de faixa: começa "com redutor" por padrão
+
+  atualizarCardFaixa();
+  blocoTaxa.style.display = 'block';
+  updTaxa();
+  onImovel();
+  calcCapacidade();
+}
+
+function atualizarCardFaixa() {
+  const card = document.getElementById('fcCard');
+  if (!fx) { card.className = 'fcard'; return; }
+  const vi = pv(document.getElementById('vImovel').value);
+
+  // Redutor só existe até a Faixa 3 (MCMV). Faixa 4 e SBPE não têm redutor.
+  const podeRedutor = !fx.sbpe && (fx.tag === 'f1' || fx.tag === 'f2' || fx.tag === 'f3');
+  const redutorBox = document.getElementById('redutorBox');
+  if (podeRedutor) {
+    redutorBox.style.display = 'block';
+  } else {
+    redutorBox.style.display = 'none';
+    usaRedutor = true; // Faixa 4/SBPE: sempre taxa 'n' (sem opção de redutor)
+  }
+  atualizarBotoesRedutor();
+
+  // Detectar se imóvel ultrapassa limite da faixa MCMV → avisar SBPE
+  const acimaDaFaixa = !fx.sbpe && vi > 0 && vi > fx.iMax;
+
+  if (fx.sbpe) {
+    card.className = 'fcard show fsbpe';
+    document.getElementById('fcTit').textContent = 'SBPE — Renda acima de R$ 13.000 (fora do MCMV)';
+    document.getElementById('fcInfo').textContent =
+      'Sistema SBPE: PRICE financia até 80% da avaliação · SAC financia até 90% da avaliação · Taxa: 11,49% a.a.';
+  } else if (acimaDaFaixa) {
+    // Imóvel acima do limite — mostrar faixa + alerta de SBPE
+    card.className = 'fcard show ' + fx.tag;
+    document.getElementById('fcTit').textContent =
+      fx.nome + ' pela renda — ⚠️ Imóvel acima do limite (' + fi(fx.iMax) + ')';
+    document.getElementById('fcInfo').textContent =
+      'Imóvel de ' + fi(vi) + ' ultrapassa o teto MCMV de ' + fi(fx.iMax) + '. ' +
+      'O cliente pode ser enquadrado no SBPE (taxa 11,49% a.a.) se aprovado. ' +
+      'Taxa nominal atual: ' + sub.n.toFixed(2) + '% a.a.  ·  Taxa efetiva: ' + sub.e.toFixed(2) + '% a.a.';
+  } else {
+    card.className = 'fcard show ' + fx.tag;
+    document.getElementById('fcTit').textContent =
+      fx.nome + ' — Imóvel até ' + fi(fx.iMax) + ' · Máx. financiado: ' + (fx.maxPct * 100).toFixed(0) + '%';
+    document.getElementById('fcInfo').textContent = podeRedutor
+      ? (usaRedutor ? 'Taxa com redutor: ' + sub.n.toFixed(2) + '% a.a.' : 'Taxa sem redutor: ' + sub.e.toFixed(2) + '% a.a.')
+      : 'Taxa: ' + sub.n.toFixed(2) + '% a.a. (sem opção de redutor nesta faixa)';
+  }
+}
+
+function setRedutor(valor) {
+  usaRedutor = valor;
+  atualizarBotoesRedutor();
+  atualizarCardFaixa();
+  updTaxa();
+  onImovel();
+  calcCapacidade();
+}
+
+function atualizarBotoesRedutor() {
+  const btnCom = document.getElementById('btnComRedutor');
+  const btnSem = document.getElementById('btnSemRedutor');
+  if (!btnCom || !btnSem) return;
+  btnCom.classList.toggle('ton-ok', usaRedutor);
+  btnSem.classList.toggle('ton-er', !usaRedutor);
+}
+
+/* ══════════════════════════════════════
+   CAPACIDADE DE PAGAMENTO
+   Passo a passo conforme o Guia MCMV 2026:
+   1. Parcela máx = renda × 30%
+   2. Cap. teórica = (parcela máx / parcela por R$100k) × 100.000
+   3. Limite programa = avaliação × % máx financiado
+   4. Financiado aprovado = min(cap. teórica, limite programa)
+   5. Parcela real = (financiado / 100.000) × parcela por R$100k
+   ══════════════════════════════════════ */
+function calcCapacidade() {
+  if (!fx || !sub) return;
+  const r = pv(document.getElementById('renda').value);
+  if (!r) return;
+
+  // ── PASSO 1: Parcela máxima ──────────────────────────
+  const pctRenda = getPctRenda();
+  const parcelaMax = r * pctRenda;
+
+  // ── PASSO 2: Capacidade teórica ──────────────────────
+  const p100k = getP100k();
+  const capTeorica = (parcelaMax / p100k) * 100000;
+
+  // ── PASSO 3: Limite do programa ──────────────────────
+  const vi = pv(document.getElementById('vImovel').value);
+  const va = pv(document.getElementById('vAval').value) || (vi * 1.10);
+  const pct = getPct();
+  const limProg = vi > 0 ? va * pct : 0;
+
+  // ── PASSO 4: Financiado aprovado ─────────────────────
+  const finAprov = limProg > 0 ? Math.min(capTeorica, limProg) : capTeorica;
+  const limitadoPor = limProg > 0
+    ? (capTeorica <= limProg ? 'renda' : 'programa')
+    : 'renda';
+
+  // ── PASSO 5: Parcela real recalculada ────────────────
+  const parcelaReal = finAprov > 0 ? (finAprov / 100000) * p100k : 0;
+
+  const prazoA = parseInt(document.getElementById('prazoSlider')?.value) || 30;
+
+  document.getElementById('capBox').className = 'cap-box show';
+
+  // Montar o HTML passo a passo, visual igual ao guia
+  document.getElementById('capGrid').innerHTML = `
+    <div class="cap-i" style="border-left:3px solid var(--azul)">
+      <div class="cap-l">① Parcela máx. (renda × ${(pctRenda*100).toFixed(0)}%)</div>
+      <div class="cap-v cv-az">${fi(r)} × ${(pctRenda*100).toFixed(0)}% = <strong>${fi(parcelaMax)}</strong></div>
+    </div>
+    <div class="cap-i" style="border-left:3px solid var(--verde)">
+      <div class="cap-l">② Cap. teórica = (parcela ÷ R$${p100k}) × 100k</div>
+      <div class="cap-v cv-vd">(${fi(parcelaMax)} ÷ R$ ${p100k}) × 100k = <strong>${fi(capTeorica)}</strong></div>
+    </div>
+    ${vi > 0 ? `
+    <div class="cap-i" style="border-left:3px solid var(--laranja)">
+      <div class="cap-l">③ Limite programa (${(pct*100).toFixed(0)}% da avaliação)</div>
+      <div class="cap-v cv-am">${fi(va)} × ${(pct*100).toFixed(0)}% = <strong>${fi(limProg)}</strong></div>
+    </div>
+    <div class="cap-i" style="border-left:3px solid var(--vermelho);background:${limitadoPor==='renda'?'#EAF4EE':'#FDE8E8'}">
+      <div class="cap-l">④ Financiado aprovado = menor entre ② e ③</div>
+      <div class="cap-v" style="color:${limitadoPor==='renda'?'var(--verde)':'var(--vermelho)'}">
+        min(${fi(capTeorica)}, ${fi(limProg)}) = <strong>${fi(finAprov)}</strong>
+        <span style="font-size:10px;font-weight:600;margin-left:4px">[limitado pela ${limitadoPor==='renda'?'renda':'avaliação'}]</span>
+      </div>
+    </div>
+    ` : ''}
+    ${finAprov > 0 ? `
+    <div class="cap-i" style="border-left:3px solid #185FA5;background:var(--azulclaro)">
+      <div class="cap-l">⑤ Parcela recalculada sobre valor aprovado</div>
+      <div class="cap-v" style="color:var(--azul)">(${fi(finAprov)} ÷ 100k) × R$ ${p100k} = <strong>${fb(parcelaReal)}</strong>/mês</div>
+    </div>
+    ` : ''}
+    <div class="cap-i" style="background:var(--cinza1)">
+      <div class="cap-l">Prazo simulação / Faixa</div>
+      <div class="cap-v">${prazoA} anos · ${fx.nome}</div>
+    </div>
+  `;
+
+  document.getElementById('capObs').innerHTML =
+    `⭐ <strong>Regra de Ouro:</strong> o banco aprova o <strong>menor</strong> entre ② capacidade (${fi(capTeorica)}) e ③ limite do programa (${vi > 0 ? fi(limProg) : '—'}).
+    Financiado aprovado: <strong style="color:var(--azul)">${fi(finAprov)}</strong> · Parcela estimada: <strong style="color:var(--azul)">${fb(parcelaReal)}</strong>/mês.`;
+}
+
+/* ══════════════════════════════════════
+   IMÓVEL — AVALIAÇÃO E MÁXIMO FINANCIÁVEL
+   ══════════════════════════════════════ */
+function onImovel() {
+  const vi = pv(document.getElementById('vImovel').value);
+  if (!vi) {
+    document.getElementById('vFinanciavel').value = '';
+    document.getElementById('vAval').value = '';
+    document.getElementById('avLimite').style.display = 'none';
+    return;
+  }
+
+  const vaEl = document.getElementById('vAval');
+  // Auto-preenche +10% se campo estiver vazio
+  if (!pv(vaEl.value)) setVal('vAval', vi * 1.10);
+  const va = pv(vaEl.value);
+
+  // getPct() retorna 0.80 mesmo se fx=null
+  const pct = getPct();
+  const maxFin = va * pct;
+  setVal('vFinanciavel', maxFin);
+  document.getElementById('lblMaxFin').textContent =
+    'Máx. financiado (' + (pct * 100).toFixed(0) + '%)' + (fx && fx.sbpe ? ' — SBPE' : '');
+
+  if (fx && !fx.sbpe && vi > fx.iMax) {
+    show('avLimite', 'av er',
+      '⚠️ Imóvel (' + fi(vi) + ') acima do limite MCMV para ' + fx.nome + ' (máx. ' + fi(fx.iMax) + '). ' +
+      'Para este imóvel, o cliente precisará do SBPE (taxa 11,49% a.a., sem subsídio MCMV).');
+  } else if (fx && !fx.sbpe) {
+    show('avLimite', 'av ok', '✓ Imóvel dentro do limite para ' + fx.nome + ' (máx. ' + fi(fx.iMax) + ').');
+  } else if (!fx) {
+    show('avLimite', 'av wn', '⚠️ Preencha a renda para identificar a faixa MCMV.');
+  } else {
+    document.getElementById('avLimite').style.display = 'none';
+  }
+
+  atualizarCardFaixa();
+  onEntrada();
+  calcSeguro();
+  if (fx) calcCapacidade();
+}
+
+/* ══════════════════════════════════════
+   ENTRADA + FGTS COM TETO DE AVALIAÇÃO
+   Regra: ato + FGTS ≤ (avaliação − máx.financiado)
+   Ex: avaliação 350k, banco libera 280k → entrada necessária 70k
+       Se ato = 0 → FGTS máx = 70k
+       Se ato = 30k → FGTS máx = 40k
+   ══════════════════════════════════════ */
+function calcFGTSMax(va, pct, ato) {
+  const entradaNecessaria = va * (1 - pct); // ex: 350k × 20% = 70k
+  return Math.max(0, entradaNecessaria - ato);
+}
+
+function onEntrada() {
+  const vi = pv(document.getElementById('vImovel').value);
+  if (!vi) return;
+  const va = pv(document.getElementById('vAval').value) || vi * 1.10;
+  const ato = pv(document.getElementById('ato').value);
+  const pct = getPct();
+  const maxFin = va * pct;
+  const entradaNecessaria = va * (1 - pct);
+
+  // ── FGTS teto ──
+  const fgtsDisp = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
+  const fgtsMax = calcFGTSMax(va, pct, ato);
+  const fgtsUsar = Math.min(fgtsDisp, fgtsMax);
+
+  // ── Exibir box FGTS ──
+  const fgtsBox = document.getElementById('fgtsBox');
+  if (fgtsPode && fgtsDisp > 0 && va > 0) {
+    const excede = fgtsDisp > fgtsMax;
+    fgtsBox.className = 'fgts-box show';
+    document.getElementById('fgtsGrid').innerHTML = `
+      <div class="fgts-item"><div class="fgts-lbl">Avaliação Caixa</div><div class="fgts-val">${fi(va)}</div></div>
+      <div class="fgts-item"><div class="fgts-lbl">Banco libera (${(pct*100).toFixed(0)}%)</div><div class="fgts-val">${fi(maxFin)}</div></div>
+      <div class="fgts-item"><div class="fgts-lbl">Entrada necessária (${((1-pct)*100).toFixed(0)}%)</div><div class="fgts-val cv-am">${fi(entradaNecessaria)}</div></div>
+      <div class="fgts-item"><div class="fgts-lbl">Ato informado</div><div class="fgts-val">${fi(ato)}</div></div>
+      <div class="fgts-item"><div class="fgts-lbl">FGTS disponível</div><div class="fgts-val">${fi(fgtsDisp)}</div></div>
+      <div class="fgts-item" style="border-color:${excede ? '#EF4444' : '#7C3AED'}">
+        <div class="fgts-lbl">FGTS máx. utilizável</div>
+        <div class="fgts-val" style="color:${excede ? '#991B1B' : '#3C1A80'}">${fi(fgtsMax)}</div>
+      </div>
+      <div class="fgts-item" style="border-color:#1B6E3F;grid-column:span 2">
+        <div class="fgts-lbl">✅ FGTS a utilizar</div>
+        <div class="fgts-val" style="color:#14522F">${fi(fgtsUsar)}${excede ? ' — limitado ao teto' : ''}</div>
+      </div>
+    `;
+    if (excede) {
+      show('avFGTS', 'av wn',
+        '⚠️ FGTS de ' + fi(fgtsDisp) + ' excede o teto. Será utilizado apenas <strong>' + fi(fgtsMax) +
+        '</strong>. (Entrada necessária ' + fi(entradaNecessaria) + ' − ato ' + fi(ato) + ' = FGTS máx. ' + fi(fgtsMax) + ')');
+    } else {
+      document.getElementById('avFGTS').style.display = 'none';
+    }
+  } else {
+    fgtsBox.className = 'fgts-box';
+  }
+
+  // ── Total entrada ──
+  const totalEntrada = ato + fgtsUsar;
+  if (totalEntrada > 0) setVal('totalEnt', totalEntrada);
+  else document.getElementById('totalEnt').value = '';
+
+  // ── Financiado real: aplica TODOS os 3 limites em tempo real ──
+  const r = pv(document.getElementById('renda').value);
+  const p100k = getP100k();
+
+  // Limite 1: banco (80% da avaliação)
+  const limBanco = maxFin;
+
+  // Limite 2: renda (capacidade de pagamento — 30% MCMV/SBPE-SAC, 25% SBPE-PRICE)
+  const pctRenda = getPctRenda();
+  const capTeorica = (r > 0 && p100k > 0)
+    ? Math.round((r * pctRenda / p100k) * 100000)
+    : Infinity;
+
+  // Financiado bruto (vi - entrada solicitada)
+  const financiadoBruto = Math.max(0, vi - totalEntrada);
+
+  // Financiado aprovado = menor entre bruto, banco e renda
+  const financiado = Math.min(financiadoBruto, limBanco, capTeorica);
+
+  if (financiado > 0) setVal('vFinanciado', financiado);
+  else document.getElementById('vFinanciado').value = '';
+
+  // Qual limite foi aplicado?
+  const limitePelo = financiadoBruto <= limBanco && financiadoBruto <= capTeorica
+    ? 'entrada informada'
+    : financiado === limBanco && limBanco <= capTeorica
+    ? 'banco (' + (pct*100).toFixed(0) + '% da avaliação)'
+    : 'renda (' + (pctRenda*100).toFixed(0) + '% × capacidade)';
+
+  // ── Validação: financiado vs limite do banco ──
+  if (financiadoBruto > limBanco && vi > 0) {
+    show('avFinanciado', 'av er',
+      '⚠️ Sem entrada, o banco liberaria apenas ' + fi(limBanco) +
+      ' (' + (pct*100).toFixed(0) + '% de ' + fi(va) + '). ' +
+      'Adicione entrada para reduzir o financiado abaixo desse teto.');
+  } else if (vi > 0 && financiado > 0) {
+    show('avFinanciado', 'av ok',
+      '✓ Financiado aprovado: ' + fi(financiado) +
+      ' (' + ((financiado/va)*100).toFixed(1) + '% da avaliação) — limitado pelo ' + limitePelo + '.');
+  }
+
+  // ── Validação: capacidade de renda ──
+  if (r && sub && financiadoBruto > 0) {
+    const parcelaEst = (financiadoBruto / 100000) * p100k;
+    const parcelaMax30 = r * pctRenda;
+    const finPelaRenda = capTeorica;
+    if (parcelaEst > parcelaMax30) {
+      show('avCapacidade', 'av er',
+        '⚠️ Com entrada informada, financiado bruto seria ' + fi(financiadoBruto) +
+        ' → parcela estimada ' + fi(parcelaEst) + ' ultrapassa ' + (pctRenda*100).toFixed(0) + '% da renda (' + fi(parcelaMax30) + '). ' +
+        'Banco aprovará apenas <strong>' + fi(finPelaRenda) + '</strong>. ' +
+        'Valor financiado já corrigido no campo abaixo.');
+    } else {
+      show('avCapacidade', 'av ok',
+        '✓ Parcela estimada (' + fi(parcelaEst) + ') dentro dos ' + (pctRenda*100).toFixed(0) + '% da renda (' +
+        fi(parcelaMax30) + '). Aprovação favorável para ' + fi(financiado) + '.');
+    }
+  }
+
+  // ── Validação: entrada mínima (sobre valor de venda) ──
+  const entMinVenda = vi * (1 - pct);
+  const pctEntVenda = vi > 0 ? (totalEntrada / vi) * 100 : 0;
+  if (vi > 0) {
+    if (totalEntrada > 0 && totalEntrada < entMinVenda) {
+      show('avEntrada', 'av wn',
+        '⚠️ Entrada total (' + fi(totalEntrada) + ' = ' + pctEntVenda.toFixed(1) +
+        '%) abaixo do mínimo de ' + ((1-pct)*100).toFixed(0) + '% (' + fi(entMinVenda) +
+        '). Faltam <strong>' + fi(entMinVenda - totalEntrada) + '</strong>.');
+      document.getElementById('txtAuto').textContent =
+        'Faltam ' + fi(entMinVenda - totalEntrada) + ' para entrada mínima de ' +
+        ((1-pct)*100).toFixed(0) + '%. Preencher no campo Ato?';
+      document.getElementById('blocoAuto').style.display = 'block';
+    } else if (totalEntrada >= entMinVenda) {
+      show('avEntrada', 'av ok',
+        '✓ Entrada de ' + pctEntVenda.toFixed(1) + '% (' + fi(totalEntrada) +
+        ') — acima do mínimo de ' + ((1-pct)*100).toFixed(0) + '% exigido.');
+      document.getElementById('blocoAuto').style.display = 'none';
+    } else {
+      document.getElementById('blocoAuto').style.display = 'none';
+    }
+  }
+
+  calcSeguro();
+  calcCapacidade();
+  atualizarBlocoAutoObra();
+}
+
+/* ── PREENCHER ATO AUTOMATICAMENTE ── */
+function preencherAuto() {
+  const vi = pv(document.getElementById('vImovel').value);
+  const va = pv(document.getElementById('vAval').value) || vi * 1.10;
+  const pct = getPct();
+  const entMinVenda = vi * (1 - pct);
+  const fgtsDisp = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
+  // FGTS máx sem ato ainda = entrada necessária inteira
+  const fgtsMaxSemAto = calcFGTSMax(va, pct, 0);
+  const fgtsUsarSemAto = Math.min(fgtsDisp, fgtsMaxSemAto);
+  // Ato = o que falta da entrada mínima após o FGTS
+  const novoAto = Math.max(0, entMinVenda - fgtsUsarSemAto);
+  setVal('ato', novoAto);
+  onEntrada();
+}
+
+/* ══════════════════════════════════════
+   OBRA — PARCELAMENTO E CRONOGRAMA
+   ══════════════════════════════════════ */
+function onObra() {
+  // Sempre recalcula fx/sub a partir da renda atual (não depende do estado
+  // anterior das variáveis globais) — evita usar taxa de fallback (10%) ou
+  // taxa de uma faixa/sistema antigo quando o cronograma de obra é calculado
+  // em qualquer ordem em relação ao evento de renda.
+  const rendaAtual = pv(document.getElementById('renda')?.value);
+  if (rendaAtual) {
+    fx = FAIXAS.find(f => rendaAtual <= f.rMax) || FAIXAS[4];
+    sub = fx.subs.find(s => rendaAtual <= s.a) || fx.subs[fx.subs.length - 1];
+  }
+
+  const dt = document.getElementById('dtEntrega').value;
+  const dtLanc = document.getElementById('dtLancamento').value;
+  const hoje = new Date();
+  let meses = 0;
+  let dataValida = false;
+
+  // Valida e exibe info do lançamento
+  const avLanc = document.getElementById('avLancamento');
+  if (dtLanc && dt) {
+    const lancamento = new Date(dtLanc + 'T12:00:00');
+    const entregaChk = new Date(dt + 'T12:00:00');
+    if (lancamento >= entregaChk) {
+      avLanc.className = 'av er show';
+      avLanc.textContent = '⚠️ Data de lançamento deve ser anterior à data de entrega.';
+    } else {
+      const totalObra = (entregaChk.getFullYear() - lancamento.getFullYear()) * 12 + (entregaChk.getMonth() - lancamento.getMonth());
+      const mesesDecorridos = Math.max(0, (hoje.getFullYear() - lancamento.getFullYear()) * 12 + (hoje.getMonth() - lancamento.getMonth()));
+      const mesesRestantes = Math.max(1, totalObra - mesesDecorridos);
+      const pctConcluido = totalObra > 0 ? Math.round((mesesDecorridos / totalObra) * 100) : 0;
+      avLanc.className = 'av in show';
+      avLanc.innerHTML = '🏗️ Obra total: <strong>' + totalObra + ' meses</strong> · Decorridos: <strong>' + mesesDecorridos + ' meses (' + pctConcluido + '%)</strong> · Restantes (a pagar): <strong>' + mesesRestantes + ' meses</strong>';
+    }
+  } else {
+    avLanc.className = 'av';
+    avLanc.textContent = '';
+  }
+
+  if (dt) {
+    const entrega = new Date(dt + 'T12:00:00'); // força meio-dia para evitar bug de timezone
+    const anoEntrega = entrega.getFullYear();
+    const mesEntrega = entrega.getMonth();
+    const anoHoje = hoje.getFullYear();
+    const mesHoje = hoje.getMonth();
+
+    // Validação: data deve ser futura e máximo 15 anos à frente
+    const ehFutura = anoEntrega > anoHoje || (anoEntrega === anoHoje && mesEntrega > mesHoje);
+
+    if (!ehFutura) {
+      show('avObra', 'av er', '⚠️ Data de entrega deve ser futura (mês após o atual).');
+      document.getElementById('mesesObra').value = '—';
+    } else if (anoEntrega > anoHoje + 15) {
+      show('avObra', 'av er', '⚠️ Data inválida: ano ' + anoEntrega + '. Verifique a digitação (máx. ' + (anoHoje + 15) + ').');
+      document.getElementById('mesesObra').value = '—';
+    } else {
+      // Se tem lançamento, meses de obra = apenas os meses restantes (a pagar)
+      if (dtLanc) {
+        const lancamento = new Date(dtLanc + 'T12:00:00');
+        if (lancamento < entrega) {
+          const totalObra = (anoEntrega - lancamento.getFullYear()) * 12 + (mesEntrega - lancamento.getMonth());
+          const mesesDecorridos = Math.max(0, (anoHoje - lancamento.getFullYear()) * 12 + (mesHoje - lancamento.getMonth()));
+          meses = Math.max(1, totalObra - mesesDecorridos);
+        } else {
+          meses = Math.max(1, (anoEntrega - anoHoje) * 12 + (mesEntrega - mesHoje));
+        }
+      } else {
+        meses = Math.max(1, (anoEntrega - anoHoje) * 12 + (mesEntrega - mesHoje));
+      }
+      document.getElementById('mesesObra').value = meses + ' meses';
+      dataValida = true;
+      document.getElementById('avObra').style.display = 'none';
+    }
+  } else {
+    document.getElementById('mesesObra').value = '—';
+  }
+
+  // Reforços (cada reforço agora tem valor individual: vlRef1, vlRef2, ...)
+  const qtd = parseInt(document.getElementById('qtdRef').value) || 0;
+
+  // ── Gerar inputs de data + valor para cada reforço ──
+  const refBox = document.getElementById('refDatasBox');
+  if (refBox) {
+    if (qtd > 0) {
+      refBox.style.display = 'block';
+      // Preserva datas E valores já preenchidos ANTES de recriar o HTML
+      const datasAtuais = [];
+      const valoresAtuais = [];
+      for (let i = 1; i <= qtd; i++) {
+        const elD = document.getElementById('dtRef' + i);
+        const elV = document.getElementById('vlRef' + i);
+        datasAtuais.push(elD ? elD.value : '');
+        valoresAtuais.push(elV ? elV.value : '');
+      }
+      let boxHtml = '<div style="font-size:11px;font-weight:600;color:var(--texto2);margin-bottom:4px">📅 Reforços — valor e data de cada um (opcional)</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px">';
+      for (let i = 0; i < qtd; i++) {
+        const valD = datasAtuais[i] || '';
+        const valV = valoresAtuais[i] || '';
+        boxHtml += `<div style="display:flex;gap:4px">
+          <div class="field" style="margin:0;flex:1"><label style="font-size:10px">Reforço ${i+1} — valor</label><input type="text" id="vlRef${i+1}" value="${valV}" placeholder="R$ 0,00" oninput="M(this);onObra()" style="font-size:12px"/></div>
+          <div class="field" style="margin:0;flex:1"><label style="font-size:10px">Reforço ${i+1} — data</label><input type="date" id="dtRef${i+1}" value="${valD}" onchange="onObra()" style="font-size:12px"/></div>
+        </div>`;
+      }
+      boxHtml += '</div>';
+      // Só reescreve se qtd mudou, para não perder o foco do usuário
+      const atualQtd = refBox.querySelectorAll('input[type=date]').length;
+      if (atualQtd !== qtd) refBox.innerHTML = boxHtml;
+    } else {
+      refBox.style.display = 'none';
+      refBox.innerHTML = '';
+    }
+  }
+
+  // Soma os valores individuais de cada reforço (campo único 'vlRef' foi descontinuado)
+  let totR = 0;
+  for (let i = 1; i <= qtd; i++) {
+    const elV = document.getElementById('vlRef' + i);
+    if (elV) totR += pv(elV.value);
+  }
+  if (totR > 0) setVal('totalRef', totR);
+  else document.getElementById('totalRef').value = '';
+
+  if (!dataValida) {
+    document.getElementById('totalMensOb').value = '';
+    document.getElementById('resumoObra').className = 'obra-res';
+    atualizarBlocoAutoObra();
+    calcSeguro();
+    return;
+  }
+
+  // ── CÁLCULO CORRETO DA PARCELA MENSAL DE OBRA ──
+  // Fórmula: (Financiado aprovado − Ato − FGTS − Reforços) ÷ Meses
+  const vi   = pv(document.getElementById('vImovel').value);
+  const va   = pv(document.getElementById('vAval').value) || vi * 1.10;
+  const ato  = pv(document.getElementById('ato').value);
+  const pct  = getPct();
+  const r    = pv(document.getElementById('renda').value);
+  const p100k = getP100k();
+
+  // Limite banco
+  const limBanco = va * pct;
+  // Limite renda
+  const capTeorica = (r > 0 && p100k > 0) ? Math.round((r * getPctRenda() / p100k) * 100000) : Infinity;
+  // Financiado aprovado (já aplicado os dois limites)
+  const finAprov = Math.min(vi, limBanco, capTeorica);
+
+  // FGTS dentro do teto
+  const fgtsUsar = fgtsPode
+    ? Math.min(pv(document.getElementById('fgtsDisp').value), calcFGTSMax(va, pct, ato))
+    : 0;
+
+  // ── FÓRMULA CORRETA ──────────────────────────────────────────────
+  // Entrada necessária = valor do imóvel − financiado aprovado
+  // Ex: imóvel 350k, financia 308k → entrada = 42k
+  // Saldo parcelas = 42k - (ato 10k + fgts 0 + reforços 10k) = 22k → 22k ÷ 35 = R$628/mês
+  const entradaNecessaria = Math.max(0, vi - finAprov);
+  const jaCompro = ato + fgtsUsar + totR;
+  const saldoParaParcelas = Math.max(0, entradaNecessaria - jaCompro);
+  const parcelaSugerida = meses > 0 ? saldoParaParcelas / meses : 0;
+
+  // ── Teto: parcela de obra ≤ 80% da parcela do sistema escolhido (SAC 1ª ou PRICE) ──
+  const prazoA = parseInt(document.getElementById('prazoSlider')?.value) || 30;
+  const taxaMes = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
+  const nMeses = prazoA * 12;
+  // Detecta aba ativa: SAC ou PRICE
+  const tabAtivo = document.querySelector('.res-tab.ton');
+  const usandoSAC = !tabAtivo || tabAtivo.textContent.includes('SAC');
+  // Parcela de referência para o teto
+  let parcelaRef;
+  if (usandoSAC) {
+    // SAC: 1ª parcela (a maior) = amortização + juros do saldo total
+    const amortSAC = finAprov / nMeses;
+    parcelaRef = amortSAC + (finAprov * taxaMes);
+  } else {
+    // PRICE: parcela fixa
+    const coefPRICE = nMeses > 0 && taxaMes > 0
+      ? (taxaMes * Math.pow(1 + taxaMes, nMeses)) / (Math.pow(1 + taxaMes, nMeses) - 1)
+      : 1 / nMeses;
+    parcelaRef = finAprov * coefPRICE;
+  }
+  const parcelaPRICE = (() => {
+    const coef = nMeses > 0 && taxaMes > 0
+      ? (taxaMes * Math.pow(1 + taxaMes, nMeses)) / (Math.pow(1 + taxaMes, nMeses) - 1)
+      : 1 / nMeses;
+    return finAprov * coef;
+  })();
+  const tetoObra = parcelaRef * 0.80;
+
+  // ── Teto: parcela de obra ≤ 80% da parcela do sistema escolhido ──
+  const sistLabel = usandoSAC ? 'SAC (1ª parcela ' + fb(parcelaRef) + ')' : 'PRICE ' + fb(parcelaRef);
+  // calcula quantos meses seriam necessários para cobrir com o teto
+  const parcelaComTeto = tetoObra > 0 ? Math.min(parcelaSugerida, tetoObra) : parcelaSugerida;
+  const excedeTeto = tetoObra > 0 && parcelaSugerida > tetoObra;
+  const mesesNecessarios = excedeTeto && tetoObra > 0 ? Math.ceil(saldoParaParcelas / tetoObra) : meses;
+  const mesesExtras = Math.max(0, mesesNecessarios - meses);
+
+  // Parcela final = teto se excede, senão a ideal
+  const parcelaFinal = parcelaComTeto;
+  const totMCoberto = parcelaFinal * meses; // o que efetivamente cobre nos meses de obra
+  const saldoRestante = Math.max(0, saldoParaParcelas - totMCoberto); // o que sobra após os meses de obra com teto
+
+  // Preenche a parcela mensal automaticamente
+  if (parcelaFinal > 0) {
+    setVal('mensalObra', parcelaFinal);
+  } else {
+    document.getElementById('mensalObra').value = '';
+  }
+
+  const mens = parcelaFinal;
+  const totM = meses > 0 ? mens * meses : 0;
+  if (totM > 0) setVal('totalMensOb', totM);
+  else document.getElementById('totalMensOb').value = '';
+
+  // ── Resumo cronograma ──
+  const res = document.getElementById('resumoObra');
+  if (meses > 0) {
+    res.className = 'obra-res show';
+    let html = '';
+    if (ato > 0)      html += `<div class="obra-linha"><span>🔑 Ato (assinatura)</span><span><strong>${fb(ato)}</strong></span></div>`;
+    if (fgtsUsar > 0) html += `<div class="obra-linha"><span>💰 FGTS utilizado</span><span><strong>${fb(fgtsUsar)}</strong></span></div>`;
+    for (let i = 1; i <= qtd; i++) {
+      const dtRefEl = document.getElementById('dtRef' + i);
+      const vlRefEl = document.getElementById('vlRef' + i);
+      const vlrIndiv = vlRefEl ? pv(vlRefEl.value) : 0;
+      let refLabel = '';
+      if (dtRefEl && dtRefEl.value) {
+        const dtR = new Date(dtRefEl.value + 'T12:00:00');
+        refLabel = dtR.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      } else {
+        const m = Math.round(meses / Math.max(qtd, 1) * i);
+        refLabel = 'mês ' + m + ' da obra';
+      }
+      html += `<div class="obra-linha"><span>📅 Reforço ${i} — ${refLabel}</span><span><strong>${fb(vlrIndiv)}</strong></span></div>`;
+    }
+    if (mens > 0) {
+      html += `<div class="obra-linha"><span>📆 ${meses}× parcelas mensais de obra</span><span>${meses} × ${fb(mens)} = <strong>${fb(totM)}</strong></span></div>`;
+
+      // ── Bloco resumo do financiamento bancário ──
+      const nFin = prazoA * 12;
+      const taxaMesF = taxaMes; // já calculado acima
+      // SAC
+      const amortSAC = finAprov / nFin;
+      const parcSAC1 = amortSAC + (finAprov * taxaMesF);
+      const parcSACult = amortSAC + (amortSAC * taxaMesF);
+      // PRICE
+      const coefFin = nFin > 0 && taxaMesF > 0
+        ? (taxaMesF * Math.pow(1 + taxaMesF, nFin)) / (Math.pow(1 + taxaMesF, nFin) - 1)
+        : 1 / nFin;
+      const parcPRICE = finAprov * coefFin;
+
+      html += `
+        <div style="background:var(--azul-claro,#EEF4FF);border-radius:8px;padding:10px 12px;margin-top:6px;border-left:3px solid var(--azul,#1A56DB)">
+          <div style="font-size:11px;font-weight:700;color:var(--azul,#1A56DB);margin-bottom:6px;letter-spacing:.5px">🏦 FINANCIAMENTO BANCÁRIO APÓS ENTREGA</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span style="color:var(--texto2)">Valor financiado</span>
+            <span style="font-weight:700;color:var(--azul,#1A56DB)">${fi(finAprov)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span style="color:var(--texto2)">Prazo</span>
+            <span style="font-weight:600">${prazoA} anos (${nFin} parcelas)</span>
+          </div>
+          <div style="height:1px;background:var(--cinza2,#E5E7EB);margin:6px 0"></div>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;background:#fff;border-radius:6px;padding:7px 10px;border:1px solid #DBEAFE">
+              <div style="font-size:10px;font-weight:700;color:#1A56DB;margin-bottom:3px">📉 SAC</div>
+              <div style="font-size:11px;color:var(--texto2)">1ª parcela</div>
+              <div style="font-size:13px;font-weight:700;color:var(--texto1)">${fb(parcSAC1)}</div>
+              <div style="font-size:11px;color:var(--texto2);margin-top:2px">Última parcela</div>
+              <div style="font-size:12px;font-weight:600;color:var(--verde,#057A55)">${fb(parcSACult)}</div>
+            </div>
+            <div style="flex:1;background:#fff;border-radius:6px;padding:7px 10px;border:1px solid #DBEAFE">
+              <div style="font-size:10px;font-weight:700;color:#1A56DB;margin-bottom:3px">📊 PRICE</div>
+              <div style="font-size:11px;color:var(--texto2)">Parcela fixa</div>
+              <div style="font-size:13px;font-weight:700;color:var(--texto1)">${fb(parcPRICE)}</div>
+              <div style="font-size:11px;color:var(--texto2);margin-top:2px">${nFin}× igual</div>
+              <div style="font-size:12px;font-weight:600;color:var(--texto3)">sem variação</div>
+            </div>
+          </div>
+        </div>`;
+
+      if (excedeTeto && saldoRestante > 0) {
+        html += `<div class="obra-linha" style="background:#FEF3E8;border-radius:6px;padding:6px 8px">
+          <span style="color:#8A3F00">⚠️ Saldo restante (pagar até as chaves)</span>
+          <span style="color:#C05A00"><strong>${fi(saldoRestante)}</strong></span>
+        </div>`;
+        html += `<div class="obra-linha" style="background:#EDE8FA;border-radius:6px;padding:6px 8px">
+          <span style="color:#4A2C8A">📋 Prazo total necessário no teto de 80%</span>
+          <span style="color:#4A2C8A"><strong>${mesesNecessarios} meses</strong> (${mesesExtras} além da obra)</span>
+        </div>`;
+      }
+    }
+
+    res.querySelector('#obraLinhas').innerHTML = html || '<div style="font-size:12px;color:var(--texto3)">Preencha os campos.</div>';
+
+    const totalPagoObra = ato + fgtsUsar + totR + totM;
+    document.getElementById('totalObraPago').textContent = fb(totalPagoObra);
+    document.getElementById('saldoFin').textContent = fi(finAprov);
+
+    if (excedeTeto && saldoRestante > 0) {
+      show('avObra', 'av wn',
+        `⚠️ Com o teto de 80% da parcela ${sistLabel} (<strong>${fb(tetoObra)}/mês</strong>), os ${meses} meses de obra cobrem ${fi(totMCoberto)} das parcelas. ` +
+        `Saldo restante: <strong>${fi(saldoRestante)}</strong> — ` +
+        `seriam necessários mais <strong>${mesesExtras} meses</strong> no mesmo teto (total ${mesesNecessarios} meses). ` +
+        `Considere aumentar o ato, FGTS ou reforços para cobrir o restante.`
+      );
+    } else {
+      const totalPago = ato + fgtsUsar + totR + totM;
+      const diff = Math.abs(totalPago - entradaNecessaria);
+      if (diff < 1) {
+        show('avObra', 'av ok',
+          '✓ Fluxo equilibrado: ato + FGTS + reforços + parcelas = ' + fi(totalPago) +
+          ' = entrada necessária (' + fi(entradaNecessaria) + '). Financiado bancário: ' + fi(finAprov) + '.');
+      } else if (totalPago < entradaNecessaria) {
+        show('avObra', 'av wn',
+          '⚠️ Falta ' + fi(entradaNecessaria - totalPago) + ' para cobrir a entrada necessária (' +
+          fi(entradaNecessaria) + '). Revise os valores.');
+      } else {
+        show('avObra', 'av ok',
+          '✓ Entrada pré-chaves (' + fi(totalPago) + ') cobre a entrada necessária (' +
+          fi(entradaNecessaria) + '). Financiado bancário: ' + fi(finAprov) + '.');
+      }
+    }
+  } else {
+    res.className = 'obra-res';
+  }
+
+  atualizarBlocoAutoObra();
+  calcSeguro();
+}
+
+function calcEntradaFaltando() {
+  /* Retorna quanto falta da ENTRADA (não do financiamento).
+     Entrada necessária = avaliação × (1 - pct)
+     Já pago/comprometido: ato + FGTS + reforços anuais
+     Falta: cobrir pelo parcelamento mensal durante a obra */
+  const vi = pv(document.getElementById('vImovel').value);
+  const va = pv(document.getElementById('vAval').value) || vi * 1.10;
+  const ato = pv(document.getElementById('ato').value);
+  const pct = getPct();
+  const fgtsUsar = fgtsPode
+    ? Math.min(pv(document.getElementById('fgtsDisp').value), calcFGTSMax(va, pct, ato))
+    : 0;
+  // Entrada necessária sobre o valor de venda (o que cliente precisa pagar antes das chaves)
+  const entradaNecessaria = vi * (1 - pct);
+  // Já comprometido: ato + FGTS + reforços
+  const totRef = pv(document.getElementById('totalRef').value) || 0;
+  const jaCompro = ato + fgtsUsar + totRef;
+  // Falta cobrir pelas parcelas mensais de obra
+  const falta = Math.max(0, entradaNecessaria - jaCompro);
+  return { falta, entradaNecessaria, jaCompro, ato, fgtsUsar, totRef };
+}
+
+function atualizarBlocoAutoObra() {
+  const meses = parseInt(document.getElementById('mesesObra').value) || 0;
+  const bloco = document.getElementById('blocoAutoObra');
+  const { falta, entradaNecessaria, jaCompro } = calcEntradaFaltando();
+
+  if (falta > 0 && meses > 0) {
+    const parcelaSugerida = falta / meses;
+    document.getElementById('txtAutoObra').textContent =
+      'Entrada necessária: ' + fi(entradaNecessaria) +
+      ' | Já comprometido (ato + FGTS + reforços): ' + fi(jaCompro) +
+      ' | Falta: ' + fi(falta) +
+      ' → ' + meses + ' parcelas de ' + fi(parcelaSugerida) + '/mês durante a obra.';
+    bloco.style.display = 'block';
+  } else if (falta <= 0 && meses > 0) {
+    // Entrada já coberta — mostrar aviso diferente
+    document.getElementById('txtAutoObra').textContent =
+      '✓ Entrada já coberta por ato + FGTS + reforços (' + fi(jaCompro) + '). Parcela mensal de obra não é necessária.';
+    bloco.style.display = 'block';
+  } else {
+    bloco.style.display = 'none';
+  }
+}
+
+function preencherAutoObra() {
+  const meses = parseInt(document.getElementById('mesesObra').value) || 0;
+  if (meses <= 0) return;
+  const { falta } = calcEntradaFaltando();
+  if (falta <= 0) {
+    setVal('mensalObra', 0);
+  } else {
+    setVal('mensalObra', falta / meses);
+  }
+  onObra();
+}
+
+/* ══════════════════════════════════════
+   SEGURO DE OBRA GRADUAL
+   ══════════════════════════════════════ */
+/* ── Curva do seguro de obra: 3 segmentos (terços do prazo total) ──
+   Forma: piso→33% / 33%→66,66% / 66,66%→95% da parcela de referência.
+   Piso (1º mês da obra): 12% no SAC, 10% no PRICE (regra Caixa).
+   Teto real (último mês de uma obra completa) = 95% puro da parcela.
+   posAbsoluta = posição do mês dentro da obra TOTAL (1..totalMeses).
+   totalMeses  = duração total da obra (lançamento → entrega), não o
+   prazo restante — assim, obras já em andamento pagam só a fatia final. */
+function pctSeguroObra(posAbsoluta, totalMeses, piso) {
+  const pisoReal = piso !== undefined ? piso : 0.12;
+  const terco = totalMeses / 3;
+  const m = Math.min(Math.max(posAbsoluta, 1), totalMeses);
+  if (m <= terco) {
+    const t = terco > 1 ? (m - 1) / (terco - 1) : 1;
+    return pisoReal + t * (0.33 - pisoReal);
+  } else if (m <= terco * 2) {
+    const t = terco > 1 ? (m - terco - 1) / (terco - 1) : 1;
+    return 0.33 + t * (0.6666 - 0.33);
+  } else {
+    const t = terco > 1 ? (m - terco * 2 - 1) / (terco - 1) : 1;
+    return 0.6666 + t * (0.95 - 0.6666);
+  }
+}
+
+// Função pura: calcula o total acumulado do seguro de obra, dado o
+// financiamento, prazo, taxa, meses de obra e sistema (SAC/PRICE).
+// Não lê nem escreve no DOM — usada tanto pela pré-visualização (calcSeguro)
+// quanto pela geração do PDF, garantindo que ambos sempre usem exatamente
+// o mesmo financiamento e cheguem ao mesmo resultado.
+function calcularSeguroTotal(fin, meses, prazoAnos, taxaMensal, isSAC, dtLancamento, dtEntrega) {
+  if (!fin || !meses) return { total: 0, parcelaRef: 0, limite: 0 };
+
+  const nP = prazoAnos * 12;
+  let parcelaRefSeg;
+  if (isSAC) {
+    const amort = fin / nP;
+    parcelaRefSeg = amort + (fin * taxaMensal);
+  } else {
+    const coef = nP > 0 && taxaMensal > 0
+      ? (taxaMensal * Math.pow(1 + taxaMensal, nP)) / (Math.pow(1 + taxaMensal, nP) - 1)
+      : 1 / nP;
+    parcelaRefSeg = fin * coef;
+  }
+  const limite = parcelaRefSeg * 0.95;
+
+  let totalMesesObra = meses;
+  let obraOffset = 0;
+  if (dtLancamento && dtEntrega) {
+    const lancObj = new Date(dtLancamento + 'T12:00:00');
+    const entObj  = new Date(dtEntrega + 'T12:00:00');
+    totalMesesObra = Math.max(meses, (entObj.getFullYear() - lancObj.getFullYear()) * 12 + (entObj.getMonth() - lancObj.getMonth()));
+    const hoje = new Date();
+    obraOffset = Math.max(0, (hoje.getFullYear() - lancObj.getFullYear()) * 12 + (hoje.getMonth() - lancObj.getMonth()));
+  }
+
+  const piso = isSAC ? 0.12 : 0.10;
+  const tetoAbsoluto = fin * piso;
+  let somaTotal = 0;
+  const mesesDetalhes = [];
+  for (let m = 1; m <= meses; m++) {
+    const posAbsoluta = obraOffset + m;
+    const pct = pctSeguroObra(posAbsoluta, totalMesesObra, piso);
+    let valFinal = Math.round(parcelaRefSeg * pct);
+    if (somaTotal + valFinal > tetoAbsoluto) {
+      valFinal = Math.max(0, Math.round(tetoAbsoluto - somaTotal));
+    }
+    somaTotal += valFinal;
+    mesesDetalhes.push({ m, mesRef: m, valFinal });
+  }
+
+  return { total: somaTotal, parcelaRef: parcelaRefSeg, limite, mesesDetalhes, totalMesesObra, obraOffset };
+}
+
+function calcSeguro() {
+  const fin = pv(document.getElementById('vFinanciado').value);
+  const meses = parseInt(document.getElementById('mesesObra').value) || 36;
+
+  if (!fin) {
+    document.getElementById('seguroBox').style.display = 'none';
+    document.getElementById('seguroTotal').value = '';
+    return;
+  }
+
+  // ── Sistema ativo (SAC ou PRICE) ────────
+  const prazoA = parseInt(document.getElementById('prazoSlider')?.value) || 30;
+  const taxa = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
+  const tabAtivoSeg = document.querySelector('.res-tab.ton');
+  const usandoSACSeg = !tabAtivoSeg || tabAtivoSeg.textContent.includes('SAC');
+
+  // Datas de lançamento/entrega para calcular a posição real dentro da obra total
+  const dtEntregaElCalc = document.getElementById('dtEntrega');
+  const dtLancElCalc = document.getElementById('dtLancamento');
+
+  // ── Cálculo central (mesma função usada pelo PDF, garante consistência) ──
+  const resultado = calcularSeguroTotal(
+    fin, meses, prazoA, taxa, usandoSACSeg,
+    dtLancElCalc?.value, dtEntregaElCalc?.value
+  );
+  const { total: somaTotal, parcelaRef: parcelaRefSeg, limite, mesesDetalhes, totalMesesObra, obraOffset } = resultado;
+  const sistLabelSegFull = usandoSACSeg
+    ? 'SAC (1ª parcela ' + fb(parcelaRefSeg) + ')'
+    : 'PRICE ' + fb(parcelaRefSeg);
+
+  const total = somaTotal;
+  setVal('seguroTotal', total);
+
+  // ── Montar faixas para exibição com anos dinâmicos ──────────────────
+  // Se há data de lançamento, o início real da obra é o lançamento.
+  // Senão, calcula retroativamente a partir da data de entrega.
+  let dtInicioObra = new Date();
+  if (dtLancElCalc && dtLancElCalc.value) {
+    dtInicioObra = new Date(dtLancElCalc.value + 'T12:00:00');
+  } else if (dtEntregaElCalc && dtEntregaElCalc.value) {
+    dtInicioObra = new Date(dtEntregaElCalc.value + 'T12:00:00');
+    dtInicioObra.setMonth(dtInicioObra.getMonth() - meses);
+  }
+
+  // Agrupa meses por ano real + fase
+  // A fase é calculada pela posição RELATIVA dentro da obra TOTAL (lançamento → entrega)
+  // "conclusão" é reservada para o ÚLTIMO ANO da obra apenas
+  const gruposSeguro = {};
+  mesesDetalhes.forEach(item => {
+    const dtMes = new Date(dtInicioObra);
+    dtMes.setMonth(dtMes.getMonth() + (obraOffset > 0 ? obraOffset + item.m - 1 : item.m - 1));
+    const anoMes = dtMes.getFullYear();
+    const posAbsoluta = obraOffset + item.m; // posição no total da obra
+    // Posição relativa no total da obra (lançamento → entrega), em %
+    const pctRelativa = posAbsoluta / totalMesesObra;
+    const pctRelativaPts = Math.round(pctRelativa * 100);
+    // Fase baseada em % — "conclusão" será ajustada depois para apenas o último ano
+    const fase = pctRelativa <= 0.33 ? 'início da obra'
+               : pctRelativa <= 0.66 ? 'obra em andamento'
+               : 'obra final';
+    const chave = `${anoMes}|||${fase}`;
+    if (!gruposSeguro[chave]) {
+      gruposSeguro[chave] = { ano: anoMes, fase, min: item.valFinal, max: item.valFinal, soma: item.valFinal, qtd: 1, pctMin: pctRelativaPts, pctMax: pctRelativaPts };
+    } else {
+      gruposSeguro[chave].min = Math.min(gruposSeguro[chave].min, item.valFinal);
+      gruposSeguro[chave].max = Math.max(gruposSeguro[chave].max, item.valFinal);
+      gruposSeguro[chave].soma += item.valFinal;
+      gruposSeguro[chave].qtd++;
+      gruposSeguro[chave].pctMin = Math.min(gruposSeguro[chave].pctMin, pctRelativaPts);
+      gruposSeguro[chave].pctMax = Math.max(gruposSeguro[chave].pctMax, pctRelativaPts);
+    }
+  });
+
+  // Renomeia o último grupo para "conclusão" (mantém pctMin/pctMax reais já calculados)
+  const listaGrupos = Object.values(gruposSeguro);
+  if (listaGrupos.length > 0) {
+    listaGrupos[listaGrupos.length - 1].fase = 'conclusão';
+  }
+  // Monta o texto de % a partir do range real de progresso de cada grupo
+  listaGrupos.forEach(g => { g.pctObra = g.pctMin + '% – ' + g.pctMax + '%'; });
+
+  let html = '';
+  listaGrupos.forEach(g => {
+    const limitado = g.max >= Math.round(limite) - 1;
+    html += `<div class="st-row ativo">
+      <span class="st-ano">${g.ano} — ${g.fase}</span>
+      <span class="st-range">
+        ${fi(g.min)} – <strong style="color:${limitado?'var(--vermelho)':'var(--laranja)'}">${fi(g.max)}</strong>
+        ${limitado ? '<span style="font-size:10px;color:var(--vermelho);margin-left:3px">[teto]</span>' : ''}
+      </span>
+      <span class="st-pct">${g.pctObra}</span>
+      <span>
+        <div class="prog-bar" style="width:80px;display:inline-block">
+          <div class="prog-fill" style="width:${g.pctProg}%"></div>
+        </div>
+        <span style="font-size:10px;color:${!limitado?'var(--verde)':'var(--vermelho)'}"> ${!limitado?'✓':'⚠️'}</span>
+      </span>
+    </div>`;
+  });
+
+  document.getElementById('stRows').innerHTML = html;
+  document.getElementById('segLimite').textContent = limite > 0
+    ? fb(limite) + ' (95% da parcela ' + sistLabelSegFull + ')'
+    : '—';
+
+  const mediaMensal = meses > 0 ? somaTotal / meses : 0;
+  const okGeral = mediaMensal <= limite + 1;
+  document.getElementById('segStatus').innerHTML = okGeral
+    ? `<span style="color:var(--verde)">✓ Dentro do limite (95% = ${fb(limite)})</span>`
+    : `<span style="color:var(--vermelho)">⚠️ Parcela acima do teto — banco pode ajustar</span>`;
+  document.getElementById('segMediaAviso').innerHTML =
+    `📊 Média estimada: <strong>${fb(mediaMensal)}/mês</strong> · ` +
+    `Teto (95% da parcela ${sistLabelSegFull}): <strong>${fb(limite)}</strong> · ` +
+    `Total: <strong>${fi(total)}</strong> em ${meses} meses.<br>` +
+    `<span style="font-size:11px;color:var(--texto3)">Valores calculados para os últimos ${meses} meses da obra ` +
+    `(obra próxima da entrega = fase mais avançada). Financiado de ${fi(fin)} (ref. R$350k).</span>`;
+  document.getElementById('seguroBox').style.display = 'block';
+}
+
+/* ══════════════════════════════════════
+   PRAZO POR IDADE
+   Regra Caixa: máximo = 80 anos e 6 meses − idade atual
+   Máximo absoluto do sistema: 35 anos (MCMV) ou 35 anos (SBPE)
+   ══════════════════════════════════════ */
+function onIdade() {
+  const nasc = document.getElementById('nasc').value;
+  if (!nasc) { document.getElementById('idadeDisplay').value = ''; return; }
+
+  const hoje = new Date(), d = new Date(nasc);
+  let anos = hoje.getFullYear() - d.getFullYear();
+  let mesR = hoje.getMonth() - d.getMonth();
+  if (hoje.getDate() < d.getDate()) mesR--;
+  if (mesR < 0) { anos--; mesR += 12; }
+
+  document.getElementById('idadeDisplay').value = anos + ' anos e ' + mesR + ' meses';
+
+  // 80 anos e 6 meses = 966 meses
+  const idadeMeses = anos * 12 + mesR;
+  const prazoMesesMax = 966 - idadeMeses;
+  prazoMaxAnos = Math.floor(prazoMesesMax / 12);
+  const prazoMesesResto = prazoMesesMax % 12;
+
+  const pw = document.getElementById('prazoWarn');
+  const bs = document.getElementById('blocoSlider');
+
+  if (anos < 18) {
+    document.getElementById('prazoBox').className = 'prazo-box';
+    show('prazoWarn', 'av er', '⚠️ Cliente menor de 18 anos — não elegível para financiamento imobiliário.');
+    bs.style.display = 'none'; return;
+  }
+  if (prazoMesesMax <= 12) {
+    document.getElementById('prazoBox').className = 'prazo-box';
+    show('prazoWarn', 'av er', '⚠️ Prazo insuficiente — cliente muito próximo dos 80 anos e 6 meses na quitação.');
+    bs.style.display = 'none'; return;
+  }
+
+  pw.style.display = 'none';
+  document.getElementById('prazoBox').className = 'prazo-box show';
+
+  let prazoTxt = prazoMaxAnos + (prazoMaxAnos === 1 ? ' ano' : ' anos');
+  if (prazoMesesResto > 0) prazoTxt += ' e ' + prazoMesesResto + (prazoMesesResto === 1 ? ' mês' : ' meses');
+  document.getElementById('prazoMaxTxt').textContent = prazoTxt;
+  document.getElementById('prazoDet').innerHTML =
+    'Idade: ' + anos + ' anos e ' + mesR + ' meses<br/>Limite Caixa: 80 anos e 6 meses na quitação';
+
+  // Slider limitado ao menor entre prazoMaxAnos e 35 — inicia sempre no MÁXIMO
+  const sMax = Math.min(prazoMaxAnos, 35);
+  const sl = document.getElementById('prazoSlider');
+  sl.max = sMax;
+  sl.value = sMax; // sempre inicia no prazo máximo permitido
+  document.getElementById('prazoSliderVal').textContent = sl.value + ' anos';
+  document.getElementById('prazoMaxLabel').textContent = sMax + ' anos (máx.)';
+
+  if (prazoMaxAnos < 35) {
+    show('prazoWarn', 'av wn',
+      '⚠️ Prazo máximo reduzido pela idade: <strong>' + prazoTxt + '</strong>. ' +
+      'Parcelas serão mais altas. Cliente terá ' + (anos + prazoMaxAnos) + ' anos na quitação.');
+  }
+  bs.style.display = 'block';
+}
+
+function onSlider() {
+  document.getElementById('prazoSliderVal').textContent = document.getElementById('prazoSlider').value + ' anos';
+  calcSeguro();
+}
+
+/* ── TAXA ── */
+/* ── TAXA — 'n' (com redutor) ou 'e' (sem redutor), conforme escolha do usuário ── */
+function updTaxa() {
+  if (!sub) return;
+  // Faixa 4 e SBPE não têm redutor: sempre usa 'n' (nesses casos n = e)
+  const podeRedutor = fx && !fx.sbpe && (fx.tag === 'f1' || fx.tag === 'f2' || fx.tag === 'f3');
+  tipoTaxa = (podeRedutor && !usaRedutor) ? 'e' : 'n';
+  const taxaUsada = tipoTaxa === 'n' ? sub.n : sub.e;
+  document.getElementById('taxaDisplay').textContent =
+    taxaUsada.toFixed(2).replace('.', ',') + ' %';
+  document.getElementById('taxaLabel').textContent =
+    tipoTaxa === 'n' ? 'Taxa aplicada (com redutor):' : 'Taxa aplicada (sem redutor):';
+  document.getElementById('lblMaxFin').textContent =
+    'Máx. financiado (' + (getPct() * 100).toFixed(0) + '%)' +
+    (fx && fx.sbpe ? ' — PRICE/SBPE' : '');
+}
+
+/* ── ABAS RESULTADO ── */
+function atualizarValorizacao() {
+  const d = window._simDadosVal;
+  if (!d) return;
+  const pct = Math.max(1, parseFloat(document.getElementById('pctValorizacao')?.value) || 60) / 100;
+  const valorFuturo = d.vi * (1 + pct);
+  const seguro = d.segTotal || 0;
+  // Sempre lê a aba REAL ativa agora (não o sistemaAtivo congelado no momento
+  // do cálculo) — assim, ao trocar de aba sem reclicar "Calcular", o valor
+  // financiado mostrado já é o correto para aquele sistema (30% SAC / 25%
+  // PRICE em SBPE), evitando mostrar o mesmo financiamento nos dois.
+  const _tabAgoraVal = document.querySelector('.res-tab.ton');
+  const _sistemaAgoraVal = (_tabAgoraVal && _tabAgoraVal.textContent.includes('PRICE')) ? 'price' : 'sac';
+  const finAgora = _sistemaAgoraVal === 'sac' ? (d.finSAC ?? d.fin) : (d.finPRICE ?? d.fin);
+  const lucro = valorFuturo - finAgora - d.totalEntrada - seguro;
+  document.getElementById('valGrid').innerHTML = `
+    <div class="val-item azul"><div class="vi-lbl">Valor hoje</div><div class="vi-val azul">${fi(d.vi)}</div></div>
+    <div class="val-item azul"><div class="vi-lbl">Valorização est. (${Math.round(pct*100)}%)</div><div class="vi-val azul">${fi(d.vi * pct)}</div></div>
+    <div class="val-item"><div class="vi-lbl">Valor na entrega</div><div class="vi-val">${fi(valorFuturo)}</div></div>
+    <div class="val-item"><div class="vi-lbl">Financiado aprovado</div><div class="vi-val" style="color:var(--laranja)">${fi(finAgora)}</div></div>
+    <div class="val-item"><div class="vi-lbl">Entrada total</div><div class="vi-val" style="color:var(--texto2)">${fi(d.totalEntrada)}</div></div>
+    ${seguro > 0 ? `<div class="val-item"><div class="vi-lbl">Seguro de obra pago</div><div class="vi-val" style="color:var(--vermelho)">− ${fi(seguro)}</div></div>` : ''}
+    <div class="val-item"><div class="vi-lbl">Lucro estimado</div><div class="vi-val" style="color:${lucro>=0?'var(--verde)':'var(--vermelho)'}">${fi(lucro)}</div></div>
+  `;
+}
+
+function setTab(t) {
+  document.querySelectorAll('.res-tab').forEach((el, i) =>
+    el.classList.toggle('ton', (i === 0 && t === 'sac') || (i === 1 && t === 'price')));
+  document.getElementById('pSAC').style.display = t === 'sac' ? '' : 'none';
+  document.getElementById('pPRICE').style.display = t === 'price' ? '' : 'none';
+
+  // Recalcula o financiamento de pré-visualização (vFinanciado) ANTES do
+  // seguro — calcSeguro() lê vFinanciado do DOM, então se essa ordem for
+  // invertida o seguro usa o financiamento do sistema anterior (causa do
+  // bug de o PRICE mostrar o mesmo seguro travado em 12% do SAC).
+  onEntrada();
+  // Recalcula seguro e parcela de obra com novo sistema (SAC ↔ PRICE)
+  calcSeguro();
+  onObra();
+  // Atualiza o financiamento exibido (cada sistema tem teto de renda próprio)
+  if (window._simDadosVal) atualizarValorizacao();
+
+  // SBPE: ao trocar SAC ↔ PRICE o % máx financiado muda (90% vs 80%)
+  if (fx && fx.sbpe) {
+    const pct = getPct();
+    const va = pv(document.getElementById('vAval').value);
+    if (va > 0) {
+      setVal('maxFin', va * pct);
+      const lbl = document.getElementById('maxFinLabel');
+      if (lbl) lbl.textContent = 'Máx. financiado (' + (pct*100).toFixed(0) + '%) — SBPE ' + (t==='sac'?'SAC':'PRICE');
+    }
+    const sub2 = document.getElementById('fcSub');
+    if (sub2) sub2.textContent = t === 'sac'
+      ? 'Sistema SBPE SAC: financia até 90% da avaliação · Taxa: 11,49% a.a.'
+      : 'Sistema SBPE PRICE: financia até 80% da avaliação · Taxa: 11,49% a.a.';
+  }
+}
+
+/* ══════════════════════════════════════
+   SIMULAR — CÁLCULO PRINCIPAL
+   ══════════════════════════════════════ */
+function simular() {
+  // Validações
+  if (!sub) { alert('Preencha a renda para identificar a faixa MCMV.'); return; }
+  if (!document.getElementById('nasc').value) { alert('Informe a data de nascimento para calcular o prazo.'); return; }
+  const vi = pv(document.getElementById('vImovel').value);
+  if (!vi) { alert('Informe o valor do imóvel.'); return; }
+
+  const va = pv(document.getElementById('vAval').value) || vi * 1.10;
+  const ato = pv(document.getElementById('ato').value);
+
+  // ── Financiamento calculado SEPARADAMENTE para SAC e PRICE ──
+  // Cada sistema tem seu próprio % máx. financiado (getPct) e seu próprio
+  // teto de comprometimento de renda (getPctRenda: 30% SAC / 25% PRICE em
+  // SBPE). Calcular um único 'fin' para os dois sistemas estava aprovando
+  // o mesmo financiamento em ambos, ignorando o teto mais restritivo do PRICE.
+  const r = pv(document.getElementById('renda').value);
+
+  function calcFinanciamentoPara(isSAC) {
+    const pctLocal = getPct(isSAC);
+    const maxFinLocal = va * pctLocal;
+    const p100kLocal = getP100k(isSAC);
+    const pctRendaLocal = getPctRenda(isSAC);
+    const fgtsMaxLocal = calcFGTSMax(va, pctLocal, ato);
+    const fgtsDispLocal = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
+    const fgtsUsarLocal = Math.min(fgtsDispLocal, fgtsMaxLocal);
+    const totalEntradaLocal = ato + fgtsUsarLocal;
+    const capTeoricaLocal = (r > 0 && p100kLocal > 0) ? (r * pctRendaLocal / p100kLocal) * 100000 : Infinity;
+    let finLocal = Math.max(0, vi - totalEntradaLocal);
+    finLocal = Math.min(finLocal, maxFinLocal, capTeoricaLocal);
+    return { fin: finLocal, totalEntrada: totalEntradaLocal, fgtsUsar: fgtsUsarLocal, pct: pctLocal, p100k: p100kLocal, pctRenda: pctRendaLocal };
+  }
+
+  const calcSAC = calcFinanciamentoPara(true);
+  const calcPRICE = calcFinanciamentoPara(false);
+
+  // Variáveis usadas no restante da função (compatibilidade com código existente
+  // que ainda assume um 'fin' único — usamos o financiamento do sistema
+  // atualmente ativo na aba para essas partes, e os valores específicos
+  // calcSAC.fin / calcPRICE.fin para os blocos de cada sistema).
+  const pct = getPct();
+  const maxFin = va * pct;
+  const fgtsDisp = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
+  const fgtsMax = calcFGTSMax(va, pct, ato);
+  const fgtsUsar = Math.min(fgtsDisp, fgtsMax);
+  const totalEntrada = ato + fgtsUsar;
+  const p100k = getP100k();
+  const pctRendaCalc = getPctRenda();
+  const parcelaMax30 = r * pctRendaCalc;
+  const capTeorica = (parcelaMax30 / p100k) * 100000;
+  let fin = Math.max(0, vi - totalEntrada);
+  fin = Math.min(fin, maxFin, capTeorica);
+
+  if (calcSAC.fin <= 100 || calcPRICE.fin <= 100) {
+    alert('Valor financiado inválido. Verifique os dados (renda, valor do imóvel ou entrada).');
+    return;
+  }
+  const finSAC = calcSAC.fin;
+  const finPRICE = calcPRICE.fin;
+
+  const prazoA = parseInt(document.getElementById('prazoSlider').value) || 30;
+  const taxa = (tipoTaxa === 'n' ? sub.n : sub.e) / 100 / 12;
+  // SBPE PRICE: sempre 360 meses (30 anos) conforme regra Caixa
+  const prazoPrice = (fx && fx.sbpe) ? 30 : prazoA;
+  const n = prazoA * 12;
+  const nPrice = prazoPrice * 12;
+
+  // ── SAC ──
+  const amSAC = finSAC / n;
+  let sS = finSAC, tjS = 0, rS = [];
+  for (let i = 1; i <= n; i++) {
+    const j = sS * taxa;
+    rS.push({ m: i, p: amSAC + j, a: amSAC, j, s: Math.max(0, sS - amSAC) });
+    tjS += j; sS -= amSAC;
+  }
+
+  // ── PRICE ── (SBPE usa sempre 360 meses)
+  const coef = (taxa * Math.pow(1 + taxa, nPrice)) / (Math.pow(1 + taxa, nPrice) - 1);
+  const pP = finPRICE * coef;
+  let sP = finPRICE, tjP = 0, rP = [];
+  for (let i = 1; i <= nPrice; i++) {
+    const j = sP * taxa, a = pP - j;
+    rP.push({ m: i, p: pP, a, j, s: Math.max(0, sP - a) });
+    tjP += j; sP -= a;
+  }
+
+  // ── FASE 1: Obra ──
+  const mesesObra = parseInt(document.getElementById('mesesObra').value) || 0;
+  const segTotal = pv(document.getElementById('seguroTotal').value);
+  const segMed = mesesObra > 0 ? segTotal / mesesObra : 0;
+  const mens = pv(document.getElementById('mensalObra').value);
+  const f1 = document.getElementById('fase1');
+
+  if (mesesObra > 0) {
+    // ── Calcular teto do seguro baseado no sistema ativo (SAC ou PRICE) ──
+    const taxaSegF1 = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
+    const nSegF1 = prazoA * 12;
+    const tabAtivoF1 = document.querySelector('.res-tab.ton');
+    const usandoSACf1 = !tabAtivoF1 || tabAtivoF1.textContent.includes('SAC');
+    const finAtivoF1 = usandoSACf1 ? finSAC : finPRICE;
+    let parcelaRefF1;
+    if (usandoSACf1) {
+      const amort = finAtivoF1 / nSegF1;
+      parcelaRefF1 = amort + (finAtivoF1 * taxaSegF1);
+    } else {
+      const coefF1 = nSegF1 > 0 && taxaSegF1 > 0
+        ? (taxaSegF1 * Math.pow(1 + taxaSegF1, nSegF1)) / (Math.pow(1 + taxaSegF1, nSegF1) - 1)
+        : 1 / nSegF1;
+      parcelaRefF1 = finAtivoF1 * coefF1;
+    }
+    const coefF1price = nSegF1 > 0 && taxaSegF1 > 0
+      ? (taxaSegF1 * Math.pow(1 + taxaSegF1, nSegF1)) / (Math.pow(1 + taxaSegF1, nSegF1) - 1)
+      : 1 / nSegF1;
+    const parcelaPRICEf1 = finPRICE * coefF1price;
+    const sistLabelF1 = usandoSACf1
+      ? 'SAC (1ª parcela ' + fb(parcelaRefF1) + ')'
+      : 'PRICE ' + fb(parcelaRefF1);
+
+    // ── Faixas proporcionais ao financiado real com anos dinâmicos ──
+    // Calcula data de início real (lançamento se disponível, senão retroativo pela entrega)
+    const dtEntregaF1El = document.getElementById('dtEntrega');
+    const dtLancF1El = document.getElementById('dtLancamento');
+    let dtInicioF1 = new Date();
+    let totalMesesF1 = mesesObra;
+    let offsetF1 = 0;
+    if (dtLancF1El && dtLancF1El.value) {
+      dtInicioF1 = new Date(dtLancF1El.value + 'T12:00:00');
+      if (dtEntregaF1El && dtEntregaF1El.value) {
+        const entF1 = new Date(dtEntregaF1El.value + 'T12:00:00');
+        totalMesesF1 = Math.max(mesesObra, (entF1.getFullYear() - dtInicioF1.getFullYear()) * 12 + (entF1.getMonth() - dtInicioF1.getMonth()));
+        const hojeF1 = new Date();
+        offsetF1 = Math.max(0, (hojeF1.getFullYear() - dtInicioF1.getFullYear()) * 12 + (hojeF1.getMonth() - dtInicioF1.getMonth()));
+      }
+    } else if (dtEntregaF1El && dtEntregaF1El.value) {
+      dtInicioF1 = new Date(dtEntregaF1El.value + 'T12:00:00');
+      dtInicioF1.setMonth(dtInicioF1.getMonth() - mesesObra);
+    }
+
+    // Curva progressiva em 3 segmentos (terços do prazo da obra total)
+    const tetoSegF1 = parcelaRefF1 * 0.95; // teto real: 95% puro da parcela no último mês da obra
+    const gruposF1 = {};
+    for (let m = 1; m <= mesesObra; m++) {
+      const posAbsF1 = offsetF1 + m;
+      const pisoF1 = usandoSACf1 ? 0.12 : 0.10;
+      const valFinal = Math.round(parcelaRefF1 * pctSeguroObra(posAbsF1, totalMesesF1, pisoF1));
+      const dtMes = new Date(dtInicioF1);
+      dtMes.setMonth(dtMes.getMonth() + offsetF1 + m - 1);
+      const anoMes = dtMes.getFullYear();
+      const pctRel = (offsetF1 + m) / totalMesesF1;
+      const fase = pctRel <= 0.33 ? 'início da obra' : pctRel <= 0.66 ? 'obra em andamento' : 'obra final'; // conclusão aplicada só no último grupo abaixo
+      const chave = `${anoMes}|||${fase}`;
+      if (!gruposF1[chave]) {
+        gruposF1[chave] = { ano: anoMes, fase, min: valFinal, max: valFinal, mInicio: m, mFim: m };
+      } else {
+        gruposF1[chave].min = Math.min(gruposF1[chave].min, valFinal);
+        gruposF1[chave].max = Math.max(gruposF1[chave].max, valFinal);
+        gruposF1[chave].mFim = m;
+      }
+    }
+
+    // Renomeia o último grupo de gruposF1 para "conclusão"
+    const listaF1 = Object.values(gruposF1);
+    if (listaF1.length > 0) listaF1[listaF1.length - 1].fase = 'conclusão';
+
+    let segTimeline = '';
+    listaF1.forEach(g => {
+      const limitado = g.max >= Math.round(tetoSegF1) - 1;
+      segTimeline += `
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--cinza2);font-size:12px">
+          <span>${g.ano} — ${g.fase} (meses ${g.mInicio}–${g.mFim})</span>
+          <span style="color:${limitado ? 'var(--vermelho)' : 'var(--laranja)'};font-weight:600">
+            ${fi(g.min)} – ${fi(g.max)}/mês${limitado ? ' <span style="font-size:10px">[teto]</span>' : ''}
+          </span>
+        </div>`;
+    });
+
+    f1.innerHTML = `
+      <div class="bonif">🔒 <strong>Bonificação ativa:</strong> Após assinatura CEF, saldo de ${fi(finAtivoF1)} fica
+        <strong>congelado sem INCC</strong> + isenção de documentação. Economia estimada: R$ 211.600.</div>
+      <div class="mets">
+        <div class="met"><div class="ml">Duração da obra</div><div class="mv">${mesesObra} meses</div></div>
+        <div class="met"><div class="ml">Parcela mensal obra</div><div class="mv bl">${fb(mens || 0)}</div></div>
+        <div class="met"><div class="ml">Seguro (média/mês)</div><div class="mv am">${fb(segMed)}</div></div>
+        <div class="met"><div class="ml">Total mensal obra+seg</div><div class="mv">${fb((mens || 0) + segMed)}</div></div>
+        <div class="met"><div class="ml">Seguro total obra</div><div class="mv am">${fi(segTotal)}</div></div>
+        <div class="met"><div class="ml">Saldo congelado</div><div class="mv gr">${fi(finAtivoF1)}</div></div>
+      </div>
+      <div style="background:var(--cinza1);border-radius:var(--radius2);padding:10px 12px">
+        <div class="sub" style="margin-bottom:5px">📈 Evolução gradual do seguro de obra</div>
+        <div style="font-size:11px;color:var(--texto2);margin-bottom:6px">
+          Teto: 95% da parcela ${sistLabelF1} = <strong style="color:var(--azul)">${fb(tetoSegF1)}</strong>
+        </div>
+        ${segTimeline}
+        <div style="font-size:11px;color:var(--texto3);margin-top:6px">
+          Seguro sobe conforme % de obra concluída. Custo total estimado ≈ ${usandoSACf1 ? '12%' : '10%'} do financiado de ${fi(finAtivoF1)} (pode variar conforme a duração da obra).
+        </div>
+      </div>`;
+  } else {
+    f1.innerHTML = '<p style="font-size:12px;color:var(--texto3)">Informe a data de entrega para ver os custos durante a obra.</p>';
+  }
+
+  // ── FASE 2: Financiamento ──
+  rMets('mSAC', vi, ato, calcSAC.fgtsUsar, calcSAC.totalEntrada, finSAC, tjS, rS[0].p, rS[n-1].p, (tipoTaxa==='n'?sub.n:sub.e), prazoA, 'sac');
+  rMets('mPRICE', vi, ato, calcPRICE.fgtsUsar, calcPRICE.totalEntrada, finPRICE, tjP, pP, pP, (tipoTaxa==='n'?sub.n:sub.e), prazoPrice, 'price');
+  rBar('bSAC', finSAC, tjS);
+  rBar('bPRICE', finPRICE, tjP);
+  rTab('tSAC', rS);
+  rTab('tPRICE', rP);
+
+  // ── VALORIZAÇÃO ──
+  // Guarda dados para recalculo ao mudar % (inclui seguro total para abater do lucro)
+  // Detecta qual sistema está ativo no momento da simulação
+  const tabAtivoFinal = document.querySelector('.res-tab.ton');
+  const sistemaAtivo = (!tabAtivoFinal || tabAtivoFinal.textContent.includes('SAC')) ? 'sac' : 'price';
+
+  // Financiamento e entrada exibidos na proposta seguem o sistema ATIVO no
+  // momento (SAC usa finSAC/30% renda, PRICE usa finPRICE/25% renda — cada
+  // um com seu próprio teto de capacidade, em vez de compartilhar um único
+  // financiamento entre os dois sistemas).
+  const finAtivo = sistemaAtivo === 'sac' ? finSAC : finPRICE;
+  const totalEntradaAtivo = sistemaAtivo === 'sac' ? calcSAC.totalEntrada : calcPRICE.totalEntrada;
+  const fgtsUsarAtivo = sistemaAtivo === 'sac' ? calcSAC.fgtsUsar : calcPRICE.fgtsUsar;
+
+  const _atoVal  = pv(document.getElementById('ato')?.value);
+  const _fgtsVal = fgtsUsarAtivo;
+  window._simDadosVal = { vi, fin: finAtivo, finSAC, finPRICE, totalEntrada: totalEntradaAtivo, segTotal, parcelaPrice: pP, prazoPrice,
+    parcelaSAC1: rS[0].p, parcelaSACult: rS[n-1].p, prazoSAC: prazoA, sistemaAtivo,
+    ato: _atoVal, fgts: _fgtsVal };
+  atualizarValorizacao();
+  atualizarEconomia();
+
+  document.getElementById('resultado').style.display = '';
+  setTimeout(() => document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
+/* ══════════════════════════════════════
+   ECONOMIA
+   ══════════════════════════════════════ */
+let temLaudemio = false;
+let temTaxaLig = false;
+
+function setLaudemio(val) {
+  temLaudemio = val;
+  document.getElementById('btnLdN').className = 'ttog' + (!val ? ' ton-er' : '');
+  document.getElementById('btnLdS').className = 'ttog' + (val ? ' ton-ok' : '');
+  atualizarEconomia();
+}
+function setTaxaLig(val) {
+  temTaxaLig = val;
+  document.getElementById('btnTxN').className = 'ttog' + (!val ? ' ton-ok' : '');
+  document.getElementById('btnTxS').className = 'ttog' + (val ? ' ton-er' : '');
+  atualizarEconomia();
+}
+function atualizarEconomia() {
+  const d = window._simDadosVal;
+  if (!d) return;
+  const vf = d.vi; // valor do imóvel
+
+  // Garante que o seguro de obra está recalculado para o sistema REALMENTE
+  // ativo agora (SAC 12% / PRICE 10%), e não um valor desatualizado de uma
+  // troca de aba anterior que não tenha disparado o recálculo a tempo.
+  calcSeguro();
+
+  // INCC: 10% ao ano de obra restante (proporcional aos meses que faltam)
+  const mesesRestantesINCC = parseInt(document.getElementById('mesesObra')?.value) || 36;
+  const incc = vf * 0.10 * (mesesRestantesINCC / 12);
+  // RGI/ITBI: 5% do valor do imóvel pronto (planilha mostra 28k para 560k = ~5%)
+  // Usando valor pronto (valorizado) se disponível
+  const pct = Math.max(1, parseFloat(document.getElementById('pctValorizacao')?.value) || 60) / 100;
+  const vEntrega = vf * (1 + pct);
+  const rgiItbi = vEntrega * 0.05;
+  // Laudêmio: 5% do imóvel pronto
+  const laudemio = temLaudemio ? vEntrega * 0.05 : 0;
+  // Taxa ligação + decoração: 6% do imóvel (só se construtora não entregar)
+  const taxaLig = temTaxaLig ? vf * 0.06 : 0;
+  // Seguro de obra
+  const seguro = pv(document.getElementById('seguroTotal').value) || 0;
+
+  const total = incc + rgiItbi + laudemio + taxaLig + seguro;
+
+  const econGrid = document.getElementById('econGrid');
+  const econTotal = document.getElementById('econTotal');
+
+  econGrid.innerHTML = `
+    <div class="met"><div class="ml">INCC (10%/ano × ${mesesRestantesINCC}m restantes)</div><div class="mv gr">${fi(incc)}</div></div>
+    <div class="met"><div class="ml">RGI / ITBI (5% entrega)</div><div class="mv gr">${fi(rgiItbi)}</div></div>
+    ${temLaudemio ? `<div class="met"><div class="ml">Laudêmio (5% entrega)</div><div class="mv gr">${fi(laudemio)}</div></div>` : ''}
+    ${temTaxaLig ? `<div class="met"><div class="ml">Taxa ligação + decoração (6%)</div><div class="mv am">${fi(taxaLig)}</div></div>`
+      : `<div class="met"><div class="ml">Taxa ligação + decoração</div><div class="mv gr">Entregue pela construtora</div></div>`}
+    <div class="met"><div class="ml">Seguro de obra</div><div class="mv gr">${fi(seguro)}</div></div>
+  `;
+  econTotal.innerHTML = `
+    <div style="background:linear-gradient(135deg,#EAF4EE,#F0FBF5);border:1.5px solid #1B6E3F;border-radius:var(--radius2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span style="font-size:13px;font-weight:700;color:#14522F">🏆 TOTAL DE ECONOMIA</span>
+      <span style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--verde)">${fi(total)}</span>
+    </div>
+    <div style="margin-top:7px;font-size:11px;color:var(--texto3);background:var(--amareloClaro);border-radius:6px;padding:7px 10px;border:1px solid #FDE68A">
+      ⭐ <strong>Por pagar o seguro de obra (${fi(seguro)}), o cliente não paga INCC nem documentações</strong> — economia de ${fi(total - seguro)} em custos que seriam obrigatórios.
+    </div>
+  `;
+  // Salva para o PDF
+  window._econDados = { incc, rgiItbi, laudemio, taxaLig, seguro, total, temLaudemio, temTaxaLig };
+}
+
+/* ══════════════════════════════════════
+   GERAR PDF
+   ══════════════════════════════════════ */
+function gerarPDF() {
+  const d = window._simDadosVal;
+  if (!d) { alert('Realize a simulação antes de exportar.'); return; }
+
+  const nome = document.getElementById('nomeCliente').value || '—';
+  const produto = document.getElementById('nomeProduto').value || '—';
+  const tipologia = (document.getElementById('tipologia').value || '—');
+  const metragem = (document.getElementById('metragem').value || '').replace(/M²/g, 'm²').replace(/M2/g, 'm²').replace(/m2/gi, 'm²');
+  const pct = Math.max(1, parseFloat(document.getElementById('pctValorizacao')?.value) || 60);
+  const pctD = pct / 100;
+  const vEntrega = d.vi * (1 + pctD);
+
+  // Texto do destaque conforme sistema ativo
+  // Lê o sistema ativo da aba marcada no momento de gerar o PDF (não do cache)
+  const _tabAtivaAgora = document.querySelector('.res-tab.ton');
+  const sistemaAtivo = (_tabAtivaAgora && _tabAtivaAgora.textContent.includes('PRICE')) ? 'price' : 'sac';
+
+  // Financiamento e entrada corretos para o sistema realmente ativo agora —
+  // SAC e PRICE têm capacidade de renda diferente (30% vs 25% em SBPE), logo
+  // financiamentos diferentes. Usa os valores específicos já calculados em
+  // simular() (d.finSAC / d.finPRICE), em vez do d.fin genérico que reflete
+  // só o sistema que estava ativo quando o botão "Calcular" foi clicado.
+  const finPDF = sistemaAtivo === 'sac' ? (d.finSAC ?? d.fin) : (d.finPRICE ?? d.fin);
+  const totalEntradaPDF = d.totalEntrada; // entrada (ato+FGTS) é a mesma independente do sistema na prática atual
+
+  // Seguro de obra: SEMPRE recalculado aqui com finPDF e o sistema realmente
+  // ativo agora (em vez de ler d.segTotal, que reflete só o sistema que
+  // estava ativo no último clique em "Calcular" — causa do bug de o PRICE
+  // mostrar o mesmo seguro travado em 12% do SAC).
+  const _mesesObraPDF = parseInt(document.getElementById('mesesObra')?.value) || 36;
+  const _prazoAPDF = parseInt(document.getElementById('prazoSlider')?.value) || 30;
+  const _taxaPDF = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
+  const _dtLancPDF = document.getElementById('dtLancamento')?.value;
+  const _dtEntregaPDF = document.getElementById('dtEntrega')?.value;
+  const seguro = calcularSeguroTotal(
+    finPDF, _mesesObraPDF, _prazoAPDF, _taxaPDF, sistemaAtivo === 'sac',
+    _dtLancPDF, _dtEntregaPDF
+  ).total;
+
+  const lucro = vEntrega - finPDF - totalEntradaPDF - seguro;
+  const eco = window._econDados || {};
+  const faixa = window.fx ? window.fx.nome : '—';
+  let parcelaDestaque, parcelaDetalhe;
+  if (sistemaAtivo === 'sac') {
+    parcelaDestaque = fb(d.parcelaSAC1);
+    parcelaDetalhe = `${d.prazoSAC * 12} parcelas — iniciando em ${fb(d.parcelaSAC1)}, encerrando em ${fb(d.parcelaSACult)}`;
+  } else {
+    parcelaDestaque = fb(d.parcelaPrice);
+    parcelaDetalhe = `${d.prazoPrice * 12} parcelas fixas de ${fb(d.parcelaPrice)}`;
+  }
+
+  // ── Cronograma da obra para o PDF ──────────────────────────────────
+  {
+    const _vi    = d.vi || 0;
+    const _ato   = d.ato || 0;
+    const _fgts  = d.fgts || 0;
+    const _qtd   = parseInt(document.getElementById('qtdRef').value) || 0;
+    const _mens  = pv(document.getElementById('mensalObra').value);
+    const _meses = parseInt(document.getElementById('mesesObra').value) || 0;
+    const _totM  = _mens * _meses;
+    const _prazoFin = (d.prazoSAC || d.prazoPrice || 30);
+    const _nFin  = _prazoFin * 12;
+    // Usa os MESMOS valores já calculados e corretos da simulação principal
+    // (d.parcelaSAC1, d.parcelaSACult, d.parcelaPrice) em vez de recalcular
+    // com uma taxa que pode estar desatualizada (window.sub/window.tipoTaxa).
+    const _pSAC1  = d.parcelaSAC1  || 0;
+    const _pSACu  = d.parcelaSACult || 0;
+    const _pPRICE = d.parcelaPrice || 0;
+
+    window._cronoPDF = {
+      nFin: _prazoFin, parcSAC1: _pSAC1, parcSACult: _pSACu, parcPrice: _pPRICE
+    };
+
+    const rowStyle = 'style="border-bottom:1px solid #F3F4F6;padding:5px 9px;display:flex;justify-content:space-between;font-size:10px"';
+    const lblStyle = 'style="color:#374151"';
+    const valStyle = 'style="font-weight:700;color:#111"';
+
+    let _rows = '';
+    if (_ato > 0)
+      _rows += `<tr><td style="padding:5px 9px;color:#374151">🔑 Ato (assinatura)</td><td style="padding:5px 9px;text-align:right;font-weight:700">${fb(_ato)}</td></tr>`;
+    if (_fgts > 0)
+      _rows += `<tr><td style="padding:5px 9px;color:#374151">💰 FGTS utilizado</td><td style="padding:5px 9px;text-align:right;font-weight:700">${fb(_fgts)}</td></tr>`;
+    for (let i = 1; i <= _qtd; i++) {
+      const dtEl = document.getElementById('dtRef' + i);
+      const vlEl = document.getElementById('vlRef' + i);
+      const _vlrIndiv = vlEl ? pv(vlEl.value) : 0;
+      let refLabel = '';
+      if (dtEl && dtEl.value) {
+        const dtR = new Date(dtEl.value + 'T12:00:00');
+        refLabel = dtR.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      } else {
+        const m = Math.round(_meses / Math.max(_qtd, 1) * i);
+        refLabel = 'mês ' + m + ' da obra';
+      }
+      _rows += `<tr><td style="padding:5px 9px;color:#374151">📅 Reforço ${i} — ${refLabel}</td><td style="padding:5px 9px;text-align:right;font-weight:700">${fb(_vlrIndiv)}</td></tr>`;
+    }
+    if (_mens > 0)
+      _rows += `<tr><td style="padding:5px 9px;color:#374151">📆 ${_meses}× parcelas mensais de obra</td><td style="padding:5px 9px;text-align:right;font-weight:700">${_meses} × ${fb(_mens)} = ${fb(_totM)}</td></tr>`;
+
+    window._cronoLinhasPDF  = _rows;
+    window._cronoNFinPDF    = _prazoFin;
+    window._cronoParcSAC1   = _pSAC1;
+    window._cronoParcSACult = _pSACu;
+    window._cronoParcPrice  = _pPRICE;
+  }
+
+  const cronoLinhas    = window._cronoLinhasPDF  || '';
+  const cronoNFin      = window._cronoNFinPDF    || 30;
+  const cronoParcSAC1  = window._cronoParcSAC1   || 0;
+  const cronoParcSACult= window._cronoParcSACult || 0;
+  const cronoParcPrice = window._cronoParcPrice  || 0;
+
+  // Calcular anos reais da obra a partir da data de entrega
+  const dataEntregaEl = document.getElementById('dataEntrega');
+  const mesesObra = parseInt(document.getElementById('mesesObra').value) || 11;
+  let anoEntrega = new Date().getFullYear();
+  if (dataEntregaEl && dataEntregaEl.value) {
+    const partes = dataEntregaEl.value.split('/');
+    if (partes.length === 3) anoEntrega = parseInt(partes[2]);
+    else anoEntrega = new Date(dataEntregaEl.value).getFullYear();
+  }
+  // Ano de início = ano da entrega menos anos completos de obra (arredondado para cima)
+  const anosObra = Math.ceil(mesesObra / 12);
+  const anoInicio = anoEntrega - anosObra + 1;
+  // Montar linhas da tabela de seguro com anos reais
+  // Recalcula os valores reais do seguro mês a mês (mesma lógica do calcSeguro)
+  // para exibir faixas corretas no PDF com valores proporcionais ao financiado real
+  // Limite parcela PDF: usa parcela do sistema ativo
+  // Parcela de referência do seguro: usa o MESMO valor já calculado e exibido
+  // no card "Parcela Morando" (d.parcelaSAC1 / d.parcelaPrice), evitando
+  // recalcular com uma taxa que possa estar desatualizada (window.sub).
+  const parcelaRefPDF = sistemaAtivo === 'price'
+    ? (d.parcelaPrice || 0)
+    : (d.parcelaSAC1 || 0);
+  // Curva progressiva em 3 segmentos (terços do prazo da obra total)
+
+  // Calcula início real da obra para o PDF (usa lançamento se disponível)
+  const dtLancPDFEl = document.getElementById('dtLancamento');
+  const dtEntPDFEl  = document.getElementById('dtEntrega');
+  let dtInicioPDF = new Date();
+  let totalMesesPDF = mesesObra;
+  let offsetPDF = 0;
+  if (dtLancPDFEl && dtLancPDFEl.value) {
+    dtInicioPDF = new Date(dtLancPDFEl.value + 'T12:00:00');
+    if (dtEntPDFEl && dtEntPDFEl.value) {
+      const entPDF = new Date(dtEntPDFEl.value + 'T12:00:00');
+      totalMesesPDF = Math.max(mesesObra, (entPDF.getFullYear() - dtInicioPDF.getFullYear()) * 12 + (entPDF.getMonth() - dtInicioPDF.getMonth()));
+      const hojePDF = new Date();
+      offsetPDF = Math.max(0, (hojePDF.getFullYear() - dtInicioPDF.getFullYear()) * 12 + (hojePDF.getMonth() - dtInicioPDF.getMonth()));
+    }
+  } else if (dtEntPDFEl && dtEntPDFEl.value) {
+    dtInicioPDF = new Date(dtEntPDFEl.value + 'T12:00:00');
+    dtInicioPDF.setMonth(dtInicioPDF.getMonth() - mesesObra);
+  }
+
+  // Agrupa meses em períodos por ano e fase — curva progressiva sobre a obra total
+  const gruposPDF = {};
+  const pisoPDF = sistemaAtivo === 'price' ? 0.10 : 0.12;
+  for (let m = 1; m <= mesesObra; m++) {
+    const posAbsPDF = offsetPDF + m;
+    const valFinal = Math.round(parcelaRefPDF * pctSeguroObra(posAbsPDF, totalMesesPDF, pisoPDF));
+    // Determina ano real deste mês a partir do início real da obra
+    const dtMes = new Date(dtInicioPDF);
+    dtMes.setMonth(dtMes.getMonth() + offsetPDF + m - 1);
+    const anoMes = dtMes.getFullYear();
+    const pctRelPDF = (offsetPDF + m) / totalMesesPDF;
+    const pctRelPDFPts = Math.round(pctRelPDF * 100);
+    const fase = pctRelPDF <= 0.33 ? 'início da obra' : pctRelPDF <= 0.66 ? 'obra em andamento' : 'obra final';
+    const chave = `${anoMes}|||${fase}`;
+    if (!gruposPDF[chave]) gruposPDF[chave] = { ano: anoMes, fase, min: valFinal, max: valFinal, pctMin: pctRelPDFPts, pctMax: pctRelPDFPts };
+    else {
+      gruposPDF[chave].min = Math.min(gruposPDF[chave].min, valFinal);
+      gruposPDF[chave].max = Math.max(gruposPDF[chave].max, valFinal);
+      gruposPDF[chave].pctMin = Math.min(gruposPDF[chave].pctMin, pctRelPDFPts);
+      gruposPDF[chave].pctMax = Math.max(gruposPDF[chave].pctMax, pctRelPDFPts);
+    }
+  }
+  // Renomeia o último grupo de gruposPDF para "conclusão" e monta o texto de % real
+  const listaGruposPDF = Object.values(gruposPDF);
+  if (listaGruposPDF.length > 0) listaGruposPDF[listaGruposPDF.length - 1].fase = 'conclusão';
+  listaGruposPDF.forEach(g => { g.pctObra = g.pctMin + '% – ' + g.pctMax + '%'; });
+
+  let linhasSeguro = '';
+  listaGruposPDF.forEach(g => {
+    linhasSeguro += `<tr><td>${g.ano} — ${g.fase}</td><td>${fi(g.min)} – ${fi(g.max)}</td><td>${g.pctObra}</td></tr>`;
+  });
+
+  // ── FLUXO DE PAGAMENTO TOTAL (resumo final) ────────────────────────
+  const fluxoAto    = d.ato || 0;
+  const fluxoFgts   = d.fgts || 0;
+  const fluxoQtdRef = parseInt(document.getElementById('qtdRef')?.value) || 0;
+  const fluxoMens   = pv(document.getElementById('mensalObra')?.value) || 0;
+  const fluxoMeses  = parseInt(document.getElementById('mesesObra')?.value) || 0;
+  const fluxoSegMedio = fluxoMeses > 0 ? (seguro / fluxoMeses) : 0;
+  const fluxoParcelaObraTotal = fluxoMens + fluxoSegMedio; // parcela + seguro durante a obra ("média")
+
+  // PICO: valor do seguro no ÚLTIMO mês da obra (sempre o mais alto, pela curva crescente).
+  // Usado para avaliar saúde financeira de forma realista — a média pode mascarar
+  // um aperto orçamentário forte que o cliente vai sentir de fato no fim da obra.
+  const fluxoSegPico = listaGruposPDF.length > 0 ? listaGruposPDF[listaGruposPDF.length - 1].max : fluxoSegMedio;
+  const fluxoParcelaObraPico = fluxoMens + fluxoSegPico;
+
+  // Quebra anual: parcela de obra (fixa) + seguro (média do período) por ano/fase,
+  // reaproveitando os grupos já calculados em listaGruposPDF
+  let fluxoAnualHtml = '';
+  listaGruposPDF.forEach(g => {
+    const segMedioGrupo = (g.min + g.max) / 2; // média do seguro nesse período
+    const totalGrupo = fluxoMens + segMedioGrupo;
+    fluxoAnualHtml += `<tr><td>${g.ano} — ${g.fase}</td><td>${fb(fluxoMens)} parcela + ${fb(segMedioGrupo)} seguro</td><td><strong>${fb(totalGrupo)}</strong>/mês</td></tr>`;
+  });
+
+  let fluxoLinhasRef = '';
+  for (let i = 1; i <= fluxoQtdRef; i++) {
+    const dtEl = document.getElementById('dtRef' + i);
+    const vlEl = document.getElementById('vlRef' + i);
+    const fluxoVlrIndiv = vlEl ? pv(vlEl.value) : 0;
+    let refLabel = '';
+    if (dtEl && dtEl.value) {
+      const dtR = new Date(dtEl.value + 'T12:00:00');
+      refLabel = dtR.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    } else {
+      const m = Math.round(fluxoMeses / Math.max(fluxoQtdRef, 1) * i);
+      refLabel = 'mês ' + m + ' da obra';
+    }
+    fluxoLinhasRef += `
+      <div class="eco-line">
+        <span class="lbl">📅 Reforço ${i} — ${refLabel}</span>
+        <span class="val" style="color:#4A2C8A">${fi(fluxoVlrIndiv)}</span>
+      </div>`;
+  }
+
+  // ── Capacidade de pagamento (renda × 30% padrão / 25% SBPE-PRICE) ──
+  // Avaliação usa o PICO (último mês, valor mais alto do seguro) — não a média —
+  // para refletir o momento de maior aperto financeiro real durante a obra.
+  const fluxoRenda = pv(document.getElementById('renda')?.value) || 0;
+  const fluxoPctRendaLimite = getPctRenda();
+  const fluxoLimite30 = fluxoRenda * fluxoPctRendaLimite;
+  const fluxoPctRenda = fluxoRenda > 0 ? (fluxoParcelaObraPico / fluxoRenda * 100) : 0;
+  const fluxoPctRendaLimiteNum = fluxoPctRendaLimite * 100;
+  let fluxoStatusLabel, fluxoStatusCor, fluxoStatusFundo, fluxoStatusBorda;
+  if (fluxoRenda <= 0) {
+    fluxoStatusLabel = 'Informe a renda bruta para avaliar'; fluxoStatusCor = '#6B7280'; fluxoStatusFundo = '#F4F6FA'; fluxoStatusBorda = '#D1D5DB';
+  } else if (fluxoPctRenda > fluxoPctRendaLimiteNum) {
+    fluxoStatusLabel = '⚠️ FLUXO NÃO SAUDÁVEL — no pico, ultrapassa ' + fluxoPctRendaLimiteNum.toFixed(0) + '% da renda'; fluxoStatusCor = '#991B1B'; fluxoStatusFundo = '#FDE8E8'; fluxoStatusBorda = '#EF4444';
+  } else if (fluxoPctRenda === fluxoPctRendaLimiteNum) {
+    fluxoStatusLabel = '➖ NA MÉDIA — no pico, exatamente ' + fluxoPctRendaLimiteNum.toFixed(0) + '% da renda'; fluxoStatusCor = '#8A3F00'; fluxoStatusFundo = '#FEF3E8'; fluxoStatusBorda = '#C05A00';
+  } else {
+    fluxoStatusLabel = '✅ SAUDÁVEL — mesmo no pico, abaixo de ' + fluxoPctRendaLimiteNum.toFixed(0) + '% da renda'; fluxoStatusCor = '#14522F'; fluxoStatusFundo = '#EAF4EE'; fluxoStatusBorda = '#1B6E3F';
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Proposta — ${nome}</title>
+<style>
+  @page { margin: 14mm 13mm; size: A4; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 10.5px; color: #1a1a2e; background: #fff; line-height: 1.4; }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #0B3D91 0%, #1565C0 60%, #1976D2 100%);
+    color: #fff; padding: 14px 16px 12px; border-radius: 8px; margin-bottom: 11px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .header-left h1 { font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+  .header-left p  { font-size: 10px; opacity: .75; margin-top: 2px; }
+  .header-right   { text-align: right; }
+  .badge-mcmv     { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+                    padding: 3px 9px; border-radius: 10px; font-size: 9px; font-weight: 700;
+                    letter-spacing: .04em; }
+  .header-date    { font-size: 9px; opacity: .6; margin-top: 4px; }
+
+  /* ── ID ROW ── */
+  .id-row { display: grid; grid-template-columns: 2fr 2fr 2fr 1fr; gap: 7px; margin-bottom: 10px; }
+  .id-cell { background: #F1F5FB; border-left: 3px solid #1565C0;
+             border-radius: 0 4px 4px 0; padding: 6px 9px; }
+  .id-cell.destaque-cell { border-left-color: #1B6E3F; background: #EAF4EE; }
+  .id-lbl { font-size: 8px; font-weight: 700; color: #6B7280; text-transform: uppercase;
+             letter-spacing: .05em; margin-bottom: 2px; }
+  .id-val { font-size: 11.5px; font-weight: 700; color: #0B3D91; }
+  .id-val.vd { color: #1B6E3F; }
+
+  /* ── DUAS COLUNAS PRINCIPAIS ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+
+  /* ── SEÇÃO ── */
+  .sec { break-inside: avoid; margin-bottom: 10px; }
+  .sec-head { background: #0B3D91; color: #fff; font-size: 8.5px; font-weight: 700;
+              text-transform: uppercase; letter-spacing: .06em; padding: 4px 9px;
+              border-radius: 4px 4px 0 0; }
+  .sec-head.green  { background: #1B6E3F; }
+  .sec-head.orange { background: #C05A00; }
+  .sec-head.purple { background: #4A2C8A; }
+  .sec-body { border: 1px solid #D1D5DB; border-top: none; border-radius: 0 0 4px 4px; padding: 9px; }
+
+  /* ── MÉTRICAS ── */
+  .metrics { display: grid; gap: 6px; }
+  .metrics.cols2 { grid-template-columns: 1fr 1fr; }
+  .metrics.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .metric { background: #F4F6FA; border-radius: 4px; padding: 6px 8px; }
+  .m-lbl { font-size: 8px; font-weight: 700; color: #6B7280; text-transform: uppercase;
+            letter-spacing: .04em; margin-bottom: 2px; }
+  .m-val { font-size: 13px; font-weight: 800; color: #111; font-variant-numeric: tabular-nums; }
+  .m-val.az { color: #1565C0; }
+  .m-val.vd { color: #1B6E3F; }
+  .m-val.am { color: #C05A00; }
+  .m-val.rd { color: #991B1B; }
+  .m-val.sm { font-size: 11px; }
+
+  /* ── LINHAS ECO ── */
+  .eco-line { display: flex; justify-content: space-between; align-items: center;
+              padding: 4px 0; border-bottom: 1px solid #F0F0F0; font-size: 10px; }
+  .eco-line:last-child { border-bottom: none; }
+  .eco-line .lbl { color: #374151; }
+  .eco-line .val { font-weight: 700; font-size: 11px; white-space: nowrap; margin-left: 8px; }
+  .eco-total-bar { background: #EAF4EE; border: 1.5px solid #1B6E3F; border-radius: 4px;
+                   padding: 7px 10px; display: flex; justify-content: space-between;
+                   align-items: center; margin-top: 7px; }
+  .eco-total-bar .tl { font-size: 10px; font-weight: 800; color: #14522F; }
+  .eco-total-bar .tv { font-size: 14px; font-weight: 800; color: #1B6E3F; }
+
+  /* ── TABELA SEGURO ── */
+  .seg-tbl { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-top: 5px; }
+  .seg-tbl th { background: #E8ECF4; padding: 4px 7px; text-align: left;
+                font-size: 8px; text-transform: uppercase; letter-spacing: .03em; color: #374151; }
+  .seg-tbl td { padding: 4px 7px; border-bottom: 1px solid #F0F0F0; color: #374151; }
+  .seg-tbl tr:last-child td { border-bottom: none; }
+
+  /* ── NOTICE AMARELO ── */
+  .notice-yellow { background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px;
+                   padding: 6px 9px; font-size: 9px; color: #78350F; margin-top: 7px;
+                   line-height: 1.5; }
+  .notice-blue   { background: #EFF6FF; border: 1px solid #93C5FD; border-radius: 4px;
+                   padding: 6px 9px; font-size: 9px; color: #1e40af; margin-top: 6px;
+                   line-height: 1.5; }
+
+  /* ── DESTAQUE PARCELA ── */
+  .parcela-banner {
+    break-inside: avoid;
+    background: linear-gradient(135deg, #0B3D91, #1976D2);
+    color: #fff; border-radius: 7px; padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .pb-left .pb-tag  { font-size: 8px; opacity: .7; text-transform: uppercase; letter-spacing: .06em; }
+  .pb-left .pb-val  { font-size: 24px; font-weight: 800; margin: 2px 0; letter-spacing: -.5px; }
+  .pb-left .pb-det  { font-size: 9px; opacity: .8; }
+  .pb-right         { text-align: right; }
+  .pb-right .pb-sys { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3);
+                      padding: 4px 10px; border-radius: 10px; font-size: 9px; font-weight: 700; }
+
+  /* ── VALORIZAÇÃO BANNER ── */
+  .val-banner { break-inside: avoid; display: grid; grid-template-columns: repeat(4,1fr);
+                gap: 6px; margin-bottom: 6px; }
+  .val-card   { border-radius: 4px; padding: 7px 8px; }
+  .val-card.az { background: #EFF6FF; border: 1px solid #BFDBFE; }
+  .val-card.vd { background: #F0FBF5; border: 1px solid #B5D9C3; }
+  .val-card.am { background: #FEF3E8; border: 1px solid #FCD9A8; }
+  .val-card.rd { background: #FDE8E8; border: 1px solid #FCA5A5; }
+  .val-card.gy { background: #F4F6FA; border: 1px solid #D1D5DB; }
+  .val-card.lucro { grid-column: span 2; }
+  .vc-lbl { font-size: 8px; font-weight: 700; color: #6B7280; text-transform: uppercase;
+             letter-spacing: .04em; margin-bottom: 3px; }
+  .vc-val { font-size: 14px; font-weight: 800; }
+  .vc-val.az { color: #1565C0; }
+  .vc-val.vd { color: #1B6E3F; }
+  .vc-val.am { color: #C05A00; }
+  .vc-val.rd { color: #991B1B; }
+
+  /* ── FOOTER ── */
+  .footer { text-align: center; font-size: 8px; color: #9CA3AF;
+            margin-top: 10px; border-top: 1px solid #E5E7EB; padding-top: 7px; }
+
+  /* ── PRINT ── */
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-break { break-inside: avoid; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>📊 Simulação de Unidade</h1>
+    <p>${produto} · ${tipologia}${metragem ? ' · ' + metragem : ''} · ${faixa}</p>
+  </div>
+  <div class="header-right">
+    <div class="badge-mcmv">MCMV 2026 · Caixa Econômica Federal</div>
+    <div class="header-date">${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+  </div>
+</div>
+
+<!-- IDENTIFICAÇÃO -->
+<div class="id-row">
+  <div class="id-cell"><div class="id-lbl">Cliente</div><div class="id-val">${nome}</div></div>
+  <div class="id-cell"><div class="id-lbl">Produto / Empreendimento</div><div class="id-val">${produto}</div></div>
+  <div class="id-cell"><div class="id-lbl">Tipologia</div><div class="id-val">${tipologia}</div></div>
+  <div class="id-cell destaque-cell"><div class="id-lbl">Metragem</div><div class="id-val vd">${metragem || '—'}</div></div>
+</div>
+
+<!-- PARCELA MORANDO — destaque topo -->
+<div class="parcela-banner no-break">
+  <div class="pb-left">
+    <div class="pb-tag">Parcela Morando — Após entrega das chaves</div>
+    <div class="pb-val">${parcelaDestaque} / mês</div>
+    <div class="pb-det">${parcelaDetalhe}</div>
+  </div>
+  <div class="pb-right">
+    <div class="pb-sys">Sistema ${sistemaAtivo.toUpperCase()}</div>
+  </div>
+</div>
+
+<!-- CRONOGRAMA DA OBRA -->
+<div class="sec no-break" style="margin-bottom:10px">
+  <div class="sec-head" style="background:#1565C0">🏗️ Cronograma da Obra</div>
+  <div class="sec-body" style="padding:0">
+    <table style="width:100%;border-collapse:collapse;font-size:10px">
+      <tbody>
+        ${cronoLinhas}
+      </tbody>
+    </table>
+    <!-- Financiamento bancário -->
+    <div style="background:#EEF4FF;border-top:2px solid #1565C0;padding:8px 10px">
+      <div style="font-size:9px;font-weight:700;color:#1A56DB;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">🏦 Financiamento Bancário — Após Entrega das Chaves</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;font-size:10px">
+        <div><span style="color:#6B7280">Valor financiado:</span> <strong style="color:#1A56DB">${fi(finPDF)}</strong></div>
+        <div><span style="color:#6B7280">Prazo:</span> <strong>${cronoNFin} anos (${cronoNFin * 12} parcelas)</strong></div>
+      </div>
+      <div>
+        ${sistemaAtivo === 'sac' ? `
+        <div style="background:#fff;border-radius:4px;padding:8px 10px;border:1px solid #DBEAFE">
+          <div style="font-size:9px;font-weight:700;color:#1A56DB;margin-bottom:4px">📉 SAC — Parcelas Decrescentes</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div><div style="font-size:9px;color:#6B7280">1ª parcela</div><div style="font-size:13px;font-weight:700;color:#111">${fb(cronoParcSAC1)}</div></div>
+            <div><div style="font-size:9px;color:#6B7280">Última parcela</div><div style="font-size:12px;font-weight:600;color:#057A55">${fb(cronoParcSACult)}</div></div>
+          </div>
+        </div>` : `
+        <div style="background:#fff;border-radius:4px;padding:8px 10px;border:1px solid #DBEAFE">
+          <div style="font-size:9px;font-weight:700;color:#1A56DB;margin-bottom:4px">📊 PRICE — Parcela Fixa</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div><div style="font-size:9px;color:#6B7280">Parcela fixa</div><div style="font-size:13px;font-weight:700;color:#111">${fb(cronoParcPrice)}</div></div>
+            <div><div style="font-size:9px;color:#6B7280">${cronoNFin * 12}× igual</div><div style="font-size:11px;font-weight:600;color:#9CA3AF">sem variação</div></div>
+          </div>
+        </div>`}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LINHA 1: VALORES + SEGURO -->
+<div class="two-col">
+
+  <!-- VALORES -->
+  <div class="sec no-break">
+    <div class="sec-head">💰 Valores da Proposta</div>
+    <div class="sec-body">
+      <div class="metrics cols2" style="margin-bottom:6px">
+        <div class="metric"><div class="m-lbl">Valor da unidade</div><div class="m-val az">${fi(d.vi)}</div></div>
+        <div class="metric"><div class="m-lbl">Financiamento liberado</div><div class="m-val az">${fi(finPDF)}</div></div>
+        <div class="metric"><div class="m-lbl">Entrada total</div><div class="m-val">${fi(totalEntradaPDF)}</div></div>
+        <div class="metric"><div class="m-lbl">Seguro de obra</div><div class="m-val am">${fi(seguro)}</div></div>
+      </div>
+      <div style="background:#F4F6FA;border-radius:4px;padding:6px 9px;margin-bottom:2px">
+        <div style="font-size:8px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">📌 Composição da entrada</div>
+        <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#374151;padding:2px 0">
+          <span>🔑 Ato — valor pago na assinatura do contrato</span>
+          <strong style="color:#111">${fi(d.ato || 0)}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#374151;padding:2px 0;border-top:1px solid #E5E7EB">
+          <span>💰 FGTS — saldo do Fundo de Garantia utilizado na entrada</span>
+          <strong style="color:#111">${fi(d.fgts || 0)}</strong>
+        </div>
+      </div>
+      <div class="notice-blue">
+        🔒 <strong>Saldo congelado sem INCC</strong> após assinatura CEF + isenção de documentação. Por pagar o seguro, o cliente não paga INCC nem documentações.
+      </div>
+    </div>
+  </div>
+
+  <!-- SEGURO DE OBRA -->
+  <div class="sec no-break">
+    <div class="sec-head orange">🔒 Seguro de Obra — Evolução Gradual</div>
+    <div class="sec-body">
+      <table class="seg-tbl">
+        <thead><tr><th>Período</th><th>Faixa mensal</th><th>% obra</th></tr></thead>
+        <tbody>${linhasSeguro}</tbody>
+      </table>
+      <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;background:#FEF3E8;padding:6px 9px;border-radius:4px;border:1px solid #FCD9A8">
+        <span style="font-size:9px;font-weight:700;color:#8A3F00">MÉDIA TOTAL</span>
+        <span style="font-size:13px;font-weight:800;color:#C05A00">${fi(seguro)}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- LINHA 2: ECONOMIA + VALORIZAÇÃO -->
+<div class="two-col">
+
+  <!-- ECONOMIA -->
+  <div class="sec no-break">
+    <div class="sec-head green">🏆 Economia com o Programa</div>
+    <div class="sec-body">
+      <div class="eco-line">
+        <span class="lbl">INCC — 10%/ano de obra restante</span>
+        <span class="val" style="color:#1B6E3F">${fi(eco.incc || 0)}</span>
+      </div>
+      <div class="eco-line">
+        <span class="lbl">RGI / ITBI — Média 5% do valor pronto</span>
+        <span class="val" style="color:#1B6E3F">${fi(eco.rgiItbi || 0)}</span>
+      </div>
+      <div class="eco-line">
+        <span class="lbl">Laudêmio — ${eco.temLaudemio ? 'Média 5% do valor pronto' : 'Não se aplica'}</span>
+        <span class="val" style="color:${eco.temLaudemio ? '#1B6E3F' : '#9CA3AF'}">${eco.temLaudemio ? fi(eco.laudemio || 0) : '—'}</span>
+      </div>
+      <div class="eco-line">
+        <span class="lbl">Seguro de obra — Período de construção <span style="font-size:8px;color:#B91C1C">(custo do cliente)</span></span>
+        <span class="val" style="color:#B91C1C">− ${fi(eco.seguro || 0)}</span>
+      </div>
+      <div class="eco-total-bar">
+        <span class="tl">🏆 TOTAL DE ECONOMIA</span>
+        <span class="tv">${fi(eco.total || 0)}</span>
+      </div>
+      <div class="notice-yellow" style="margin-top:6px;text-align:center;font-weight:700">
+        POR PAGAR O SEGURO, VOCÊ NÃO PAGA INCC E DOCUMENTAÇÕES
+      </div>
+    </div>
+  </div>
+
+  <!-- VALORIZAÇÃO -->
+  <div class="sec no-break">
+    <div class="sec-head purple">📈 Projeção de Valorização (${pct}%)</div>
+    <div class="sec-body">
+      <div class="val-banner">
+        <div class="val-card az"><div class="vc-lbl">Valor hoje</div><div class="vc-val az">${fi(d.vi)}</div></div>
+        <div class="val-card az"><div class="vc-lbl">Valorização (${pct}%)</div><div class="vc-val az">${fi(d.vi * pctD)}</div></div>
+        <div class="val-card vd"><div class="vc-lbl">Valor na entrega</div><div class="vc-val vd">${fi(vEntrega)}</div></div>
+        <div class="val-card am"><div class="vc-lbl">Financiado</div><div class="vc-val am">${fi(finPDF)}</div></div>
+        <div class="val-card gy"><div class="vc-lbl">Entrada total</div><div class="vc-val" style="color:#374151">${fi(totalEntradaPDF)}</div></div>
+        <div class="val-card rd"><div class="vc-lbl">Seguro pago</div><div class="vc-val rd">− ${fi(seguro)}</div></div>
+        <div class="val-card ${lucro>=0?'vd':'rd'} lucro">
+          <div class="vc-lbl">Lucro estimado</div>
+          <div class="vc-val ${lucro>=0?'vd':'rd'}" style="font-size:18px">${fi(lucro)}</div>
+        </div>
+      </div>
+      <div style="font-size:8.5px;color:#9CA3AF;margin-top:4px">* Estimativa. Não é garantia de retorno. Histórico Porto Maravilha: ~60% em 30 meses.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- LINHA 3: FLUXO DE PAGAMENTO TOTAL -->
+<div class="sec no-break" style="margin-bottom:10px">
+  <div class="sec-head" style="background:#0B3D91">💳 Fluxo de Pagamento Total</div>
+  <div class="sec-body">
+    <div class="eco-line">
+      <span class="lbl">🔑 Ato — pago na assinatura</span>
+      <span class="val" style="color:#0B3D91">${fi(fluxoAto)}</span>
+    </div>
+    <div class="eco-line">
+      <span class="lbl">💰 FGTS utilizado</span>
+      <span class="val" style="color:#0B3D91">${fi(fluxoFgts)}</span>
+    </div>
+    ${fluxoLinhasRef}
+    <div class="eco-line">
+      <span class="lbl">🏗️ Período de obra — parcela + seguro <span style="font-size:8px;color:#6B7280">(média mensal)</span></span>
+      <span class="val" style="color:#C05A00">${fi(fluxoParcelaObraTotal)}</span>
+    </div>
+    <div style="font-size:8.5px;color:#9CA3AF;margin:2px 0 4px;padding-left:1px">
+      ${fb(fluxoMens)} parcela de obra + ${fb(fluxoSegMedio)} seguro médio/mês
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:9.5px">
+      <thead>
+        <tr style="background:#F3F4F6">
+          <th style="text-align:left;padding:4px 6px;font-weight:700;color:#374151">Período</th>
+          <th style="text-align:left;padding:4px 6px;font-weight:700;color:#374151">Composição</th>
+          <th style="text-align:right;padding:4px 6px;font-weight:700;color:#374151">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${fluxoAnualHtml}
+      </tbody>
+    </table>
+
+    <div style="background:${fluxoStatusFundo};border:1.5px solid ${fluxoStatusBorda};border-radius:6px;padding:10px 12px;margin-top:8px">
+      <div style="font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📊 Capacidade de Pagamento — Período de Obra</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <div class="metric"><div class="m-lbl">Renda bruta familiar</div><div class="m-val">${fi(fluxoRenda)}</div></div>
+        <div class="metric"><div class="m-lbl">Máximo ${fluxoPctRendaLimiteNum.toFixed(0)}% da renda</div><div class="m-val">${fi(fluxoLimite30)}</div></div>
+        <div class="metric"><div class="m-lbl">Parcela média (período de obra)</div><div class="m-val" style="color:#C05A00">${fi(fluxoParcelaObraTotal)}</div></div>
+        <div class="metric"><div class="m-lbl">Parcela no pico (último mês)</div><div class="m-val" style="color:${fluxoStatusCor}">${fi(fluxoParcelaObraPico)}</div></div>
+      </div>
+      <div style="text-align:center;font-weight:800;font-size:11px;color:${fluxoStatusCor};background:#fff;border-radius:4px;padding:7px 9px;border:1px solid ${fluxoStatusBorda}">
+        ${fluxoStatusLabel} (${fluxoRenda > 0 ? fluxoPctRenda.toFixed(1).replace('.', ',') + '%' : '—'} no pico)
+      </div>
+      <div style="font-size:8px;color:#9CA3AF;margin-top:6px;line-height:1.5">
+        Referência: comprometimento até ${fluxoPctRendaLimiteNum.toFixed(0)}% da renda bruta é considerado saudável. A avaliação usa o PICO (último mês da obra, quando o seguro é mais alto), não a média — para refletir o momento de maior aperto financeiro real.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="background:#FEF9C3;border:1px solid #F59E0B;border-radius:5px;padding:8px 12px;margin-bottom:8px;font-size:9px;color:#78350F;text-align:center;line-height:1.6">
+  ⚠️ <strong>SIMULAÇÃO — Os valores apresentados são estimativas e podem ter variações de acordo com a aprovação do banco.</strong><br>
+  Parcelas, taxas e condições estão sujeitas à análise de crédito, avaliação do imóvel e políticas vigentes da Caixa Econômica Federal no momento da contratação.
+</div>
+
+<div class="footer">
+  Simulador MCMV 2026 · Caixa Econômica Federal · Uso profissional · Simulação estimada — consulte uma agência Caixa para proposta oficial.
+</div>
+
+</body>
+</html>`;
+
+  // Abre janela e imprime como PDF
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}
+
+function rMets(id, vi, ato, fg, totalEnt, fin, juros, prim, ult, taxa, prazo, tipo) {
+  document.getElementById(id).innerHTML = `
+    <div class="met"><div class="ml">Valor imóvel</div><div class="mv">${fi(vi)}</div></div>
+    <div class="met"><div class="ml">Ato</div><div class="mv">${fi(ato)}</div></div>
+    <div class="met"><div class="ml">FGTS utilizado</div><div class="mv">${fi(fg)}</div></div>
+    <div class="met"><div class="ml">Entrada total</div><div class="mv">${fi(totalEnt)}</div></div>
+    <div class="met"><div class="ml">Financiado</div><div class="mv bl">${fi(fin)}</div></div>
+    <div class="met"><div class="ml">Prazo</div><div class="mv">${prazo} anos</div></div>
+    <div class="met"><div class="ml">${tipo === 'sac' ? '1ª parcela' : 'Parcela fixa'}</div><div class="mv">${fb(prim)}</div></div>
+    ${tipo === 'sac' ? `<div class="met"><div class="ml">Última parcela</div><div class="mv gr">${fb(ult)}</div></div>` : ''}
+    <div class="met"><div class="ml">Taxa a.a.</div><div class="mv" style="font-size:12px">${taxa.toFixed(2).replace('.', ',')}%</div></div>
+    <div class="met"><div class="ml">Total de juros</div><div class="mv am">${fi(juros)}</div></div>
+    <div class="met"><div class="ml">Custo total</div><div class="mv rd">${fi(fin + juros)}</div></div>
+  `;
+}
+function rBar(id, fin, juros) {
+  const t = fin + juros, pF = (fin / t * 100).toFixed(1), pJ = (juros / t * 100).toFixed(1);
+  document.getElementById(id).innerHTML = `
+    <div style="display:flex;gap:12px;margin-bottom:5px;flex-wrap:wrap;font-size:11px;font-weight:500;color:var(--texto2)">
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--azul);margin-right:3px;vertical-align:middle"></span>Amortização ${pF}%</span>
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--laranja);margin-right:3px;vertical-align:middle"></span>Juros ${pJ}%</span>
+    </div>
+    <div style="display:flex;border-radius:4px;overflow:hidden;height:9px;margin-bottom:10px">
+      <div style="width:${pF}%;background:var(--azul)"></div>
+      <div style="width:${pJ}%;background:var(--laranja)"></div>
+    </div>`;
+}
+function rTab(id, rows) {
+  const n = rows.length;
+  const m = n > 120 ? [...rows.slice(0, 60), null, ...rows.slice(-12)] : rows;
+  document.getElementById(id).innerHTML = m.map(r => {
+    if (!r) return `<tr><td colspan="5" style="text-align:center;color:var(--texto3);font-size:10px;padding:4px">... parcelas intermediárias omitidas ...</td></tr>`;
+    return `<tr><td>${r.m}</td><td>${fb(r.p)}</td><td>${fb(r.a)}</td><td>${fb(r.j)}</td><td>${fi(r.s)}</td></tr>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
