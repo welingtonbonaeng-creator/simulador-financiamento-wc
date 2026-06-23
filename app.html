@@ -21,7 +21,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Sora',sans-serif;background:var(--cinza1);color:var(--texto);min-height:100vh;}
 header{background:#fff;padding:0 1.5rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(11,61,145,.1);border-bottom:2px solid var(--azulclaro);}
-.header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:136px;}
+.header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:124px;}
 .logo{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:32px;height:32px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
 .logo-txt{color:#fff;font-size:14px;font-weight:600;}
@@ -260,10 +260,7 @@ async function _confirmarTroca(){
 <header>
   <div class="header-inner">
     <div class="logo">
-      <div style="overflow:hidden;height:122px;display:flex;justify-content:center;align-items:flex-start;">
-        <img src="logo.png" alt="SimulaPro" style="height:168px;width:auto;"/>
-      </div>
-      <div style="font-size:11px;font-weight:700;color:#64748B;letter-spacing:.15em;text-transform:uppercase;margin-top:2px;font-family:'Sora',sans-serif;">Simulador de Financiamento Imobiliário</div>
+      <img src="logo.png" alt="SimulaPro" style="height:116px;width:auto;display:block;"/>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <div class="badge-header">SimulaPro</div>
@@ -2530,12 +2527,15 @@ function gerarPDF() {
 
 <!-- HEADER -->
 <div class="header">
-  <div class="header-left">
-    <h1>📊 Simulação de Unidade</h1>
-    <p>${produto} · ${tipologia}${metragem ? ' · ' + metragem : ''} · ${faixa}</p>
+  <div class="header-left" style="display:flex;align-items:center;gap:14px;">
+    <img src="https://welingtonbonaeng-creator.github.io/simulador-financiamento-wc/logo.png" alt="SimulaPro" style="height:72px;width:auto;"/>
+    <div>
+      <h1>Simulação de Financiamento</h1>
+      <p>${produto} · ${tipologia}${metragem ? ' · ' + metragem : ''} · ${faixa}</p>
+    </div>
   </div>
   <div class="header-right">
-    <div class="badge-mcmv">MCMV 2026 · Caixa Econômica Federal</div>
+    <div class="badge-mcmv">SimulaPro</div>
     <div class="header-date">${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
   </div>
 </div>
@@ -2753,11 +2753,11 @@ function gerarPDF() {
 
 <div style="background:#FEF9C3;border:1px solid #F59E0B;border-radius:5px;padding:8px 12px;margin-bottom:8px;font-size:9px;color:#78350F;text-align:center;line-height:1.6">
   ⚠️ <strong>SIMULAÇÃO — Os valores apresentados são estimativas e podem ter variações de acordo com a aprovação do banco.</strong><br>
-  Parcelas, taxas e condições estão sujeitas à análise de crédito, avaliação do imóvel e políticas vigentes da Caixa Econômica Federal no momento da contratação.
+  Parcelas, taxas e condições estão sujeitas à análise de crédito, avaliação do imóvel e políticas vigentes no momento da contratação.
 </div>
 
 <div class="footer">
-  Simulador MCMV 2026 · Caixa Econômica Federal · Uso profissional · Simulação estimada — consulte uma agência Caixa para proposta oficial.
+  SimulaPro · Simulador de Financiamento Imobiliário · Uso profissional · Simulação estimada — consulte um especialista para proposta oficial.
 </div>
 
 </body>
