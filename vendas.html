@@ -23,7 +23,7 @@ body{font-family:'Sora',sans-serif;color:var(--texto);background:#fff;overflow-x
 /* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 1.5rem;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(11,61,145,.08);transition:box-shadow .3s;}
 nav.scrolled{box-shadow:0 4px 24px rgba(11,61,145,.1);}
-.nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;}
+.nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:72px;}
 .nav-logo img{height:56px;width:auto;display:block;}
 .nav-links{display:flex;align-items:center;gap:2rem;}
 .nav-links a{font-size:14px;font-weight:500;color:var(--texto2);text-decoration:none;transition:color .2s;}
@@ -218,7 +218,12 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
 <!-- NAV -->
 <nav id="nav">
   <div class="nav-inner">
-    <div class="nav-logo"><a href="#"><img src="logo.png" alt="SimulaPro"/></a></div>
+    <div class="nav-logo"><a href="#" style="text-decoration:none;">
+      <div style="overflow:hidden;height:42px;display:flex;justify-content:center;align-items:flex-start;">
+        <img src="logo.png" alt="SimulaPro" style="height:58px;width:auto;"/>
+      </div>
+      <div style="font-size:9px;font-weight:700;color:#64748B;letter-spacing:.12em;text-transform:uppercase;font-family:'Sora',sans-serif;text-align:center;margin-top:1px;">Simulador de Financiamento Imobiliário</div>
+    </a></div>
     <div class="nav-links">
       <a href="#features">Funcionalidades</a>
       <a href="#preco">Preços</a>
@@ -725,7 +730,11 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
 <!-- FOOTER -->
 <footer>
   <div class="footer-inner">
-    <div class="footer-logo"><img src="logo.png" alt="SimulaPro"/></div>
+    <div class="footer-logo">
+      <div style="overflow:hidden;height:34px;display:flex;justify-content:center;align-items:flex-start;">
+        <img src="logo.png" alt="SimulaPro" style="height:47px;width:auto;"/>
+      </div>
+    </div>
     <div class="footer-links">
       <a href="#features">Funcionalidades</a>
       <a href="#preco">Preços</a>
