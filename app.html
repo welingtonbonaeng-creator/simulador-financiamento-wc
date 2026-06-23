@@ -563,6 +563,73 @@ async function _confirmarTroca(){
 
   <div class="notice">⚠️ Simulação estimada com base nas taxas oficiais. Consulte uma agência bancária para proposta oficial.</div>
 </div>
+
+<!-- ══════════════════════════════════════════════
+     SIMULADOR DE AMORTIZAÇÃO — plus do SimulaPro
+     ═══════════════════════════════════════════════ -->
+<div class="card" id="secAmort" style="display:none;margin-top:.8rem">
+  <div class="card-header" style="background:linear-gradient(135deg,#FEF3E8,#FFF7ED);border-bottom:2px solid #FED7AA">
+    <div class="ci" style="background:#FEF3E8;color:#C05A00;font-size:16px">📊</div>
+    <div>
+      <div class="ct" style="color:#9A3412">Simulador de Amortização</div>
+      <div class="cs">Mostre ao cliente o impacto de amortizar na entrega das chaves</div>
+    </div>
+  </div>
+  <div class="cb">
+
+    <!-- Dados vindos do simulador (somente leitura) -->
+    <div style="background:#F0F7FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#1565C0;display:flex;align-items:center;gap:6px">
+      ℹ️ Dados preenchidos automaticamente do Simulador de Financiamento acima
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px">
+        <div style="font-size:9px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Saldo financiado</div>
+        <div id="am-saldo" style="font-size:15px;font-weight:800;color:#1565C0">—</div>
+      </div>
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px">
+        <div style="font-size:9px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Taxa mensal</div>
+        <div id="am-taxa" style="font-size:15px;font-weight:800;color:#1565C0">—</div>
+      </div>
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px">
+        <div style="font-size:9px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Prazo total</div>
+        <div id="am-prazo" style="font-size:15px;font-weight:800;color:#1565C0">—</div>
+      </div>
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px">
+        <div style="font-size:9px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Sistema / Parcela atual</div>
+        <div id="am-sistema" style="font-size:15px;font-weight:800;color:#1565C0">—</div>
+      </div>
+    </div>
+
+    <!-- Inputs do usuário -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="field">
+        <label>Em qual parcela vai amortizar?</label>
+        <input type="number" id="am-parcela" value="1" min="1"
+          style="height:44px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 12px;font-size:14px;font-family:'Sora',sans-serif;width:100%;outline:none"
+          onfocus="this.style.borderColor='#F57C00'" onblur="this.style.borderColor='#E2E8F0'"/>
+        <span style="font-size:10px;color:#94A3B8;margin-top:3px;display:block">1 = na entrega das chaves · após a parcela escolhida</span>
+      </div>
+      <div class="field">
+        <label>Valor a amortizar (R$)</label>
+        <input type="text" id="am-valor" placeholder="Ex: 50.000,00"
+          oninput="amFmt(this)"
+          style="height:44px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 12px;font-size:14px;font-family:'Sora',sans-serif;width:100%;outline:none"
+          onfocus="this.style.borderColor='#F57C00'" onblur="this.style.borderColor='#E2E8F0'"
+          onkeydown="if(event.key==='Enter')calcAmort()"/>
+      </div>
+    </div>
+
+    <button onclick="calcAmort()"
+      style="width:100%;padding:13px;background:linear-gradient(135deg,#C05A00,#F57C00);color:#fff;border:none;border-radius:10px;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(197,90,0,.3);transition:all .2s"
+      onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+      📊 Simular Amortização
+    </button>
+
+    <!-- Resultado -->
+    <div id="am-res" style="display:none;margin-top:20px"></div>
+  </div>
+</div>
+
 </main>
 <footer>SimulaPro · Simulador de Financiamento Imobiliário · Uso profissional</footer>
 
@@ -2064,6 +2131,7 @@ function simular() {
     ato: _atoVal, fgts: _fgtsVal };
   atualizarValorizacao();
   atualizarEconomia();
+  preencherAmort();
 
   document.getElementById('resultado').style.display = '';
   setTimeout(() => document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -2804,6 +2872,192 @@ function rTab(id, rows) {
     if (!r) return `<tr><td colspan="5" style="text-align:center;color:var(--texto3);font-size:10px;padding:4px">... parcelas intermediárias omitidas ...</td></tr>`;
     return `<tr><td>${r.m}</td><td>${fb(r.p)}</td><td>${fb(r.a)}</td><td>${fb(r.j)}</td><td>${fi(r.s)}</td></tr>`;
   }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   SIMULADOR DE AMORTIZAÇÃO
+   ══════════════════════════════════════════════════════════ */
+
+function preencherAmort() {
+  const d = window._simDadosVal;
+  if (!d) return;
+
+  const isSAC     = d.sistemaAtivo !== 'price';
+  const fin       = isSAC ? (d.finSAC ?? d.fin) : (d.finPRICE ?? d.fin);
+  const prazoA    = d.prazoSAC || 30;
+  const prazoM    = prazoA * 12;
+  const taxaM     = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
+  const parcela1  = isSAC ? d.parcelaSAC1 : d.parcelaPrice;
+
+  window._amortBase = { fin, prazoM, taxaM, isSAC, parcela1 };
+
+  document.getElementById('am-saldo').textContent   = fi(fin);
+  document.getElementById('am-taxa').textContent    = (taxaM * 100).toFixed(4).replace('.', ',') + '% a.m.';
+  document.getElementById('am-prazo').textContent   = prazoM + ' meses (' + prazoA + ' anos)';
+  document.getElementById('am-sistema').textContent = (isSAC ? 'SAC · ' : 'PRICE · ') + fb(parcela1);
+  document.getElementById('am-parcela').max         = prazoM;
+  document.getElementById('am-res').style.display   = 'none';
+
+  const sec = document.getElementById('secAmort');
+  sec.style.display = '';
+  sec.style.opacity = '0';
+  sec.style.transform = 'translateY(12px)';
+  requestAnimationFrame(() => {
+    sec.style.transition = 'opacity .4s,transform .4s';
+    sec.style.opacity = '1';
+    sec.style.transform = 'translateY(0)';
+  });
+}
+
+function amFmt(el) {
+  let v = el.value.replace(/\D/g, '');
+  if (!v) { el.value = ''; return; }
+  v = (parseInt(v) / 100).toFixed(2);
+  el.value = parseFloat(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function calcAmort() {
+  const b = window._amortBase;
+  if (!b) { alert('Faça a simulação de financiamento primeiro.'); return; }
+
+  const parcelaN = Math.max(1, parseInt(document.getElementById('am-parcela').value) || 1);
+  const rawVal   = document.getElementById('am-valor').value.replace(/\./g, '').replace(',', '.');
+  const extra    = parseFloat(rawVal) || 0;
+
+  if (extra <= 0) { alert('Informe o valor a amortizar.'); return; }
+
+  const { fin, prazoM, taxaM, isSAC, parcela1 } = b;
+  const restantes = prazoM - (parcelaN - 1);
+
+  if (restantes <= 0) { alert('Parcela maior que o prazo do contrato.'); return; }
+
+  /* ── Saldo devedor na parcela N ── */
+  let saldoN;
+  if (isSAC) {
+    const amortM = fin / prazoM;
+    saldoN = Math.max(0, fin - (parcelaN - 1) * amortM);
+  } else {
+    saldoN = parcela1 > 0 && taxaM > 0
+      ? parcela1 * (1 - Math.pow(1 + taxaM, -restantes)) / taxaM
+      : 0;
+  }
+
+  if (extra >= saldoN) {
+    document.getElementById('am-res').style.display = '';
+    document.getElementById('am-res').innerHTML = `
+      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:22px">🎉</div>
+        <div style="font-weight:800;color:#14532D;font-size:16px;margin:6px 0">Financiamento quitado!</div>
+        <div style="font-size:13px;color:#166534">Com R$${fi(extra)} na parcela ${parcelaN} o saldo de ${fi(saldoN)} é totalmente liquidado.</div>
+      </div>`;
+    return;
+  }
+
+  const newSaldo = saldoN - extra;
+
+  /* ── Opção A: Reduzir Prazo (manter amortização mensal original SAC / parcela PRICE) ── */
+  let novoPrazoA, novaParcA, jurosComA, jurosOrigA;
+  if (isSAC) {
+    const amortM = fin / prazoM;
+    // juros originais restantes
+    jurosOrigA = 0;
+    let s = saldoN;
+    for (let i = 0; i < restantes && s > 0.01; i++) { jurosOrigA += s * taxaM; s -= amortM; }
+    // com amortização, mantém amortM → prazo menor
+    novoPrazoA = Math.ceil(newSaldo / amortM);
+    novaParcA  = amortM + newSaldo * taxaM;
+    jurosComA  = 0;
+    s = newSaldo;
+    for (let i = 0; i < novoPrazoA && s > 0.01; i++) { jurosComA += s * taxaM; s -= amortM; }
+  } else {
+    jurosOrigA = parcela1 * restantes - saldoN;
+    novoPrazoA = taxaM > 0 && (parcela1 - newSaldo * taxaM) > 0
+      ? Math.ceil(Math.log(parcela1 / (parcela1 - newSaldo * taxaM)) / Math.log(1 + taxaM))
+      : restantes;
+    novaParcA  = parcela1; // mesmo valor de parcela
+    jurosComA  = parcela1 * novoPrazoA - newSaldo;
+  }
+
+  /* ── Opção B: Reduzir Parcela (manter prazo) ── */
+  let novaParcB, jurosComB;
+  if (isSAC) {
+    const newAmortM = newSaldo / restantes;
+    novaParcB = newAmortM + newSaldo * taxaM;
+    jurosComB = 0;
+    let s = newSaldo;
+    for (let i = 0; i < restantes && s > 0.01; i++) { jurosComB += s * taxaM; s -= newAmortM; }
+  } else {
+    novaParcB = taxaM > 0 && restantes > 0
+      ? newSaldo * taxaM * Math.pow(1 + taxaM, restantes) / (Math.pow(1 + taxaM, restantes) - 1)
+      : newSaldo / restantes;
+    jurosComB = novaParcB * restantes - newSaldo;
+  }
+
+  const econA = jurosOrigA - jurosComA;
+  const econB = jurosOrigA - jurosComB;
+  const parcMenosA = restantes - novoPrazoA;
+  const anosMenosA = Math.floor(parcMenosA / 12);
+  const mesesMenosA = parcMenosA % 12;
+  const parcMenosStr = anosMenosA > 0
+    ? `${anosMenosA} ano${anosMenosA>1?'s':''} e ${mesesMenosA} mês${mesesMenosA!==1?'es':''}`
+    : `${parcMenosA} mese${parcMenosA!==1?'s':''}`;
+
+  const novoPrazoAStr = (() => {
+    const a = Math.floor(novoPrazoA / 12), m = novoPrazoA % 12;
+    return a > 0 ? `${novoPrazoA} meses (${a}a ${m}m)` : `${novoPrazoA} meses`;
+  })();
+
+  document.getElementById('am-res').style.display = '';
+  document.getElementById('am-res').innerHTML = `
+<div style="background:#FEF9C3;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:#78350F">
+  ⚡ Amortização de <strong>${fi(extra)}</strong> na parcela <strong>${parcelaN}</strong> · Saldo devedor nesse momento: <strong>${fi(saldoN)}</strong> → Novo saldo: <strong>${fi(newSaldo)}</strong>
+</div>
+
+<!-- Comparação lado a lado -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+  <!-- SEM -->
+  <div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px;padding:14px">
+    <div style="font-size:10px;font-weight:700;color:#991B1B;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">❌ Sem amortização</div>
+    <div style="margin-bottom:6px"><span style="font-size:10px;color:#6B7280">Parcela atual</span><br><span style="font-size:18px;font-weight:800;color:#1565C0">${fb(parcela1)}</span></div>
+    <div style="margin-bottom:6px"><span style="font-size:10px;color:#6B7280">Prazo restante</span><br><span style="font-size:14px;font-weight:700">${restantes} meses</span></div>
+    <div><span style="font-size:10px;color:#6B7280">Juros restantes</span><br><span style="font-size:14px;font-weight:700;color:#991B1B">${fi(jurosOrigA)}</span></div>
+  </div>
+  <!-- COM opção A -->
+  <div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:14px">
+    <div style="font-size:10px;font-weight:700;color:#14532D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">✅ Com amortização</div>
+    <div style="margin-bottom:6px"><span style="font-size:10px;color:#6B7280">${isSAC?'1ª nova parcela':'Parcela (mantida)'}</span><br><span style="font-size:18px;font-weight:800;color:#14532D">${fb(novaParcA)}</span></div>
+    <div style="margin-bottom:6px"><span style="font-size:10px;color:#6B7280">Novo prazo</span><br><span style="font-size:14px;font-weight:700">${novoPrazoAStr}</span></div>
+    <div><span style="font-size:10px;color:#6B7280">Juros restantes</span><br><span style="font-size:14px;font-weight:700;color:#14532D">${fi(jurosComA)}</span></div>
+  </div>
+</div>
+
+<!-- Cards de economia -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+  <div style="background:linear-gradient(135deg,#0B3D91,#1565C0);border-radius:10px;padding:14px;color:#fff;text-align:center">
+    <div style="font-size:10px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">💰 Economia de juros</div>
+    <div style="font-size:22px;font-weight:800">${fi(econA)}</div>
+    <div style="font-size:10px;opacity:.7;margin-top:4px">reduzindo o prazo</div>
+  </div>
+  <div style="background:linear-gradient(135deg,#1B6E3F,#2D9D5C);border-radius:10px;padding:14px;color:#fff;text-align:center">
+    <div style="font-size:10px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📅 Parcelas a menos</div>
+    <div style="font-size:22px;font-weight:800">${parcMenosA}</div>
+    <div style="font-size:10px;opacity:.7;margin-top:4px">${parcMenosStr}</div>
+  </div>
+</div>
+
+<!-- Opção B: reduzir parcela -->
+<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px">
+  <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:10px">Alternativa: Manter o prazo e reduzir a parcela</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+    <div><div style="font-size:9px;color:#6B7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">${isSAC?'1ª nova parcela':'Nova parcela'}</div><div style="font-weight:800;color:#1565C0;font-size:15px">${fb(novaParcB)}</div></div>
+    <div><div style="font-size:9px;color:#6B7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Prazo</div><div style="font-weight:800;font-size:15px">${restantes} meses (igual)</div></div>
+    <div><div style="font-size:9px;color:#6B7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Economia de juros</div><div style="font-weight:800;color:#1B6E3F;font-size:15px">${fi(econB)}</div></div>
+  </div>
+</div>
+
+<div style="font-size:10px;color:#94A3B8;margin-top:10px;text-align:center">
+  * Simulação estimada. A opção de reduzir prazo ou parcela depende da política do banco no momento da amortização.
+</div>`;
 }
 </script>
 </body>
