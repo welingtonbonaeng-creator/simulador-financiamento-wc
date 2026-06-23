@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin — Simulador MCMV 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --azul:#0B3D91;--azul2:#1565C0;--azul3:#1976D2;--azulclaro:#E3F0FF;
+  --verde:#1B6E3F;--verdeClaro:#E6F4EC;
+  --vermelho:#991B1B;--vermelhoClaro:#FDE8E8;
+  --laranja:#C05A00;--laranjaClaro:#FEF0E3;
+  --cinza1:#F4F6FA;--cinza2:#E8ECF4;--cinza3:#C8CDD8;
+  --texto:#111827;--texto2:#4B5563;--texto3:#9CA3AF;
+  --sombra:0 2px 16px rgba(11,61,145,.09);--radius:12px;--radius2:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sora',sans-serif;background:var(--cinza1);color:var(--texto);min-height:100vh;display:flex;flex-direction:column;visibility:hidden;}
+header{background:var(--azul);padding:0 1.5rem;box-shadow:0 2px 20px rgba(11,61,145,.3);flex-shrink:0;}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:58px;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:32px;height:32px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-txt{color:#fff;font-size:14px;font-weight:600;}
+.logo-sub{color:rgba(255,255,255,.55);font-size:11px;}
+.badge-admin{background:rgba(255,200,0,.25);color:#FFD600;font-size:11px;padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace;border:1px solid rgba(255,200,0,.3);}
+.header-right{display:flex;align-items:center;gap:10px;}
+.user-email{color:rgba(255,255,255,.6);font-size:11px;font-family:'DM Mono',monospace;}
+.btn-logout{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.85);font-size:11px;padding:4px 12px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:500;}
+
+/* TELA DE LOGIN */
+#screen-login{flex:1;display:flex;align-items:center;justify-content:center;padding:2rem 1rem;}
+.login-card{background:#fff;border-radius:var(--radius);box-shadow:var(--sombra);width:100%;max-width:380px;overflow:hidden;}
+.login-hero{background:linear-gradient(135deg,#0B3D91,#1565C0);padding:1.5rem;}
+.login-hero h2{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px;}
+.login-hero p{color:rgba(255,255,255,.65);font-size:12px;}
+.login-body{padding:1.5rem;}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:1rem;}
+.field label{font-size:10px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.05em;}
+.field input{height:42px;border:1.5px solid var(--cinza2);border-radius:var(--radius2);padding:0 12px;font-size:14px;font-family:'Sora',sans-serif;width:100%;transition:border-color .15s,box-shadow .15s;}
+.field input:focus{outline:none;border-color:var(--azul3);box-shadow:0 0 0 3px rgba(25,118,210,.11);}
+.btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,var(--azul),var(--azul3));color:#fff;border:none;border-radius:var(--radius2);font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(11,61,145,.25);}
+.btn-primary:hover{transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.msg{font-size:12px;padding:9px 12px;border-radius:var(--radius2);margin-bottom:1rem;line-height:1.5;display:none;}
+.msg.er{background:#FDE8E8;color:#991B1B;border:1px solid #FCA5A5;display:block;}
+
+/* TELA PROIBIDO */
+#screen-forbidden{flex:1;display:flex;align-items:center;justify-content:center;padding:2rem;}
+.forbidden-box{text-align:center;max-width:320px;}
+.forbidden-box .icon{font-size:48px;margin-bottom:1rem;}
+.forbidden-box h2{font-size:20px;font-weight:700;margin-bottom:8px;color:var(--vermelho);}
+.forbidden-box p{font-size:13px;color:var(--texto2);}
+
+/* TELA DE LOADING */
+#screen-loading{flex:1;display:flex;align-items:center;justify-content:center;}
+.spinner{width:36px;height:36px;border:3px solid var(--cinza2);border-top-color:var(--azul);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* DASHBOARD */
+#screen-dashboard{flex:1;display:flex;flex-direction:column;}
+.dash-main{max-width:1100px;margin:0 auto;padding:1.25rem 1.1rem 3rem;width:100%;}
+
+/* Cards de stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.25rem;}
+@media(max-width:700px){.stats-grid{grid-template-columns:1fr 1fr;}}
+.stat-card{background:#fff;border-radius:var(--radius);box-shadow:var(--sombra);padding:1rem 1.1rem;}
+.stat-label{font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.stat-value{font-size:26px;font-weight:700;font-family:'DM Mono',monospace;}
+.sv-total{color:var(--azul);}
+.sv-ativo{color:var(--verde);}
+.sv-bloq{color:var(--vermelho);}
+.sv-logins{color:var(--laranja);}
+
+/* Tabela de usuários */
+.table-card{background:#fff;border-radius:var(--radius);box-shadow:var(--sombra);overflow:hidden;}
+.table-header{padding:.9rem 1.1rem;border-bottom:1px solid var(--cinza2);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.table-title{font-size:14px;font-weight:700;}
+.btn-new{padding:8px 16px;background:var(--azul);color:#fff;border:none;border-radius:var(--radius2);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;}
+.btn-new:hover{background:var(--azul2);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{background:var(--cinza1);color:var(--texto2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:9px 12px;text-align:left;border-bottom:1px solid var(--cinza2);white-space:nowrap;}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--cinza2);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--cinza1);}
+.badge-ativo{background:var(--verdeClaro);color:var(--verde);font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;}
+.badge-bloq{background:var(--vermelhoClaro);color:var(--vermelho);font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;}
+.mono{font-family:'DM Mono',monospace;}
+.actions{display:flex;gap:6px;}
+.btn-act{padding:5px 10px;border:none;border-radius:6px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.btn-bloquear{background:var(--vermelhoClaro);color:var(--vermelho);}
+.btn-bloquear:hover{background:#FCA5A5;}
+.btn-desbloquear{background:var(--verdeClaro);color:var(--verde);}
+.btn-desbloquear:hover{background:#B5D9C3;}
+.btn-deletar{background:var(--cinza2);color:var(--texto2);}
+.btn-deletar:hover{background:var(--cinza3);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:500;padding:1rem;}
+.modal-box{background:#fff;border-radius:var(--radius);box-shadow:0 8px 40px rgba(0,0,0,.2);width:100%;max-width:420px;overflow:hidden;}
+.modal-header{background:var(--azul);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;}
+.modal-header h3{color:#fff;font-size:15px;font-weight:700;}
+.modal-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0 4px;}
+.modal-close:hover{color:#fff;}
+.modal-body{padding:1.25rem;}
+.modal-footer{padding:.75rem 1.25rem 1.25rem;display:flex;gap:8px;justify-content:flex-end;}
+.btn-cancel{padding:9px 18px;background:var(--cinza2);color:var(--texto2);border:none;border-radius:var(--radius2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-cancel:hover{background:var(--cinza3);}
+.senha-row{display:flex;gap:8px;align-items:flex-end;}
+.senha-row .field{flex:1;margin-bottom:0;}
+.btn-gerar{padding:0 12px;height:42px;background:var(--cinza1);border:1.5px solid var(--cinza2);border-radius:var(--radius2);font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--texto2);}
+.btn-gerar:hover{background:var(--cinza2);}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:var(--radius2);font-size:13px;font-weight:500;z-index:999;animation:slide-in .2s ease;box-shadow:0 4px 20px rgba(0,0,0,.15);}
+.toast.ok{background:#1B6E3F;color:#fff;}
+.toast.er{background:#991B1B;color:#fff;}
+@keyframes slide-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.empty-row td{text-align:center;padding:2rem;color:var(--texto3);font-size:13px;}
+footer{text-align:center;padding:1.25rem;font-size:11px;color:var(--texto3);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🏠</div>
+      <div><div class="logo-txt">Simulador de Financiamento</div><div class="logo-sub">MCMV 2026 · Painel Administrativo</div></div>
+    </div>
+    <div class="header-right">
+      <div class="badge-admin">⚙ ADMIN</div>
+      <span class="user-email" id="adminEmail"></span>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</header>
+
+<!-- LOADING -->
+<div id="screen-loading" style="display:none"><div class="spinner"></div></div>
+
+<!-- LOGIN -->
+<div id="screen-login" style="display:none">
+  <div class="login-card">
+    <div class="login-hero">
+      <h2>⚙ Painel Admin</h2>
+      <p>Acesso restrito ao administrador</p>
+    </div>
+    <div class="login-body">
+      <div id="loginMsg" class="msg"></div>
+      <div class="field"><label>E-mail</label><input type="email" id="loginEmail" placeholder="admin@email.com" autocomplete="email"/></div>
+      <div class="field"><label>Senha</label><input type="password" id="loginSenha" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <button class="btn-primary" id="btnLogin" onclick="doLogin()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORBIDDEN -->
+<div id="screen-forbidden" style="display:none">
+  <div class="forbidden-box">
+    <div class="icon">🚫</div>
+    <h2>Acesso Negado</h2>
+    <p>Sua conta não tem permissão de administrador.</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dashboard" style="display:none">
+  <div class="dash-main">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total de Corretores</div><div class="stat-value sv-total" id="stTotal">—</div></div>
+      <div class="stat-card"><div class="stat-label">Ativos</div><div class="stat-value sv-ativo" id="stAtivos">—</div></div>
+      <div class="stat-card"><div class="stat-label">Bloqueados</div><div class="stat-value sv-bloq" id="stBloq">—</div></div>
+      <div class="stat-card"><div class="stat-label">Logins Hoje</div><div class="stat-value sv-logins" id="stLogins">—</div></div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Corretores</div>
+        <button class="btn-new" onclick="openModal()">+ Novo Corretor</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th><th>E-mail</th><th>Status</th>
+              <th>Criado em</th><th>Último login</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"><tr class="empty-row"><td colspan="6">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO CORRETOR -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Novo Corretor</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="modalMsg" class="msg"></div>
+      <div class="field"><label>Nome completo</label><input type="text" id="mNome" placeholder="Ex: João Silva"/></div>
+      <div class="field"><label>E-mail</label><input type="email" id="mEmail" placeholder="corretor@email.com"/></div>
+      <div class="senha-row">
+        <div class="field"><label>Senha inicial</label><input type="text" id="mSenha" placeholder="Gerada automaticamente"/></div>
+        <button class="btn-gerar" onclick="gerarSenha()">🎲 Gerar</button>
+      </div>
+      <p style="font-size:11px;color:var(--texto3);margin-top:8px">O corretor receberá o e-mail com as credenciais de acesso.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" id="btnCriar" onclick="criarCorretor()" style="width:auto;padding:9px 20px">Criar e Enviar Acesso</button>
+    </div>
+  </div>
+</div>
+
+<footer>Simulador MCMV 2026 · Painel Administrativo · Acesso restrito</footer>
+
+<script>
+const SURL = 'https://uefnirdmhtsbpdxnonnd.supabase.co'
+const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s'
+const FN_URL = `${SURL}/functions/v1/admin-action`
+const _sb = supabase.createClient(SURL, SKEY)
+
+let _session = null
+
+// ── INIT ─────────────────────────────────────────────────────
+;(async function init() {
+  show('loading')
+  const { data: { session } } = await _sb.auth.getSession()
+  if (!session) { show('login'); return }
+  _session = session
+  document.getElementById('adminEmail').textContent = session.user.email
+  await loadDashboard()
+})()
+
+function show(screen) {
+  document.body.style.visibility = 'visible'
+  ;['loading','login','forbidden','dashboard'].forEach(s => {
+    document.getElementById('screen-' + s).style.display = s === screen ? (s === 'dashboard' ? 'flex' : 'flex') : 'none'
+  })
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim()
+  const senha = document.getElementById('loginSenha').value
+  const btn = document.getElementById('btnLogin')
+  if (!email || !senha) { setLoginMsg('Preencha e-mail e senha.'); return }
+  btn.disabled = true; btn.textContent = 'Entrando...'
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password: senha })
+  if (error) {
+    btn.disabled = false; btn.textContent = 'Entrar'
+    setLoginMsg(error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : 'Erro ao entrar.')
+    return
+  }
+  _session = data.session
+  document.getElementById('adminEmail').textContent = data.user.email
+  await loadDashboard()
+}
+function setLoginMsg(txt) {
+  const el = document.getElementById('loginMsg')
+  el.textContent = txt; el.className = 'msg er'
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+async function loadDashboard() {
+  show('loading')
+  const stats = await call('get_stats')
+  if (stats?._forbidden) { show('forbidden'); return }
+  if (!stats) { show('login'); return }
+  document.getElementById('stTotal').textContent  = stats.total ?? 0
+  document.getElementById('stAtivos').textContent = stats.ativos ?? 0
+  document.getElementById('stBloq').textContent   = stats.bloqueados ?? 0
+  document.getElementById('stLogins').textContent = stats.loginsHoje ?? 0
+  await loadUsers()
+  show('dashboard')
+}
+
+async function loadUsers() {
+  const res = await call('get_users')
+  const tbody = document.getElementById('usersBody')
+  if (!res?.users?.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Nenhum corretor cadastrado.</td></tr>'
+    return
+  }
+  tbody.innerHTML = res.users.map(u => {
+    const ativo = u.status === 'ativo'
+    const criado = u.data_criacao ? new Date(u.data_criacao).toLocaleDateString('pt-BR') : '—'
+    const ultimo = u.ultimo_login ? new Date(u.ultimo_login).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'Nunca'
+    return `<tr>
+      <td><strong>${esc(u.nome || '—')}</strong></td>
+      <td class="mono" style="font-size:11px">${esc(u.email)}</td>
+      <td><span class="${ativo ? 'badge-ativo' : 'badge-bloq'}">${ativo ? 'Ativo' : 'Bloqueado'}</span></td>
+      <td class="mono" style="font-size:11px">${criado}</td>
+      <td class="mono" style="font-size:11px">${ultimo}</td>
+      <td>
+        <div class="actions">
+          ${ativo
+            ? `<button class="btn-act btn-bloquear" onclick="toggleUser('${u.id}',true)">Bloquear</button>`
+            : `<button class="btn-act btn-desbloquear" onclick="toggleUser('${u.id}',false)">Desbloquear</button>`}
+          <button class="btn-act btn-deletar" onclick="deletarUser('${u.id}','${esc(u.email)}')">Excluir</button>
+        </div>
+      </td>
+    </tr>`
+  }).join('')
+}
+
+// ── AÇÕES ─────────────────────────────────────────────────────
+async function toggleUser(userId, block) {
+  const acao = block ? 'bloquear' : 'desbloquear'
+  if (!confirm(`Deseja ${acao} este corretor?`)) return
+  const r = await call('toggle_user', { userId, block })
+  if (r?.success) { toast(`Corretor ${block ? 'bloqueado' : 'desbloqueado'}.`, 'ok'); await loadUsers(); await refreshStats() }
+  else toast('Erro ao atualizar.', 'er')
+}
+
+async function deletarUser(userId, email) {
+  if (!confirm(`Excluir permanentemente ${email}?\nEsta ação não pode ser desfeita.`)) return
+  const r = await call('delete_user', { userId })
+  if (r?.success) { toast('Corretor excluído.', 'ok'); await loadUsers(); await refreshStats() }
+  else toast('Erro ao excluir.', 'er')
+}
+
+async function refreshStats() {
+  const s = await call('get_stats')
+  if (!s) return
+  document.getElementById('stTotal').textContent  = s.total ?? 0
+  document.getElementById('stAtivos').textContent = s.ativos ?? 0
+  document.getElementById('stBloq').textContent   = s.bloqueados ?? 0
+  document.getElementById('stLogins').textContent = s.loginsHoje ?? 0
+}
+
+// ── MODAL ─────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('mNome').value = ''
+  document.getElementById('mEmail').value = ''
+  document.getElementById('modalMsg').className = 'msg'
+  gerarSenha()
+  document.getElementById('modal').style.display = 'flex'
+}
+function closeModal() { document.getElementById('modal').style.display = 'none' }
+
+function gerarSenha() {
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789@#!'
+  let s = ''
+  for (let i = 0; i < 10; i++) s += chars[Math.floor(Math.random() * chars.length)]
+  document.getElementById('mSenha').value = s
+}
+
+async function criarCorretor() {
+  const nome  = document.getElementById('mNome').value.trim()
+  const email = document.getElementById('mEmail').value.trim()
+  const senha = document.getElementById('mSenha').value.trim()
+  const msgEl = document.getElementById('modalMsg')
+  const btn   = document.getElementById('btnCriar')
+  if (!nome || !email || !senha) {
+    msgEl.textContent = 'Preencha nome, e-mail e senha.'; msgEl.className = 'msg er'; return
+  }
+  btn.disabled = true; btn.textContent = 'Criando...'
+  const r = await call('create_user', { nome, email, senha })
+  btn.disabled = false; btn.textContent = 'Criar e Enviar Acesso'
+  if (r?.success) {
+    closeModal()
+    toast(`Corretor criado! E-mail enviado para ${email}.`, 'ok')
+    await loadUsers(); await refreshStats()
+  } else {
+    msgEl.textContent = r?.error || 'Erro ao criar corretor.'; msgEl.className = 'msg er'
+  }
+}
+
+// ── UTILS ─────────────────────────────────────────────────────
+async function call(action, payload = {}) {
+  if (!_session) return null
+  try {
+    const r = await fetch(FN_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${_session.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ action, payload })
+    })
+    if (r.status === 403) return { _forbidden: true }
+    if (r.status === 401) { _session = null; show('login'); return null }
+    return await r.json()
+  } catch { return null }
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+function toast(msg, tipo = 'ok') {
+  const el = document.createElement('div')
+  el.className = `toast ${tipo}`
+  el.textContent = msg
+  document.body.appendChild(el)
+  setTimeout(() => el.remove(), 3500)
+}
+
+async function logout() {
+  await _sb.auth.signOut()
+  window.location.reload()
+}
+</script>
+</body>
+</html>
