@@ -2930,7 +2930,7 @@ function amAddRow(defParcela, defValor) {
       'onfocus="this.style.borderColor=\'#F57C00\'" onblur="this.style.borderColor=\'#E2E8F0\'"/>' +
     '<select id="am-t-' + id + '" ' +
       'style="height:40px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 8px;font-size:12px;font-family:\'Sora\',sans-serif;width:100%;outline:none;background:#fff;color:#374151">' +
-      '<option>PLR</option><option>FGTS</option><option>Reforço</option><option>Outros</option>' +
+      '<option>PLR</option><option>FGTS</option><option>Recurso Próprio</option><option>Outros</option>' +
     '</select>' +
     '<button onclick="amRemoveRow(' + id + ')" title="Remover" ' +
       'style="height:40px;width:36px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;font-size:14px;cursor:pointer;color:#991B1B;padding:0">✕</button>';
@@ -3049,7 +3049,7 @@ function calcAmort() {
   const prazoStr = (m) => { const a = Math.floor(m/12), r = m%12; return a > 0 ? m + ' meses (' + a + 'a ' + (r > 0 ? r + 'm' : '') + ')' : m + ' meses'; };
 
   /* ── Linha do tempo ── */
-  const origemCor = { PLR: ['#0B3D91','#DBEAFE'], FGTS: ['#1B6E3F','#DCFCE7'], Reforço: ['#6B21A8','#F3E8FF'], Outros: ['#374151','#F1F5F9'] };
+  const origemCor = { PLR: ['#0B3D91','#DBEAFE'], FGTS: ['#1B6E3F','#DCFCE7'], 'Recurso Próprio': ['#6B21A8','#F3E8FF'], Outros: ['#374151','#F1F5F9'] };
   const timelineHTML = timeline.map((t, i) => {
     const [cor, bg] = origemCor[t.tipo] || origemCor.Outros;
     return '<div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px">' +
