@@ -382,17 +382,7 @@ async function _confirmarTroca(){
       <div class="fgts-grid" id="fgtsGrid"></div>
     </div>
 
-    <!-- Botão preencher automaticamente -->
-    <div id="blocoAuto" style="display:none;margin-bottom:9px">
-      <div class="av in show" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <span id="txtAuto">Preencher restante automaticamente para atingir entrada mínima</span>
-        <button class="btn-auto" onclick="preencherAuto()">⚡ Preencher automaticamente</button>
-      </div>
-    </div>
-
-    <div id="avEntrada" class="av"></div>
-    <div id="avFinanciado" class="av"></div>
-    <div id="avCapacidade" class="av"></div>
+    <div id="avFaltaEntrada" class="av"></div>
     <div class="field" style="margin-top:7px"><label>Valor financiado aprovado <span style="font-weight:400;font-size:10px">(já aplicado limite de renda e banco)</span></label><input type="text" id="vFinanciado" readonly placeholder="R$ 0,00"/></div>
   </div>
 </div>
@@ -1099,56 +1089,20 @@ function onEntrada() {
     ? 'banco (' + (pct*100).toFixed(0) + '% da avaliação)'
     : 'renda (' + (pctRenda*100).toFixed(0) + '% × capacidade)';
 
-  // ── Validação: financiado vs limite do banco ──
-  if (financiadoBruto > limBanco && vi > 0) {
-    show('avFinanciado', 'av er',
-      '⚠️ Sem entrada, o banco liberaria apenas ' + fi(limBanco) +
-      ' (' + (pct*100).toFixed(0) + '% de ' + fi(va) + '). ' +
-      'Adicione entrada para reduzir o financiado abaixo desse teto.');
-  } else if (vi > 0 && financiado > 0) {
-    show('avFinanciado', 'av ok',
-      '✓ Financiado aprovado: ' + fi(financiado) +
-      ' (' + ((financiado/va)*100).toFixed(1) + '% da avaliação) — limitado pelo ' + limitePelo + '.');
-  }
-
-  // ── Validação: capacidade de renda ──
-  if (r && sub && financiadoBruto > 0) {
-    const parcelaEst = (financiadoBruto / 100000) * p100k;
-    const parcelaMax30 = r * pctRenda;
-    const finPelaRenda = capTeorica;
-    if (parcelaEst > parcelaMax30) {
-      show('avCapacidade', 'av er',
-        '⚠️ Com entrada informada, financiado bruto seria ' + fi(financiadoBruto) +
-        ' → parcela estimada ' + fi(parcelaEst) + ' ultrapassa ' + (pctRenda*100).toFixed(0) + '% da renda (' + fi(parcelaMax30) + '). ' +
-        'Banco aprovará apenas <strong>' + fi(finPelaRenda) + '</strong>. ' +
-        'Valor financiado já corrigido no campo abaixo.');
-    } else {
-      show('avCapacidade', 'av ok',
-        '✓ Parcela estimada (' + fi(parcelaEst) + ') dentro dos ' + (pctRenda*100).toFixed(0) + '% da renda (' +
-        fi(parcelaMax30) + '). Aprovação favorável para ' + fi(financiado) + '.');
-    }
-  }
-
-  // ── Validação: entrada mínima (sobre valor de venda) ──
+  // ── Entrada: mostrar apenas o valor que falta ──
   const entMinVenda = vi * (1 - pct);
   const pctEntVenda = vi > 0 ? (totalEntrada / vi) * 100 : 0;
   if (vi > 0) {
-    if (totalEntrada > 0 && totalEntrada < entMinVenda) {
-      show('avEntrada', 'av wn',
-        '⚠️ Entrada total (' + fi(totalEntrada) + ' = ' + pctEntVenda.toFixed(1) +
-        '%) abaixo do mínimo de ' + ((1-pct)*100).toFixed(0) + '% (' + fi(entMinVenda) +
-        '). Faltam <strong>' + fi(entMinVenda - totalEntrada) + '</strong>.');
-      document.getElementById('txtAuto').textContent =
-        'Faltam ' + fi(entMinVenda - totalEntrada) + ' para entrada mínima de ' +
-        ((1-pct)*100).toFixed(0) + '%. Preencher no campo Ato?';
-      document.getElementById('blocoAuto').style.display = 'block';
-    } else if (totalEntrada >= entMinVenda) {
-      show('avEntrada', 'av ok',
-        '✓ Entrada de ' + pctEntVenda.toFixed(1) + '% (' + fi(totalEntrada) +
-        ') — acima do mínimo de ' + ((1-pct)*100).toFixed(0) + '% exigido.');
-      document.getElementById('blocoAuto').style.display = 'none';
+    const faltam = entMinVenda - totalEntrada;
+    if (faltam > 0) {
+      show('avFaltaEntrada', 'av wn',
+        '💡 Falta <strong>' + fi(faltam) + '</strong> para entrada mínima de ' +
+        ((1-pct)*100).toFixed(0) + '% (' + fi(entMinVenda) + ').');
+    } else if (totalEntrada > 0) {
+      show('avFaltaEntrada', 'av ok',
+        '✓ Entrada completa — ' + fi(totalEntrada) + ' (' + pctEntVenda.toFixed(1) + '% do valor de venda).');
     } else {
-      document.getElementById('blocoAuto').style.display = 'none';
+      document.getElementById('avFaltaEntrada').style.display = 'none';
     }
   }
 
