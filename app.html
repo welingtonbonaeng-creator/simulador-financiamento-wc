@@ -1578,12 +1578,13 @@ function calcularSeguroTotal(fin, meses, prazoAnos, taxaMensal, isSAC, dtLancame
   for (let m = 1; m <= meses; m++) {
     const posAbsoluta = obraOffset + m;
     const pct = pctSeguroObra(posAbsoluta, totalMesesObra, piso);
-    let valFinal = Math.round(parcelaRefSeg * pct);
+    const valDisplay = Math.round(parcelaRefSeg * pct); // valor bruto para exibição (sem cap)
+    let valFinal = valDisplay;
     if (somaTotal + valFinal > tetoAbsoluto) {
       valFinal = Math.max(0, Math.round(tetoAbsoluto - somaTotal));
     }
     somaTotal += valFinal;
-    mesesDetalhes.push({ m, mesRef: m, valFinal });
+    mesesDetalhes.push({ m, mesRef: m, valFinal, valDisplay });
   }
 
   return { total: somaTotal, parcelaRef: parcelaRefSeg, limite, mesesDetalhes, totalMesesObra, obraOffset };
@@ -1641,20 +1642,20 @@ function calcSeguro() {
     const dtMes = new Date(dtInicioObra);
     dtMes.setMonth(dtMes.getMonth() + (obraOffset > 0 ? obraOffset + item.m - 1 : item.m - 1));
     const anoMes = dtMes.getFullYear();
-    const posAbsoluta = obraOffset + item.m; // posição no total da obra
-    // Posição relativa no total da obra (lançamento → entrega), em %
+    const posAbsoluta = obraOffset + item.m;
     const pctRelativa = posAbsoluta / totalMesesObra;
     const pctRelativaPts = Math.round(pctRelativa * 100);
-    // Fase baseada em % — "conclusão" será ajustada depois para apenas o último ano
     const fase = pctRelativa <= 0.33 ? 'início da obra'
                : pctRelativa <= 0.66 ? 'obra em andamento'
                : 'obra final';
     const chave = `${anoMes}|||${fase}`;
+    // usa valDisplay (bruto, sem cap) para min/max de exibição — igual ao simular()
+    const vd = item.valDisplay;
     if (!gruposSeguro[chave]) {
-      gruposSeguro[chave] = { ano: anoMes, fase, min: item.valFinal, max: item.valFinal, soma: item.valFinal, qtd: 1, pctMin: pctRelativaPts, pctMax: pctRelativaPts };
+      gruposSeguro[chave] = { ano: anoMes, fase, min: vd, max: vd, soma: item.valFinal, qtd: 1, pctMin: pctRelativaPts, pctMax: pctRelativaPts };
     } else {
-      gruposSeguro[chave].min = Math.min(gruposSeguro[chave].min, item.valFinal);
-      gruposSeguro[chave].max = Math.max(gruposSeguro[chave].max, item.valFinal);
+      gruposSeguro[chave].min = Math.min(gruposSeguro[chave].min, vd);
+      gruposSeguro[chave].max = Math.max(gruposSeguro[chave].max, vd);
       gruposSeguro[chave].soma += item.valFinal;
       gruposSeguro[chave].qtd++;
       gruposSeguro[chave].pctMin = Math.min(gruposSeguro[chave].pctMin, pctRelativaPts);
