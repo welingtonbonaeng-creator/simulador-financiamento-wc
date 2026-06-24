@@ -1008,8 +1008,9 @@ function onImovel() {
        Se ato = 30k → FGTS máx = 40k
    ══════════════════════════════════════ */
 function calcFGTSMax(va, pct, ato) {
-  const entradaNecessaria = va * (1 - pct); // ex: 350k × 20% = 70k
-  return Math.max(0, entradaNecessaria - ato);
+  // MCMV: deve financiar mínimo R$50k | SBPE: mínimo R$100k
+  const minFin = (fx && fx.sbpe) ? 100000 : 50000;
+  return Math.max(0, va - minFin - ato);
 }
 
 function onEntrada() {
@@ -1019,22 +1020,22 @@ function onEntrada() {
   const ato = pv(document.getElementById('ato').value);
   const pct = getPct();
   const maxFin = va * pct;
-  const entradaNecessaria = va * (1 - pct);
+  const minFin = (fx && fx.sbpe) ? 100000 : 50000; // mínimo a financiar: 50k MCMV / 100k SBPE
 
   // ── FGTS teto ──
   const fgtsDisp = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
-  const fgtsMax = calcFGTSMax(va, pct, ato);
+  const fgtsMax = calcFGTSMax(va, pct, ato); // = va - minFin - ato
   const fgtsUsar = Math.min(fgtsDisp, fgtsMax);
 
   // ── Exibir box FGTS ──
   const fgtsBox = document.getElementById('fgtsBox');
   if (fgtsPode && fgtsDisp > 0 && va > 0) {
     const excede = fgtsDisp > fgtsMax;
+    const minFinLabel = (fx && fx.sbpe) ? 'Mín. financiado SBPE' : 'Mín. financiado MCMV';
     fgtsBox.className = 'fgts-box show';
     document.getElementById('fgtsGrid').innerHTML = `
       <div class="fgts-item"><div class="fgts-lbl">Avaliação Caixa</div><div class="fgts-val">${fi(va)}</div></div>
-      <div class="fgts-item"><div class="fgts-lbl">Banco libera (${(pct*100).toFixed(0)}%)</div><div class="fgts-val">${fi(maxFin)}</div></div>
-      <div class="fgts-item"><div class="fgts-lbl">Entrada necessária (${((1-pct)*100).toFixed(0)}%)</div><div class="fgts-val cv-am">${fi(entradaNecessaria)}</div></div>
+      <div class="fgts-item"><div class="fgts-lbl">${minFinLabel}</div><div class="fgts-val cv-am">${fi(minFin)}</div></div>
       <div class="fgts-item"><div class="fgts-lbl">Ato informado</div><div class="fgts-val">${fi(ato)}</div></div>
       <div class="fgts-item"><div class="fgts-lbl">FGTS disponível</div><div class="fgts-val">${fi(fgtsDisp)}</div></div>
       <div class="fgts-item" style="border-color:${excede ? '#EF4444' : '#7C3AED'}">
@@ -1048,8 +1049,8 @@ function onEntrada() {
     `;
     if (excede) {
       show('avFGTS', 'av wn',
-        '⚠️ FGTS de ' + fi(fgtsDisp) + ' excede o teto. Será utilizado apenas <strong>' + fi(fgtsMax) +
-        '</strong>. (Entrada necessária ' + fi(entradaNecessaria) + ' − ato ' + fi(ato) + ' = FGTS máx. ' + fi(fgtsMax) + ')');
+        '⚠️ FGTS de ' + fi(fgtsDisp) + ' excede o limite. Será utilizado apenas <strong>' + fi(fgtsMax) +
+        '</strong>. (Avaliação ' + fi(va) + ' − mín. financiado ' + fi(minFin) + ' − ato ' + fi(ato) + ' = FGTS máx. ' + fi(fgtsMax) + ')');
     } else {
       document.getElementById('avFGTS').style.display = 'none';
     }
