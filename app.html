@@ -589,29 +589,28 @@ async function _confirmarTroca(){
       </div>
     </div>
 
-    <!-- Inputs do usuário -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-      <div class="field">
-        <label>Em qual parcela vai amortizar?</label>
-        <input type="number" id="am-parcela" value="1" min="1"
-          style="height:44px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 12px;font-size:14px;font-family:'Sora',sans-serif;width:100%;outline:none"
-          onfocus="this.style.borderColor='#F57C00'" onblur="this.style.borderColor='#E2E8F0'"/>
-        <span style="font-size:10px;color:#94A3B8;margin-top:3px;display:block">1 = na entrega das chaves · após a parcela escolhida</span>
-      </div>
-      <div class="field">
-        <label>Valor a amortizar (R$)</label>
-        <input type="text" id="am-valor" placeholder="Ex: 50.000,00"
-          oninput="amFmt(this)"
-          style="height:44px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 12px;font-size:14px;font-family:'Sora',sans-serif;width:100%;outline:none"
-          onfocus="this.style.borderColor='#F57C00'" onblur="this.style.borderColor='#E2E8F0'"
-          onkeydown="if(event.key==='Enter')calcAmort()"/>
-      </div>
+    <!-- Lista de amortizações planejadas -->
+    <div style="margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:2px">Amortizações planejadas</div>
+      <div style="font-size:10px;color:#94A3B8;margin-bottom:10px">Parcela 1 = primeiro mês após a entrega das chaves · adicione quantas quiser</div>
     </div>
-
+    <div style="display:grid;grid-template-columns:90px 1fr 100px 36px;gap:8px;margin-bottom:4px;padding:0 2px">
+      <span style="font-size:9px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em">Parcela nº</span>
+      <span style="font-size:9px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em">Valor (R$)</span>
+      <span style="font-size:9px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em">Origem</span>
+      <span></span>
+    </div>
+    <div id="am-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px"></div>
+    <button onclick="amAddRow()"
+      style="width:100%;padding:9px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;margin-bottom:12px;transition:all .15s"
+      onmouseover="this.style.borderColor='#F57C00';this.style.color='#C05A00'"
+      onmouseout="this.style.borderColor='#CBD5E1';this.style.color='#64748B'">
+      ＋ Adicionar amortização
+    </button>
     <button onclick="calcAmort()"
       style="width:100%;padding:13px;background:linear-gradient(135deg,#C05A00,#F57C00);color:#fff;border:none;border-radius:10px;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(197,90,0,.3);transition:all .2s"
       onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
-      📊 Simular Amortização
+      📊 Simular impacto
     </button>
 
     <!-- Resultado -->
@@ -2862,8 +2861,9 @@ function preencherAmort() {
   document.getElementById('am-taxa').textContent    = (taxaM * 100).toFixed(4).replace('.', ',') + '% a.m.';
   document.getElementById('am-prazo').textContent   = prazoM + ' meses (' + prazoA + ' anos)';
   document.getElementById('am-sistema').textContent = (isSAC ? 'SAC · ' : 'PRICE · ') + fb(parcela1);
-  document.getElementById('am-parcela').max         = prazoM;
   document.getElementById('am-res').style.display   = 'none';
+  // Inicializa lista com uma linha se ainda estiver vazia
+  if (!document.querySelector('#am-lista > div')) amAddRow();
 
   const sec = document.getElementById('secAmort');
   sec.style.display = '';
@@ -2874,6 +2874,49 @@ function preencherAmort() {
     sec.style.opacity = '1';
     sec.style.transform = 'translateY(0)';
   });
+}
+
+let _amRowCnt = 0;
+
+function amAddRow(defParcela, defValor) {
+  const b = window._amortBase;
+  const maxP = b ? b.prazoM : 420;
+  const id = ++_amRowCnt;
+  const wrap = document.createElement('div');
+  wrap.id = 'am-row-' + id;
+  wrap.style.cssText = 'display:grid;grid-template-columns:90px 1fr 100px 36px;gap:8px;align-items:center';
+  wrap.innerHTML =
+    '<input type="number" id="am-p-' + id + '" value="' + (defParcela || 1) + '" min="1" max="' + maxP + '" ' +
+      'style="height:40px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 10px;font-size:13px;font-family:\'Sora\',sans-serif;width:100%;outline:none" ' +
+      'onfocus="this.style.borderColor=\'#F57C00\'" onblur="this.style.borderColor=\'#E2E8F0\'"/>' +
+    '<input type="text" id="am-v-' + id + '" value="' + (defValor || '') + '" placeholder="Ex: 50.000,00" ' +
+      'oninput="amFmt(this)" ' +
+      'style="height:40px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 10px;font-size:13px;font-family:\'Sora\',sans-serif;width:100%;outline:none" ' +
+      'onfocus="this.style.borderColor=\'#F57C00\'" onblur="this.style.borderColor=\'#E2E8F0\'"/>' +
+    '<select id="am-t-' + id + '" ' +
+      'style="height:40px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 8px;font-size:12px;font-family:\'Sora\',sans-serif;width:100%;outline:none;background:#fff;color:#374151">' +
+      '<option>PLR</option><option>FGTS</option><option>Reforço</option><option>Outros</option>' +
+    '</select>' +
+    '<button onclick="amRemoveRow(' + id + ')" title="Remover" ' +
+      'style="height:40px;width:36px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;font-size:14px;cursor:pointer;color:#991B1B;padding:0">✕</button>';
+  document.getElementById('am-lista').appendChild(wrap);
+}
+
+function amRemoveRow(id) {
+  const el = document.getElementById('am-row-' + id);
+  if (el) el.remove();
+}
+
+function amGetLista() {
+  const rows = document.querySelectorAll('#am-lista > div');
+  return [...rows].map(r => {
+    const id = r.id.replace('am-row-', '');
+    const p = parseInt(document.getElementById('am-p-' + id)?.value) || 1;
+    const raw = (document.getElementById('am-v-' + id)?.value || '').replace(/\./g, '').replace(',', '.');
+    const v = parseFloat(raw) || 0;
+    const t = document.getElementById('am-t-' + id)?.value || 'Outros';
+    return { parcela: p, valor: v, tipo: t };
+  }).filter(x => x.valor > 0).sort((a, b) => a.parcela - b.parcela);
 }
 
 function amFmt(el) {
@@ -2887,144 +2930,152 @@ function calcAmort() {
   const b = window._amortBase;
   if (!b) { alert('Faça a simulação de financiamento primeiro.'); return; }
 
-  const parcelaN = Math.max(1, parseInt(document.getElementById('am-parcela').value) || 1);
-  const rawVal   = document.getElementById('am-valor').value.replace(/\./g, '').replace(',', '.');
-  const extra    = parseFloat(rawVal) || 0;
-
-  if (extra <= 0) { alert('Informe o valor a amortizar.'); return; }
+  const lista = amGetLista();
+  if (!lista.length) { alert('Adicione ao menos uma amortização com valor preenchido.'); return; }
 
   const { fin, prazoM, taxaM, isSAC, parcela1 } = b;
-  const restantes = prazoM - (parcelaN - 1);
+  const amortM = fin / prazoM;
 
-  if (restantes <= 0) { alert('Parcela maior que o prazo do contrato.'); return; }
+  for (const am of lista) {
+    if (am.parcela > prazoM) {
+      alert('Parcela ' + am.parcela + ' excede o prazo de ' + prazoM + ' meses.'); return;
+    }
+  }
 
-  /* ── Saldo devedor na parcela N ── */
-  let saldoN;
+  /* ── Baseline: juros totais sem amortização ── */
+  let jurosBaseline = 0;
   if (isSAC) {
-    const amortM = fin / prazoM;
-    saldoN = Math.max(0, fin - (parcelaN - 1) * amortM);
+    let s = fin;
+    for (let i = 0; i < prazoM && s > 0.01; i++) { jurosBaseline += s * taxaM; s = Math.max(0, s - amortM); }
   } else {
-    saldoN = parcela1 > 0 && taxaM > 0
-      ? parcela1 * (1 - Math.pow(1 + taxaM, -restantes)) / taxaM
-      : 0;
+    jurosBaseline = parcela1 * prazoM - fin;
   }
 
-  if (extra >= saldoN) {
-    document.getElementById('am-res').style.display = '';
-    document.getElementById('am-res').innerHTML = `
-      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:16px;text-align:center">
-        <div style="font-size:22px">🎉</div>
-        <div style="font-weight:800;color:#14532D;font-size:16px;margin:6px 0">Financiamento quitado!</div>
-        <div style="font-size:13px;color:#166534">Com R$${fi(extra)} na parcela ${parcelaN} o saldo de ${fi(saldoN)} é totalmente liquidado.</div>
-      </div>`;
-    return;
+  /* ── Simular com múltiplas amortizações (estratégia: Reduzir Prazo) ── */
+  let saldo = fin;
+  let prazoRestante = prazoM;
+  let jurosComAmort = 0;
+  let totalAmortExtra = 0;
+  let prevParcela = 0;
+  const timeline = [];
+  let quitado = false;
+
+  for (const am of lista) {
+    const steps = am.parcela - prevParcela;
+    for (let i = 0; i < steps && saldo > 0.01 && prazoRestante > 0; i++) {
+      jurosComAmort += saldo * taxaM;
+      if (isSAC) {
+        saldo = Math.max(0, saldo - amortM);
+      } else {
+        saldo = Math.max(0, saldo * (1 + taxaM) - parcela1);
+      }
+      prazoRestante--;
+    }
+    if (saldo <= 0.01) { quitado = true; break; }
+
+    const extraEfetivo = Math.min(am.valor, saldo);
+    const saldoAntes = saldo;
+    saldo = Math.max(0, saldo - extraEfetivo);
+    totalAmortExtra += extraEfetivo;
+
+    let prazoReduzido;
+    if (saldo <= 0.01) {
+      prazoReduzido = prazoRestante;
+      prazoRestante = 0;
+      quitado = true;
+    } else if (isSAC) {
+      const novo = Math.ceil(saldo / amortM);
+      prazoReduzido = prazoRestante - novo;
+      prazoRestante = novo;
+    } else {
+      const novo = (taxaM > 0 && (parcela1 - saldo * taxaM) > 0)
+        ? Math.ceil(Math.log(parcela1 / (parcela1 - saldo * taxaM)) / Math.log(1 + taxaM))
+        : prazoRestante;
+      prazoReduzido = prazoRestante - novo;
+      prazoRestante = novo;
+    }
+
+    timeline.push({ parcela: am.parcela, tipo: am.tipo, valor: am.valor, saldoAntes, saldoApos: saldo, prazoReduzido });
+    prevParcela = am.parcela;
+    if (quitado) break;
   }
 
-  const newSaldo = saldoN - extra;
-
-  /* ── Opção A: Reduzir Prazo (manter amortização mensal original SAC / parcela PRICE) ── */
-  let novoPrazoA, novaParcA, jurosComA, jurosOrigA;
-  if (isSAC) {
-    const amortM = fin / prazoM;
-    // juros originais restantes
-    jurosOrigA = 0;
-    let s = saldoN;
-    for (let i = 0; i < restantes && s > 0.01; i++) { jurosOrigA += s * taxaM; s -= amortM; }
-    // com amortização, mantém amortM → prazo menor
-    novoPrazoA = Math.ceil(newSaldo / amortM);
-    novaParcA  = amortM + newSaldo * taxaM;
-    jurosComA  = 0;
-    s = newSaldo;
-    for (let i = 0; i < novoPrazoA && s > 0.01; i++) { jurosComA += s * taxaM; s -= amortM; }
-  } else {
-    jurosOrigA = parcela1 * restantes - saldoN;
-    novoPrazoA = taxaM > 0 && (parcela1 - newSaldo * taxaM) > 0
-      ? Math.ceil(Math.log(parcela1 / (parcela1 - newSaldo * taxaM)) / Math.log(1 + taxaM))
-      : restantes;
-    novaParcA  = parcela1; // mesmo valor de parcela
-    jurosComA  = parcela1 * novoPrazoA - newSaldo;
+  /* Terminar simulação */
+  while (saldo > 0.01 && prazoRestante > 0) {
+    jurosComAmort += saldo * taxaM;
+    if (isSAC) { saldo = Math.max(0, saldo - amortM); } else { saldo = Math.max(0, saldo * (1 + taxaM) - parcela1); }
+    prazoRestante--;
   }
 
-  /* ── Opção B: Reduzir Parcela (manter prazo) ── */
-  let novaParcB, jurosComB;
-  if (isSAC) {
-    const newAmortM = newSaldo / restantes;
-    novaParcB = newAmortM + newSaldo * taxaM;
-    jurosComB = 0;
-    let s = newSaldo;
-    for (let i = 0; i < restantes && s > 0.01; i++) { jurosComB += s * taxaM; s -= newAmortM; }
-  } else {
-    novaParcB = taxaM > 0 && restantes > 0
-      ? newSaldo * taxaM * Math.pow(1 + taxaM, restantes) / (Math.pow(1 + taxaM, restantes) - 1)
-      : newSaldo / restantes;
-    jurosComB = novaParcB * restantes - newSaldo;
-  }
+  const economiaTotalJuros = Math.max(0, jurosBaseline - jurosComAmort);
+  const prazoReduzidoTotal = timeline.reduce((acc, t) => acc + t.prazoReduzido, 0);
+  const prazoFinal = prazoM - prazoReduzidoTotal;
 
-  const econA = jurosOrigA - jurosComA;
-  const econB = jurosOrigA - jurosComB;
-  const parcMenosA = restantes - novoPrazoA;
-  const anosMenosA = Math.floor(parcMenosA / 12);
-  const mesesMenosA = parcMenosA % 12;
-  const parcMenosStr = anosMenosA > 0
-    ? `${anosMenosA} ano${anosMenosA>1?'s':''} e ${mesesMenosA} mês${mesesMenosA!==1?'es':''}`
-    : `${parcMenosA} mese${parcMenosA!==1?'s':''}`;
+  const prazoStr = (m) => { const a = Math.floor(m/12), r = m%12; return a > 0 ? m + ' meses (' + a + 'a ' + (r > 0 ? r + 'm' : '') + ')' : m + ' meses'; };
 
-  const novoPrazoAStr = (() => {
-    const a = Math.floor(novoPrazoA / 12), m = novoPrazoA % 12;
-    return a > 0 ? `${novoPrazoA} meses (${a}a ${m}m)` : `${novoPrazoA} meses`;
-  })();
+  /* ── Linha do tempo ── */
+  const origemCor = { PLR: ['#0B3D91','#DBEAFE'], FGTS: ['#1B6E3F','#DCFCE7'], Reforço: ['#6B21A8','#F3E8FF'], Outros: ['#374151','#F1F5F9'] };
+  const timelineHTML = timeline.map((t, i) => {
+    const [cor, bg] = origemCor[t.tipo] || origemCor.Outros;
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px">' +
+      '<div style="min-width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C05A00,#F57C00);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + (i+1) + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+          '<span style="font-weight:700;font-size:13px;color:#1E293B">Parcela ' + t.parcela + '</span>' +
+          '<span style="background:' + bg + ';color:' + cor + ';font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px">' + t.tipo + '</span>' +
+          '<span style="font-weight:700;color:#C05A00;font-size:13px">' + fi(t.valor) + '</span>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">' +
+          '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:6px;padding:6px 8px"><div style="font-size:9px;color:#6B7280;font-weight:600;margin-bottom:2px">Saldo antes</div><div style="font-size:12px;font-weight:700">' + fi(t.saldoAntes) + '</div></div>' +
+          '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:6px;padding:6px 8px"><div style="font-size:9px;color:#6B7280;font-weight:600;margin-bottom:2px">Saldo após</div><div style="font-size:12px;font-weight:700;color:#14532D">' + fi(t.saldoApos) + '</div></div>' +
+          '<div style="background:#FEF3E8;border:1px solid #FED7AA;border-radius:6px;padding:6px 8px"><div style="font-size:9px;color:#9A3412;font-weight:600;margin-bottom:2px">Prazo cortado</div><div style="font-size:12px;font-weight:700;color:#9A3412">' + t.prazoReduzido + ' meses</div></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  const quitadoHTML = quitado
+    ? '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px;text-align:center;margin-bottom:14px"><div style="font-size:20px">🎉</div><div style="font-weight:800;color:#14532D;font-size:15px;margin:4px 0">Financiamento quitado!</div><div style="font-size:12px;color:#166534">O saldo devedor foi totalmente liquidado pelas amortizações.</div></div>'
+    : '';
 
   document.getElementById('am-res').style.display = '';
-  document.getElementById('am-res').innerHTML = `
-<div style="background:#FEF9C3;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:#78350F">
-  ⚡ Amortização de <strong>${fi(extra)}</strong> na parcela <strong>${parcelaN}</strong> · Saldo devedor nesse momento: <strong>${fi(saldoN)}</strong> → Novo saldo: <strong>${fi(newSaldo)}</strong>
-</div>
-
-<!-- Comparação lado a lado -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-  <!-- SEM -->
-  <div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px;padding:14px">
-    <div style="font-size:10px;font-weight:700;color:#991B1B;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">❌ Sem amortização</div>
-    <div style="margin-bottom:6px"><span style="font-size:10px;color:#6B7280">Parcela atual</span><br><span style="font-size:18px;font-weight:800;color:#1565C0">${fb(parcela1)}</span></div>
-    <div style="margin-bottom:6px"><span style="font-size:10px;color:#6B7280">Prazo restante</span><br><span style="font-size:14px;font-weight:700">${restantes} meses</span></div>
-    <div><span style="font-size:10px;color:#6B7280">Juros restantes</span><br><span style="font-size:14px;font-weight:700;color:#991B1B">${fi(jurosOrigA)}</span></div>
-  </div>
-  <!-- COM opção A -->
-  <div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:14px">
-    <div style="font-size:10px;font-weight:700;color:#14532D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">✅ Com amortização</div>
-    <div style="margin-bottom:6px"><span style="font-size:10px;color:#6B7280">${isSAC?'1ª nova parcela':'Parcela (mantida)'}</span><br><span style="font-size:18px;font-weight:800;color:#14532D">${fb(novaParcA)}</span></div>
-    <div style="margin-bottom:6px"><span style="font-size:10px;color:#6B7280">Novo prazo</span><br><span style="font-size:14px;font-weight:700">${novoPrazoAStr}</span></div>
-    <div><span style="font-size:10px;color:#6B7280">Juros restantes</span><br><span style="font-size:14px;font-weight:700;color:#14532D">${fi(jurosComA)}</span></div>
-  </div>
-</div>
-
-<!-- Cards de economia -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-  <div style="background:linear-gradient(135deg,#0B3D91,#1565C0);border-radius:10px;padding:14px;color:#fff;text-align:center">
-    <div style="font-size:10px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">💰 Economia de juros</div>
-    <div style="font-size:22px;font-weight:800">${fi(econA)}</div>
-    <div style="font-size:10px;opacity:.7;margin-top:4px">reduzindo o prazo</div>
-  </div>
-  <div style="background:linear-gradient(135deg,#1B6E3F,#2D9D5C);border-radius:10px;padding:14px;color:#fff;text-align:center">
-    <div style="font-size:10px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📅 Parcelas a menos</div>
-    <div style="font-size:22px;font-weight:800">${parcMenosA}</div>
-    <div style="font-size:10px;opacity:.7;margin-top:4px">${parcMenosStr}</div>
-  </div>
-</div>
-
-<!-- Opção B: reduzir parcela -->
-<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px">
-  <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:10px">Alternativa: Manter o prazo e reduzir a parcela</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-    <div><div style="font-size:9px;color:#6B7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">${isSAC?'1ª nova parcela':'Nova parcela'}</div><div style="font-weight:800;color:#1565C0;font-size:15px">${fb(novaParcB)}</div></div>
-    <div><div style="font-size:9px;color:#6B7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Prazo</div><div style="font-weight:800;font-size:15px">${restantes} meses (igual)</div></div>
-    <div><div style="font-size:9px;color:#6B7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Economia de juros</div><div style="font-weight:800;color:#1B6E3F;font-size:15px">${fi(econB)}</div></div>
-  </div>
-</div>
-
-<div style="font-size:10px;color:#94A3B8;margin-top:10px;text-align:center">
-  * Simulação estimada. A opção de reduzir prazo ou parcela depende da política do banco no momento da amortização.
-</div>`;
+  document.getElementById('am-res').innerHTML =
+    /* Resumo topo */
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">' +
+      '<div style="background:linear-gradient(135deg,#0B3D91,#1565C0);border-radius:10px;padding:14px;color:#fff;text-align:center">' +
+        '<div style="font-size:9px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Total amortizado</div>' +
+        '<div style="font-size:17px;font-weight:800">' + fi(totalAmortExtra) + '</div>' +
+        '<div style="font-size:9px;opacity:.6;margin-top:2px">' + lista.length + ' evento' + (lista.length > 1 ? 's' : '') + '</div>' +
+      '</div>' +
+      '<div style="background:linear-gradient(135deg,#C05A00,#F57C00);border-radius:10px;padding:14px;color:#fff;text-align:center">' +
+        '<div style="font-size:9px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Economia de juros</div>' +
+        '<div style="font-size:17px;font-weight:800">' + fi(Math.round(economiaTotalJuros)) + '</div>' +
+        '<div style="font-size:9px;opacity:.6;margin-top:2px">em relação ao contrato</div>' +
+      '</div>' +
+      '<div style="background:linear-gradient(135deg,#1B6E3F,#2D9D5C);border-radius:10px;padding:14px;color:#fff;text-align:center">' +
+        '<div style="font-size:9px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Prazo reduzido</div>' +
+        '<div style="font-size:17px;font-weight:800">' + prazoStr(prazoReduzidoTotal) + '</div>' +
+        '<div style="font-size:9px;opacity:.6;margin-top:2px">' + prazoStr(prazoFinal) + ' restantes</div>' +
+      '</div>' +
+    '</div>' +
+    /* Linha do tempo */
+    (quitadoHTML) +
+    '<div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:8px">Linha do tempo das amortizações</div>' +
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">' + timelineHTML + '</div>' +
+    /* Comparação final */
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">' +
+      '<div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px;padding:14px">' +
+        '<div style="font-size:10px;font-weight:700;color:#991B1B;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">❌ Sem amortização</div>' +
+        '<div style="margin-bottom:8px"><span style="font-size:9px;color:#6B7280">Prazo total</span><br><span style="font-size:13px;font-weight:700">' + prazoStr(prazoM) + '</span></div>' +
+        '<div><span style="font-size:9px;color:#6B7280">Juros totais</span><br><span style="font-size:15px;font-weight:800;color:#991B1B">' + fi(Math.round(jurosBaseline)) + '</span></div>' +
+      '</div>' +
+      '<div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:14px">' +
+        '<div style="font-size:10px;font-weight:700;color:#14532D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">✅ Com amortizações</div>' +
+        '<div style="margin-bottom:8px"><span style="font-size:9px;color:#6B7280">Prazo total</span><br><span style="font-size:13px;font-weight:700">' + (quitado ? 'Quitado' : prazoStr(prazoFinal)) + '</span></div>' +
+        '<div><span style="font-size:9px;color:#6B7280">Juros totais</span><br><span style="font-size:15px;font-weight:800;color:#14532D">' + fi(Math.round(jurosComAmort)) + '</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-size:10px;color:#94A3B8;text-align:center">* Estratégia de reduzir prazo. A parcela mensal não se altera. Sujeito à política do banco no momento da amortização.</div>';
 }
 </script>
 </body>
