@@ -494,11 +494,11 @@ async function _confirmarTroca(){
     <div class="card-header"><div class="ci ci-az">🏠</div><div><div class="ct">Fase 2 — Financiamento após Entrega</div><div class="cs">Parcelas bancárias</div></div></div>
     <div class="cb">
       <div class="res-tabs">
-        <div class="res-tab ton" onclick="setTab('sac')">SAC — Parcelas Decrescentes</div>
-        <div class="res-tab" onclick="setTab('price')">PRICE — Parcela Fixa</div>
+        <div class="res-tab" onclick="setTab('sac')">SAC — Parcelas Decrescentes</div>
+        <div class="res-tab ton" onclick="setTab('price')">PRICE — Parcela Fixa</div>
       </div>
-      <div id="pSAC"><div class="mets" id="mSAC"></div><div class="sub" style="margin-top:.4rem">Evolução</div><div id="bSAC"></div><div class="tw"><table><thead><tr><th>Mês</th><th>Parcela</th><th>Amortiz.</th><th>Juros</th><th>Saldo</th></tr></thead><tbody id="tSAC"></tbody></table></div></div>
-      <div id="pPRICE" style="display:none"><div class="mets" id="mPRICE"></div><div class="sub" style="margin-top:.4rem">Evolução</div><div id="bPRICE"></div><div class="tw"><table><thead><tr><th>Mês</th><th>Parcela</th><th>Amortiz.</th><th>Juros</th><th>Saldo</th></tr></thead><tbody id="tPRICE"></tbody></table></div></div>
+      <div id="pSAC" style="display:none"><div class="mets" id="mSAC"></div><div class="sub" style="margin-top:.4rem">Evolução</div><div id="bSAC"></div><div class="tw"><table><thead><tr><th>Mês</th><th>Parcela</th><th>Amortiz.</th><th>Juros</th><th>Saldo</th></tr></thead><tbody id="tSAC"></tbody></table></div></div>
+      <div id="pPRICE"><div class="mets" id="mPRICE"></div><div class="sub" style="margin-top:.4rem">Evolução</div><div id="bPRICE"></div><div class="tw"><table><thead><tr><th>Mês</th><th>Parcela</th><th>Amortiz.</th><th>Juros</th><th>Saldo</th></tr></thead><tbody id="tPRICE"></tbody></table></div></div>
     </div>
   </div>
   <div class="card">
@@ -806,6 +806,9 @@ function onRenda() {
   fx = FAIXAS.find(f => r <= f.rMax) || FAIXAS[4];
   sub = fx.subs.find(s => r <= s.a) || fx.subs[fx.subs.length - 1];
   usaRedutor = true; // reset ao trocar de faixa: começa "com redutor" por padrão
+
+  // MCMV → PRICE como preferência | SBPE → SAC (30% renda) como preferência
+  setTab(fx.sbpe ? 'sac' : 'price');
 
   atualizarCardFaixa();
   blocoTaxa.style.display = 'block';
