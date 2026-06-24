@@ -436,10 +436,10 @@ async function _confirmarTroca(){
 <div class="card">
   <div class="card-header"><div class="ci ci-vd">🔒</div><div><div class="ct">Seguro de Obra — Evolução Gradual</div><div class="cs">Aumenta conforme % de conclusão da obra · Máx. 95% da parcela do financiamento</div></div></div>
   <div class="cb">
-    <div class="av in show" style="display:block;margin-bottom:10px">🔒 O seguro de obra é <strong>gradual</strong>: começa em <strong>12% da parcela no SAC (10% no PRICE)</strong> e sobe até <strong>95% da parcela</strong> no fim da obra, conforme o % de conclusão. O custo total acumulado é travado em um teto máximo de <strong>12% do valor financiado</strong> — mesmo que a obra atrase além do prazo previsto.</div>
+    <div class="av in show" style="display:block;margin-bottom:10px">🔒 O seguro de obra é <strong>gradual</strong>: começa em <strong>15% da parcela</strong> e sobe até <strong>95% da parcela</strong> no fim da obra, conforme o % de conclusão. Para obras já em andamento, o valor inicial segue a posição real da obra na curva. O custo total acumulado é travado em um teto máximo de <strong>12% do valor financiado (SAC) / 10% (PRICE)</strong> — mesmo que a obra atrase além do prazo previsto.</div>
 
     <div class="g2">
-      <div class="field"><label>Custo total estimado do seguro <span style="font-weight:400;font-size:10px">(teto máximo: 12% SAC / 10% PRICE)</span></label><input type="text" id="seguroTotal" readonly placeholder="—"/></div>
+      <div class="field"><label>Custo total estimado do seguro <span style="font-weight:400;font-size:10px">(inicia 15% · teto: 12% fin. SAC / 10% PRICE)</span></label><input type="text" id="seguroTotal" readonly placeholder="—"/></div>
     </div>
 
     <div id="seguroBox" style="display:none">
@@ -1539,7 +1539,7 @@ function preencherAutoObra() {
    totalMeses  = duração total da obra (lançamento → entrega), não o
    prazo restante — assim, obras já em andamento pagam só a fatia final. */
 function pctSeguroObra(posAbsoluta, totalMeses, piso) {
-  const pisoReal = piso !== undefined ? piso : 0.12;
+  const pisoReal = piso !== undefined ? piso : 0.15;
   const terco = totalMeses / 3;
   const m = Math.min(Math.max(posAbsoluta, 1), totalMeses);
   if (m <= terco) {
@@ -1585,8 +1585,8 @@ function calcularSeguroTotal(fin, meses, prazoAnos, taxaMensal, isSAC, dtLancame
     obraOffset = Math.max(0, (hoje.getFullYear() - lancObj.getFullYear()) * 12 + (hoje.getMonth() - lancObj.getMonth()));
   }
 
-  const piso = isSAC ? 0.12 : 0.10;
-  const tetoAbsoluto = fin * piso;
+  const piso = 0.15; // curva inicia em 15% da parcela
+  const tetoAbsoluto = fin * (isSAC ? 0.12 : 0.10); // teto acumulado Caixa: 12% SAC / 10% PRICE
   let somaTotal = 0;
   const mesesDetalhes = [];
   for (let m = 1; m <= meses; m++) {
@@ -2011,7 +2011,7 @@ function simular() {
     const gruposF1 = {};
     for (let m = 1; m <= mesesObra; m++) {
       const posAbsF1 = offsetF1 + m;
-      const pisoF1 = usandoSACf1 ? 0.12 : 0.10;
+      const pisoF1 = 0.15;
       const valFinal = Math.round(parcelaRefF1 * pctSeguroObra(posAbsF1, totalMesesF1, pisoF1));
       const dtMes = new Date(dtInicioF1);
       dtMes.setMonth(dtMes.getMonth() + offsetF1 + m - 1);
@@ -2333,7 +2333,7 @@ function gerarPDF() {
 
   // Agrupa meses em períodos por ano e fase — curva progressiva sobre a obra total
   const gruposPDF = {};
-  const pisoPDF = sistemaAtivo === 'price' ? 0.10 : 0.12;
+  const pisoPDF = 0.15;
   for (let m = 1; m <= mesesObra; m++) {
     const posAbsPDF = offsetPDF + m;
     const valFinal = Math.round(parcelaRefPDF * pctSeguroObra(posAbsPDF, totalMesesPDF, pisoPDF));
