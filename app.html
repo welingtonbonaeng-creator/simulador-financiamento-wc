@@ -1093,16 +1093,7 @@ function onEntrada() {
 
 
   // Badge entrada no header Período de Obra
-  const badgeOb = document.getElementById('badgeEntradaObra');
-  if (badgeOb) {
-    if (vi > 0) {
-      const entradaTotal = Math.max(0, vi - limBanco);
-      badgeOb.textContent = '💰 Entrada: ' + fi(entradaTotal);
-      badgeOb.style.display = 'inline-block';
-    } else {
-      badgeOb.style.display = 'none';
-    }
-  }
+  atualizarBadgeEntrada();
 
   calcSeguro();
   calcCapacidade();
@@ -1479,6 +1470,27 @@ function calcEntradaFaltando() {
   return { falta, entradaNecessaria, jaCompro, ato, fgtsUsar, totRef };
 }
 
+function atualizarBadgeEntrada() {
+  const badgeOb = document.getElementById('badgeEntradaObra');
+  if (!badgeOb) return;
+  const vi = pv(document.getElementById('vImovel').value);
+  if (!vi) { badgeOb.style.display = 'none'; return; }
+  const { falta, entradaNecessaria } = calcEntradaFaltando();
+  if (entradaNecessaria <= 0) { badgeOb.style.display = 'none'; return; }
+  if (falta > 0) {
+    badgeOb.textContent = '💰 Falta entrada: ' + fi(falta);
+    badgeOb.style.background = '#FEF3E8';
+    badgeOb.style.borderColor = '#FCD9A8';
+    badgeOb.style.color = '#8A3F00';
+  } else {
+    badgeOb.textContent = '✓ Entrada coberta';
+    badgeOb.style.background = '#EAF4EE';
+    badgeOb.style.borderColor = '#B5D9C3';
+    badgeOb.style.color = '#14522F';
+  }
+  badgeOb.style.display = 'inline-block';
+}
+
 function atualizarBlocoAutoObra() {
   const meses = parseInt(document.getElementById('mesesObra').value) || 0;
   const bloco = document.getElementById('blocoAutoObra');
@@ -1500,6 +1512,7 @@ function atualizarBlocoAutoObra() {
   } else {
     bloco.style.display = 'none';
   }
+  atualizarBadgeEntrada();
 }
 
 function preencherAutoObra() {
