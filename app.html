@@ -1443,10 +1443,6 @@ function onObra() {
 }
 
 function calcEntradaFaltando() {
-  /* Retorna quanto falta da ENTRADA (não do financiamento).
-     Entrada necessária = avaliação × (1 - pct)
-     Já pago/comprometido: ato + FGTS + reforços anuais
-     Falta: cobrir pelo parcelamento mensal durante a obra */
   const vi = pv(document.getElementById('vImovel').value);
   const va = pv(document.getElementById('vAval').value) || vi * 1.10;
   const ato = pv(document.getElementById('ato').value);
@@ -1454,12 +1450,16 @@ function calcEntradaFaltando() {
   const fgtsUsar = fgtsPode
     ? Math.min(pv(document.getElementById('fgtsDisp').value), calcFGTSMax(va, pct, ato))
     : 0;
-  // Entrada necessária sobre o valor de venda (o que cliente precisa pagar antes das chaves)
-  const entradaNecessaria = vi * (1 - pct);
+  // Entrada necessária = venda − máx financiado (correto para imóveis na planta)
+  const r = pv(document.getElementById('renda').value);
+  const p100k = getP100k();
+  const limBanco = va * pct;
+  const capTeorica = (r > 0 && p100k > 0) ? Math.round((r * getPctRenda() / p100k) * 100000) : Infinity;
+  const finAprov = Math.min(vi, limBanco, capTeorica);
+  const entradaNecessaria = Math.max(0, vi - finAprov);
   // Já comprometido: ato + FGTS + reforços
   const totRef = pv(document.getElementById('totalRef').value) || 0;
   const jaCompro = ato + fgtsUsar + totRef;
-  // Falta cobrir pelas parcelas mensais de obra
   const falta = Math.max(0, entradaNecessaria - jaCompro);
   return { falta, entradaNecessaria, jaCompro, ato, fgtsUsar, totRef };
 }
