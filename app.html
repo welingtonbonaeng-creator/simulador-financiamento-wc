@@ -3008,6 +3008,7 @@ function calcAmort() {
     }
     if (saldo <= 0.01) { quitado = true; break; }
 
+    const prazoRestanteAntes = prazoRestante; // captura antes de recalcular
     const extraEfetivo = Math.min(am.valor, saldo);
     const saldoAntes = saldo;
     saldo = Math.max(0, saldo - extraEfetivo);
@@ -3030,7 +3031,14 @@ function calcAmort() {
       prazoRestante = novo;
     }
 
-    timeline.push({ parcela: am.parcela, tipo: am.tipo, valorSolicitado: am.valor, valorUsado: extraEfetivo, saldoAntes, saldoApos: saldo, prazoReduzido });
+    // SAC: nova 1ª parcela após amortização (amortM constante + juros do novo saldo)
+    const novaParcSAC = (isSAC && saldo > 0.01) ? amortM + saldo * taxaM : null;
+    // PRICE opção B: manter prazo original, recalcular parcela com novo saldo
+    const novaParcPriceB = (!isSAC && saldo > 0.01 && prazoRestanteAntes > 0 && taxaM > 0)
+      ? saldo * taxaM * Math.pow(1 + taxaM, prazoRestanteAntes) / (Math.pow(1 + taxaM, prazoRestanteAntes) - 1)
+      : null;
+
+    timeline.push({ parcela: am.parcela, tipo: am.tipo, valorSolicitado: am.valor, valorUsado: extraEfetivo, saldoAntes, saldoApos: saldo, prazoReduzido, novaParcSAC, novaParcPriceB, prazoMantido: prazoRestanteAntes });
     prevParcela = am.parcela;
     if (quitado) break;
   }
@@ -3061,22 +3069,62 @@ function calcAmort() {
           'Excedente de ' + fi(Math.round(excedente)) + ' não utilizado.</span>' +
         '</div>'
       : '';
+
+    // Cabeçalho comum: número + tipo + valor
+    const cabecalho =
+      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+        '<span style="font-weight:700;font-size:13px;color:#1E293B">Parcela ' + t.parcela + '</span>' +
+        '<span style="background:' + bg + ';color:' + cor + ';font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px">' + t.tipo + '</span>' +
+        '<span style="font-weight:700;color:#C05A00;font-size:13px">' + fi(Math.round(t.valorUsado)) + '</span>' +
+        (excedente > 0.5 ? '<span style="font-size:10px;color:#6B7280;text-decoration:line-through">' + fi(t.valorSolicitado) + '</span>' : '') +
+      '</div>';
+
+    // Mini-card reutilizável
+    const mc = (lbl, val, st) => '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:6px;padding:6px 8px' + (st ? ';' + st : '') + '"><div style="font-size:9px;color:#6B7280;font-weight:600;margin-bottom:2px">' + lbl + '</div><div style="font-size:12px;font-weight:700">' + val + '</div></div>';
+
+    let opcoesHTML;
+    if (isSAC) {
+      // SAC: mostra nova 1ª parcela + prazo cortado
+      const novaParcStr = t.novaParcSAC ? fb(Math.round(t.novaParcSAC)) : '—';
+      opcoesHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">' +
+          mc('Saldo antes', fi(Math.round(t.saldoAntes))) +
+          mc('Saldo após', fi(Math.round(t.saldoApos)), 'color:#14532D') +
+          mc('Nova 1ª parcela', novaParcStr, 'background:#EFF6FF;border-color:#BFDBFE;color:#1565C0') +
+          mc('Prazo cortado', t.prazoReduzido + ' meses', 'background:#FEF3E8;border-color:#FED7AA;color:#9A3412') +
+        '</div>';
+    } else {
+      // PRICE: duas opções (A = reduzir prazo | B = reduzir parcela)
+      const novaParcBStr = t.novaParcPriceB ? fb(Math.round(t.novaParcPriceB)) : '—';
+      const prazoStr = (m) => { const a = Math.floor(m/12), r = m%12; return a > 0 ? m + 'm (' + a + 'a' + (r?' '+r+'m':'') + ')' : m + 'm'; };
+      opcoesHTML =
+        '<div style="display:flex;flex-direction:column;gap:6px">' +
+          // Opção A: Reduzir Prazo
+          '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 10px">' +
+            '<div style="font-size:9px;font-weight:700;color:#1D4ED8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">↘ Opção A — Reduzir prazo</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px">' +
+              mc('Saldo antes', fi(Math.round(t.saldoAntes))) +
+              mc('Saldo após', fi(Math.round(t.saldoApos)), 'color:#14532D') +
+              mc('Parcela mantida', fb(Math.round(parcela1)), 'color:#1565C0') +
+              mc('Prazo cortado', t.prazoReduzido + ' meses', 'background:#FEF3E8;border-color:#FED7AA;color:#9A3412') +
+            '</div>' +
+          '</div>' +
+          // Opção B: Reduzir Parcela
+          '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:8px 10px">' +
+            '<div style="font-size:9px;font-weight:700;color:#15803D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">↘ Opção B — Reduzir parcela</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px">' +
+              mc('Saldo antes', fi(Math.round(t.saldoAntes))) +
+              mc('Saldo após', fi(Math.round(t.saldoApos)), 'color:#14532D') +
+              mc('Nova parcela', novaParcBStr, 'background:#F0FDF4;border-color:#BBF7D0;color:#14532D') +
+              mc('Prazo mantido', prazoStr(t.prazoMantido)) +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
     return '<div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px">' +
       '<div style="min-width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C05A00,#F57C00);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + (i+1) + '</div>' +
-      '<div style="flex:1;min-width:0">' +
-        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
-          '<span style="font-weight:700;font-size:13px;color:#1E293B">Parcela ' + t.parcela + '</span>' +
-          '<span style="background:' + bg + ';color:' + cor + ';font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px">' + t.tipo + '</span>' +
-          '<span style="font-weight:700;color:#C05A00;font-size:13px">' + fi(Math.round(t.valorUsado)) + '</span>' +
-          (excedente > 0.5 ? '<span style="font-size:10px;color:#6B7280;text-decoration:line-through">' + fi(t.valorSolicitado) + '</span>' : '') +
-        '</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">' +
-          '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:6px;padding:6px 8px"><div style="font-size:9px;color:#6B7280;font-weight:600;margin-bottom:2px">Saldo antes</div><div style="font-size:12px;font-weight:700">' + fi(Math.round(t.saldoAntes)) + '</div></div>' +
-          '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:6px;padding:6px 8px"><div style="font-size:9px;color:#6B7280;font-weight:600;margin-bottom:2px">Saldo após</div><div style="font-size:12px;font-weight:700;color:#14532D">' + fi(Math.round(t.saldoApos)) + '</div></div>' +
-          '<div style="background:#FEF3E8;border:1px solid #FED7AA;border-radius:6px;padding:6px 8px"><div style="font-size:9px;color:#9A3412;font-weight:600;margin-bottom:2px">Prazo cortado</div><div style="font-size:12px;font-weight:700;color:#9A3412">' + t.prazoReduzido + ' meses</div></div>' +
-        '</div>' +
-        excedenteHTML +
-      '</div>' +
+      '<div style="flex:1;min-width:0">' + cabecalho + opcoesHTML + excedenteHTML + '</div>' +
     '</div>';
   }).join('');
 
