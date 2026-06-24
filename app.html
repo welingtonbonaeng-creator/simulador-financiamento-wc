@@ -181,6 +181,9 @@ _sb.auth.getSession().then(function(r){
   document.addEventListener('DOMContentLoaded',function(){
     var el=document.getElementById('_userEmail');
     if(el)el.textContent=s.user.email;
+    // Validade padrão: hoje + 7 dias
+    var vEl=document.getElementById('validadeSimulacao');
+    if(vEl){ var d=new Date(); d.setDate(d.getDate()+7); vEl.value=d.toISOString().split('T')[0]; }
   });
   _sb.from('auth_logs').insert({user_id:s.user.id,email:s.user.email,action:'page_view',user_agent:navigator.userAgent});
 });
@@ -316,6 +319,16 @@ async function _confirmarTroca(){
       <div class="field"><label>Produto / Empreendimento</label><input type="text" id="nomeProduto" placeholder="Ex: Porto Maravilha"/></div>
       <div class="field"><label>Tipologia</label><input type="text" id="tipologia" placeholder="Ex: 2 quartos com suíte e vaga"/></div>
       <div class="field"><label>Metragem</label><input type="text" id="metragem" placeholder="Ex: 52m²"/></div>
+    </div>
+    <div class="g2" style="margin-top:10px">
+      <div class="field">
+        <label>Corretor responsável</label>
+        <input type="text" id="nomeCorretor" placeholder="Ex: Welington Silva · CRECI 12345"/>
+      </div>
+      <div class="field">
+        <label>Validade da simulação <span style="font-weight:400;font-size:10px;color:#94A3B8">(padrão: 7 dias)</span></label>
+        <input type="date" id="validadeSimulacao"/>
+      </div>
     </div>
   </div>
 </div>
@@ -2183,6 +2196,11 @@ function gerarPDF() {
   const produto = document.getElementById('nomeProduto').value || '—';
   const tipologia = (document.getElementById('tipologia').value || '—');
   const metragem = (document.getElementById('metragem').value || '').replace(/M²/g, 'm²').replace(/M2/g, 'm²').replace(/m2/gi, 'm²');
+  const nomeCorretor = document.getElementById('nomeCorretor').value.trim();
+  const validadeRaw  = document.getElementById('validadeSimulacao').value;
+  const validadeStr  = validadeRaw
+    ? new Date(validadeRaw + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' })
+    : '';
   const pct = Math.max(1, parseFloat(document.getElementById('pctValorizacao')?.value) || 60);
   const pctD = pct / 100;
   const vEntrega = d.vi * (1 + pctD);
@@ -2789,6 +2807,23 @@ function gerarPDF() {
   ⚠️ <strong>SIMULAÇÃO — Os valores apresentados são estimativas e podem ter variações de acordo com a aprovação do banco.</strong><br>
   Parcelas, taxas e condições estão sujeitas à análise de crédito, avaliação do imóvel e políticas vigentes no momento da contratação.
 </div>
+
+${(nomeCorretor || validadeStr) ? `
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,#0B3D91,#1565C0);border-radius:8px;padding:10px 16px;margin-bottom:8px;color:#fff">
+  ${nomeCorretor ? `<div style="display:flex;align-items:center;gap:8px">
+    <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">👤</div>
+    <div>
+      <div style="font-size:8px;opacity:.7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px">Simulação preparada por</div>
+      <div style="font-size:12px;font-weight:800">${nomeCorretor}</div>
+    </div>
+  </div>` : '<div></div>'}
+  ${validadeStr ? `<div style="text-align:right;flex-shrink:0">
+    <div style="font-size:8px;opacity:.7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px">Válida até</div>
+    <div style="font-size:12px;font-weight:800">${validadeStr}</div>
+    <div style="font-size:8px;opacity:.6;margin-top:1px">⏰ Condições sujeitas a alteração</div>
+  </div>` : ''}
+</div>
+` : ''}
 
 <div class="footer">
   SimulaPro · Simulador de Financiamento Imobiliário · Uso profissional · Simulação estimada — consulte um especialista para proposta oficial.
