@@ -382,7 +382,6 @@ async function _confirmarTroca(){
       <div class="fgts-grid" id="fgtsGrid"></div>
     </div>
 
-    <div id="avFaltaEntrada" class="av"></div>
     <div class="field" style="margin-top:7px"><label>Valor financiado aprovado <span style="font-weight:400;font-size:10px">(já aplicado limite de renda e banco)</span></label><input type="text" id="vFinanciado" readonly placeholder="R$ 0,00"/></div>
   </div>
 </div>
@@ -1089,22 +1088,6 @@ function onEntrada() {
     ? 'banco (' + (pct*100).toFixed(0) + '% da avaliação)'
     : 'renda (' + (pctRenda*100).toFixed(0) + '% × capacidade)';
 
-  // ── Entrada: mostrar apenas o valor que falta ──
-  const entMinVenda = vi * (1 - pct);
-  const pctEntVenda = vi > 0 ? (totalEntrada / vi) * 100 : 0;
-  if (vi > 0) {
-    const faltam = entMinVenda - totalEntrada;
-    if (faltam > 0) {
-      show('avFaltaEntrada', 'av wn',
-        '💡 Falta <strong>' + fi(faltam) + '</strong> para entrada mínima de ' +
-        ((1-pct)*100).toFixed(0) + '% (' + fi(entMinVenda) + ').');
-    } else if (totalEntrada > 0) {
-      show('avFaltaEntrada', 'av ok',
-        '✓ Entrada completa — ' + fi(totalEntrada) + ' (' + pctEntVenda.toFixed(1) + '% do valor de venda).');
-    } else {
-      document.getElementById('avFaltaEntrada').style.display = 'none';
-    }
-  }
 
   calcSeguro();
   calcCapacidade();
