@@ -388,7 +388,7 @@ async function _confirmarTroca(){
 
 <!-- OBRA -->
 <div class="card">
-  <div class="card-header"><div class="ci ci-lr">🏗️</div><div><div class="ct">Período de Obra</div><div class="cs">Parcelamento e bonificação — saldo congelado sem INCC</div></div></div>
+  <div class="card-header"><div class="ci ci-lr">🏗️</div><div><div class="ct">Período de Obra</div><div class="cs">Parcelamento e bonificação — saldo congelado sem INCC</div></div><span id="badgeEntradaObra" style="display:none;margin-left:auto;background:#FEF3E8;border:1px solid #FCD9A8;border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700;color:#8A3F00;white-space:nowrap;flex-shrink:0"></span></div>
   <div class="cb">
     <div class="av in show" style="display:block;margin-bottom:10px">💡 <strong>Bonificação exclusiva:</strong> após assinatura com a CEF o saldo fica <strong>congelado sem INCC</strong> — economia média de R$ 211.600.</div>
     <div class="g2" style="grid-template-columns:1fr 1fr 1fr">
@@ -1088,6 +1088,18 @@ function onEntrada() {
     ? 'banco (' + (pct*100).toFixed(0) + '% da avaliação)'
     : 'renda (' + (pctRenda*100).toFixed(0) + '% × capacidade)';
 
+
+  // Badge entrada no header Período de Obra
+  const badgeOb = document.getElementById('badgeEntradaObra');
+  if (badgeOb) {
+    if (vi > 0) {
+      const entradaTotal = Math.max(0, vi - limBanco);
+      badgeOb.textContent = '💰 Entrada: ' + fi(entradaTotal);
+      badgeOb.style.display = 'inline-block';
+    } else {
+      badgeOb.style.display = 'none';
+    }
+  }
 
   calcSeguro();
   calcCapacidade();
