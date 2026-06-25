@@ -2159,7 +2159,8 @@ function atualizarEconomia() {
   // Seguro de obra
   const seguro = pv(document.getElementById('seguroTotal').value) || 0;
 
-  const total = incc + rgiItbi + laudemio + taxaLig + seguro;
+  const grossEconom = incc + rgiItbi + laudemio + taxaLig;
+  const total = grossEconom - seguro;
 
   const econGrid = document.getElementById('econGrid');
   const econTotal = document.getElementById('econTotal');
@@ -2170,7 +2171,7 @@ function atualizarEconomia() {
     ${temLaudemio ? `<div class="met"><div class="ml">Laudêmio (5% entrega)</div><div class="mv gr">${fi(laudemio)}</div></div>` : ''}
     ${temTaxaLig ? `<div class="met"><div class="ml">Taxa ligação + decoração (6%)</div><div class="mv am">${fi(taxaLig)}</div></div>`
       : `<div class="met"><div class="ml">Taxa ligação + decoração</div><div class="mv gr">Entregue pela construtora</div></div>`}
-    <div class="met"><div class="ml">Seguro de obra</div><div class="mv gr">${fi(seguro)}</div></div>
+    <div class="met"><div class="ml">Seguro de obra (custo)</div><div class="mv rd">− ${fi(seguro)}</div></div>
   `;
   econTotal.innerHTML = `
     <div style="background:linear-gradient(135deg,#EAF4EE,#F0FBF5);border:1.5px solid #1B6E3F;border-radius:var(--radius2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -2178,11 +2179,11 @@ function atualizarEconomia() {
       <span style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--verde)">${fi(total)}</span>
     </div>
     <div style="margin-top:7px;font-size:11px;color:var(--texto3);background:var(--amareloClaro);border-radius:6px;padding:7px 10px;border:1px solid #FDE68A">
-      ⭐ <strong>Por pagar o seguro de obra (${fi(seguro)}), o cliente não paga INCC nem documentações</strong> — economia de ${fi(total - seguro)} em custos que seriam obrigatórios.
+      ⭐ <strong>Por pagar o seguro de obra (${fi(seguro)}), o cliente não paga INCC nem documentações</strong> — economia bruta de ${fi(grossEconom)}, descontado o seguro = <strong>economia líquida de ${fi(total)}</strong>.
     </div>
   `;
   // Salva para o PDF
-  window._econDados = { incc, rgiItbi, laudemio, taxaLig, seguro, total, temLaudemio, temTaxaLig };
+  window._econDados = { incc, rgiItbi, laudemio, taxaLig, seguro, grossEconom, total, temLaudemio, temTaxaLig };
 }
 
 /* ══════════════════════════════════════
