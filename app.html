@@ -1487,24 +1487,7 @@ function onObra() {
 
     document.getElementById('obraMesesLabel').textContent = `${meses} mês${meses !== 1 ? 'es' : ''} de parcelas mensais`;
 
-    if (false) { // placeholder — bloco de aviso removido
-    } else {
-      const totalPago = ato + fgtsUsar + totR + totM;
-      const diff = Math.abs(totalPago - entradaNecessaria);
-      if (diff < 1) {
-        show('avObra', 'av ok',
-          '✓ Fluxo equilibrado: ato + FGTS + reforços + parcelas = ' + fi(totalPago) +
-          ' = entrada necessária (' + fi(entradaNecessaria) + '). Financiado bancário: ' + fi(finAprov) + '.');
-      } else if (totalPago < entradaNecessaria) {
-        show('avObra', 'av wn',
-          '⚠️ Falta ' + fi(entradaNecessaria - totalPago) + ' para cobrir a entrada necessária (' +
-          fi(entradaNecessaria) + '). Revise os valores.');
-      } else {
-        show('avObra', 'av ok',
-          '✓ Entrada pré-chaves (' + fi(totalPago) + ') cobre a entrada necessária (' +
-          fi(entradaNecessaria) + '). Financiado bancário: ' + fi(finAprov) + '.');
-      }
-    }
+    document.getElementById('avObra').style.display = 'none';
   } else {
     res.className = 'obra-res';
   }
@@ -1557,26 +1540,8 @@ function atualizarBadgeEntrada() {
 }
 
 function atualizarBlocoAutoObra() {
-  const meses = parseInt(document.getElementById('mesesObra').value) || 0;
   const bloco = document.getElementById('blocoAutoObra');
-  const { falta, entradaNecessaria, jaCompro } = calcEntradaFaltando();
-
-  if (falta > 0 && meses > 0) {
-    const parcelaSugerida = falta / meses;
-    document.getElementById('txtAutoObra').textContent =
-      'Entrada necessária: ' + fi(entradaNecessaria) +
-      ' | Já comprometido (ato + FGTS + reforços): ' + fi(jaCompro) +
-      ' | Falta: ' + fi(falta) +
-      ' → ' + meses + ' parcelas de ' + fi(parcelaSugerida) + '/mês durante a obra.';
-    bloco.style.display = 'block';
-  } else if (falta <= 0 && meses > 0) {
-    // Entrada já coberta — mostrar aviso diferente
-    document.getElementById('txtAutoObra').textContent =
-      '✓ Entrada já coberta por ato + FGTS + reforços (' + fi(jaCompro) + '). Parcela mensal de obra não é necessária.';
-    bloco.style.display = 'block';
-  } else {
-    bloco.style.display = 'none';
-  }
+  bloco.style.display = 'none';
   atualizarBadgeEntrada();
 }
 
