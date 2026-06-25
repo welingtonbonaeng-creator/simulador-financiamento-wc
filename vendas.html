@@ -142,6 +142,33 @@ section{padding:5rem 1.5rem;}
 .preco-card{border-radius:var(--radius);padding:2.5rem;border:2px solid var(--cinza2);position:relative;transition:transform .25s,box-shadow .25s;background:#fff;}
 .preco-card:hover{transform:translateY(-4px);}
 .preco-card.destaque{border-color:var(--laranja);box-shadow:0 16px 48px rgba(245,124,0,.2);}
+.preco-card.blurred{filter:blur(5px);pointer-events:none;user-select:none;}
+.preco-card.blurred::after{content:'';position:absolute;inset:0;border-radius:var(--radius);}
+.teste-card{border-radius:var(--radius);padding:2.5rem;border:2px dashed #CBD5E1;background:linear-gradient(135deg,#F0F4FF,#F8F9FF);text-align:center;margin-top:1.5rem;max-width:480px;margin-left:auto;margin-right:auto;}
+.teste-card-icon{font-size:2.5rem;margin-bottom:.75rem;}
+.teste-card h3{font-size:1.25rem;font-weight:800;color:var(--texto);margin:0 0 .5rem;}
+.teste-card p{font-size:14px;color:var(--texto2);margin:0 0 1.5rem;line-height:1.6;}
+.btn-teste{display:inline-block;background:var(--azul);color:#fff;padding:.875rem 2rem;border-radius:var(--radius);font-weight:700;font-size:15px;text-decoration:none;cursor:pointer;border:none;transition:opacity .2s;}
+.btn-teste:hover{opacity:.85;}
+/* Modal solicitação */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:16px;padding:2.5rem 2rem;max-width:440px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.25);}
+.modal-box h3{font-size:1.25rem;font-weight:800;color:var(--texto);margin:0 0 .5rem;}
+.modal-box p{font-size:14px;color:var(--texto2);margin:0 0 1.5rem;line-height:1.6;}
+.modal-field{margin-bottom:1rem;}
+.modal-field label{display:block;font-size:13px;font-weight:600;color:var(--texto2);margin-bottom:.4rem;}
+.modal-field input{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:.75rem 1rem;font-size:15px;color:var(--texto);outline:none;box-sizing:border-box;transition:border-color .2s;}
+.modal-field input:focus{border-color:var(--azul);}
+.modal-btns{display:flex;gap:.75rem;margin-top:1.5rem;}
+.modal-btns button{flex:1;padding:.875rem;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;border:none;}
+.btn-modal-cancel{background:#F1F5F9;color:var(--texto2);}
+.btn-modal-submit{background:var(--azul);color:#fff;}
+.btn-modal-submit:hover{opacity:.85;}
+.modal-success{display:none;text-align:center;padding:1rem 0;}
+.modal-success .success-icon{font-size:3rem;margin-bottom:.75rem;}
+.modal-success h4{font-size:1.1rem;font-weight:800;color:var(--texto);margin:0 0 .5rem;}
+.modal-success p{font-size:14px;color:var(--texto2);margin:0;}
 .preco-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--laranja);color:#fff;font-size:11px;font-weight:700;padding:5px 16px;border-radius:20px;white-space:nowrap;letter-spacing:.05em;}
 .preco-nome{font-size:13px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;}
 .preco-valor{font-size:3rem;font-weight:800;color:var(--texto);line-height:1;margin-bottom:.25rem;}
@@ -612,7 +639,7 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
       <p class="section-sub">Uma venda a mais por mês já paga o plano por anos. Sem contratos, cancela quando quiser.</p>
     </div>
     <div class="preco-grid">
-      <div class="preco-card fade-up">
+      <div class="preco-card blurred fade-up">
         <div class="preco-nome">Plano Mensal</div>
         <div class="preco-valor">R$97<small>/mês</small></div>
         <div class="preco-periodo">Cobrado mensalmente · Cancela quando quiser</div>
@@ -625,7 +652,7 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
         </ul>
         <a href="#" class="btn-preco azul">Assinar Mensal</a>
       </div>
-      <div class="preco-card destaque fade-up">
+      <div class="preco-card destaque blurred fade-up">
         <div class="preco-badge">🔥 OFERTA FOUNDERS</div>
         <div class="preco-nome">Plano Founders</div>
         <div class="preco-valor">R$67<small>/mês</small></div>
@@ -642,8 +669,47 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
         <div class="vagas-bar"><div class="vagas-fill" id="vagasFill"></div></div>
       </div>
     </div>
+
+    <!-- Card solicitar teste -->
+    <div class="teste-card fade-up">
+      <div class="teste-card-icon">🧪</div>
+      <h3>Quer testar antes de assinar?</h3>
+      <p>Solicite um acesso de teste gratuito por 15 dias. Sem cartão de crédito, sem compromisso.</p>
+      <button class="btn-teste" onclick="abrirModalTeste()">Solicitar Acesso de Teste</button>
+    </div>
   </div>
 </section>
+
+<!-- Modal solicitar teste -->
+<div class="modal-overlay" id="modalTeste">
+  <div class="modal-box">
+    <div id="modalForm">
+      <h3>🧪 Solicitar Acesso de Teste</h3>
+      <p>Preencha os dados abaixo. Você receberá as credenciais no seu e-mail em até 24h.</p>
+      <div class="modal-field">
+        <label for="testeNome">Nome completo</label>
+        <input type="text" id="testeNome" placeholder="Ex: João Silva" autocomplete="name"/>
+      </div>
+      <div class="modal-field">
+        <label for="testeEmail">E-mail</label>
+        <input type="email" id="testeEmail" placeholder="seu@email.com" autocomplete="email"/>
+      </div>
+      <div class="modal-field">
+        <label for="testeTel">WhatsApp / Telefone</label>
+        <input type="tel" id="testeTel" placeholder="(21) 99999-9999" autocomplete="tel"/>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-modal-cancel" onclick="fecharModalTeste()">Cancelar</button>
+        <button class="btn-modal-submit" id="btnEnviarTeste" onclick="enviarSolicitacaoTeste()">Enviar Solicitação</button>
+      </div>
+    </div>
+    <div class="modal-success" id="modalSucesso">
+      <div class="success-icon">✅</div>
+      <h4>Solicitação enviada!</h4>
+      <p>Você receberá um e-mail com seu acesso em até 24 horas. Fique de olho na caixa de entrada.</p>
+    </div>
+  </div>
+</div>
 
 <!-- GARANTIA -->
 <section class="garantia">
@@ -783,6 +849,51 @@ setTimeout(function(){
   var fill=document.getElementById('vagasFill');
   if(fill)fill.style.width='70%';
 },500);
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+var _sb = supabase.createClient(
+  'https://uefnirdmhtsbpdxnonnd.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s'
+);
+
+function abrirModalTeste(){
+  document.getElementById('modalTeste').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function fecharModalTeste(){
+  document.getElementById('modalTeste').classList.remove('open');
+  document.body.style.overflow='';
+  // reset form
+  document.getElementById('modalForm').style.display='block';
+  document.getElementById('modalSucesso').style.display='none';
+  document.getElementById('testeNome').value='';
+  document.getElementById('testeEmail').value='';
+  document.getElementById('testeTel').value='';
+}
+document.getElementById('modalTeste').addEventListener('click',function(e){
+  if(e.target===this)fecharModalTeste();
+});
+
+async function enviarSolicitacaoTeste(){
+  var nome=document.getElementById('testeNome').value.trim();
+  var email=document.getElementById('testeEmail').value.trim();
+  var tel=document.getElementById('testeTel').value.trim();
+  if(!nome){alert('Informe seu nome completo.');return;}
+  if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
+  var btn=document.getElementById('btnEnviarTeste');
+  btn.disabled=true;btn.textContent='Enviando...';
+  try{
+    var res=await _sb.from('solicitacoes_teste').insert({nome:nome,email:email,telefone:tel});
+    if(res.error)throw res.error;
+    document.getElementById('modalForm').style.display='none';
+    document.getElementById('modalSucesso').style.display='block';
+  }catch(e){
+    alert('Erro ao enviar solicitação. Tente novamente.');
+    btn.disabled=false;btn.textContent='Enviar Solicitação';
+  }
+}
 </script>
 </body>
 </html>
