@@ -1282,55 +1282,13 @@ function onObra() {
     ? Math.min(pv(document.getElementById('fgtsDisp').value), calcFGTSMax(vi, pct, ato))
     : 0;
 
-  // ── FÓRMULA CORRETA ──────────────────────────────────────────────
-  // Entrada necessária = valor do imóvel − financiado aprovado
-  // Ex: imóvel 350k, financia 308k → entrada = 42k
-  // Saldo parcelas = 42k - (ato 10k + fgts 0 + reforços 10k) = 22k → 22k ÷ 35 = R$628/mês
+  // Entrada = vi − financiado. O saldo restante (após ato + FGTS + reforços) é
+  // parcelado mensalmente durante a obra. Sem relação com teto de 80%.
   const entradaNecessaria = Math.max(0, vi - finAprov);
   const jaCompro = ato + fgtsUsar + totR;
   const saldoParaParcelas = Math.max(0, entradaNecessaria - jaCompro);
-  const parcelaSugerida = meses > 0 ? saldoParaParcelas / meses : 0;
-
-  // ── Teto: parcela de obra ≤ 80% da parcela do sistema escolhido (SAC 1ª ou PRICE) ──
-  const prazoA = parseInt(document.getElementById('prazoSlider')?.value) || 30;
-  const taxaMes = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
-  const nMeses = prazoA * 12;
-  // Detecta aba ativa: SAC ou PRICE
-  const tabAtivo = document.querySelector('.res-tab.ton');
-  const usandoSAC = !tabAtivo || tabAtivo.textContent.includes('SAC');
-  // Parcela de referência para o teto
-  let parcelaRef;
-  if (usandoSAC) {
-    // SAC: 1ª parcela (a maior) = amortização + juros do saldo total
-    const amortSAC = finAprov / nMeses;
-    parcelaRef = amortSAC + (finAprov * taxaMes);
-  } else {
-    // PRICE: parcela fixa
-    const coefPRICE = nMeses > 0 && taxaMes > 0
-      ? (taxaMes * Math.pow(1 + taxaMes, nMeses)) / (Math.pow(1 + taxaMes, nMeses) - 1)
-      : 1 / nMeses;
-    parcelaRef = finAprov * coefPRICE;
-  }
-  const parcelaPRICE = (() => {
-    const coef = nMeses > 0 && taxaMes > 0
-      ? (taxaMes * Math.pow(1 + taxaMes, nMeses)) / (Math.pow(1 + taxaMes, nMeses) - 1)
-      : 1 / nMeses;
-    return finAprov * coef;
-  })();
-  const tetoObra = parcelaRef * 0.80;
-
-  // ── Teto: parcela de obra ≤ 80% da parcela do sistema escolhido ──
-  const sistLabel = usandoSAC ? 'SAC (1ª parcela ' + fb(parcelaRef) + ')' : 'PRICE ' + fb(parcelaRef);
-  // calcula quantos meses seriam necessários para cobrir com o teto
-  const parcelaComTeto = tetoObra > 0 ? Math.min(parcelaSugerida, tetoObra) : parcelaSugerida;
-  const excedeTeto = tetoObra > 0 && parcelaSugerida > tetoObra;
-  const mesesNecessarios = excedeTeto && tetoObra > 0 ? Math.ceil(saldoParaParcelas / tetoObra) : meses;
-  const mesesExtras = Math.max(0, mesesNecessarios - meses);
-
-  // Parcela final = sempre o valor real necessário (teto 80% é aviso, não limite)
-  const parcelaFinal = parcelaSugerida;
-  const totMCoberto = parcelaFinal * meses;
-  const saldoRestante = 0; // sem residual: parcela cobre exatamente o saldo
+  const parcelaFinal = meses > 0 ? saldoParaParcelas / meses : 0;
+  const excedeTeto = false; // teto 80% não se aplica à entrada parcelada durante a obra
 
   // Preenche a parcela mensal automaticamente
   if (parcelaFinal > 0) {
@@ -1411,16 +1369,6 @@ function onObra() {
           </div>
         </div>`;
 
-      if (excedeTeto && saldoRestante > 0) {
-        html += `<div class="obra-linha" style="background:#FEF3E8;border-radius:6px;padding:6px 8px">
-          <span style="color:#8A3F00">⚠️ Saldo restante (pagar até as chaves)</span>
-          <span style="color:#C05A00"><strong>${fi(saldoRestante)}</strong></span>
-        </div>`;
-        html += `<div class="obra-linha" style="background:#EDE8FA;border-radius:6px;padding:6px 8px">
-          <span style="color:#4A2C8A">📋 Prazo total necessário no teto de 80%</span>
-          <span style="color:#4A2C8A"><strong>${mesesNecessarios} meses</strong> (${mesesExtras} além da obra)</span>
-        </div>`;
-      }
     }
 
     res.querySelector('#obraLinhas').innerHTML = html || '<div style="font-size:12px;color:var(--texto3)">Preencha os campos.</div>';
@@ -1429,11 +1377,7 @@ function onObra() {
     document.getElementById('totalObraPago').textContent = fb(totalPagoObra);
     document.getElementById('saldoFin').textContent = fi(finAprov);
 
-    if (excedeTeto) {
-      show('avObra', 'av wn',
-        `ℹ️ A parcela mensal de obra (${fb(parcelaFinal)}) excede o teto referencial de 80% da parcela ${sistLabel} (${fb(tetoObra)}/mês). ` +
-        `Confirme com o banco a viabilidade deste valor durante a obra.`
-      );
+    if (false) { // placeholder — bloco de aviso removido
     } else {
       const totalPago = ato + fgtsUsar + totR + totM;
       const diff = Math.abs(totalPago - entradaNecessaria);
