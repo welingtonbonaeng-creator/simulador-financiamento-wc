@@ -1042,43 +1042,44 @@ function toast(msg, tipo='ok') {
 const TESTE_KEY = 'simuadmin_testes'
 let _renovarUserId = null
 
-function testesData() {
-  try { return JSON.parse(localStorage.getItem(TESTE_KEY)||'{}') } catch { return {} }
-}
-function saveTestes(d) { localStorage.setItem(TESTE_KEY, JSON.stringify(d)) }
+// ── TESTES — agora lê do Supabase (cross-device) ─────────────
+let _testesCache = []
 
-function renderTestes() {
-  const data  = testesData()
-  const hoje  = new Date(); hoje.setHours(0,0,0,0)
-  const ids   = Object.keys(data)
-  let ativos=0, vencidos=0
-  ids.forEach(id => {
-    const t = data[id]
+async function renderTestes() {
+  const tbody = document.getElementById('testeBody')
+  tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Carregando...</td></tr>'
+
+  const { data, error } = await _sb
+    .from('solicitacoes_teste')
+    .select('*')
+    .eq('status', 'aprovado')
+    .order('aprovado_em', { ascending: false })
+
+  if (error) { tbody.innerHTML = `<tr class="empty-row"><td colspan="9">Erro: ${esc(error.message)}</td></tr>`; return }
+  _testesCache = data || []
+
+  const hoje = new Date(); hoje.setHours(0,0,0,0)
+  let ativos = 0, vencidos = 0
+  _testesCache.forEach(t => {
     const d = t.validade ? new Date(t.validade) : null
-    const venceu = d && d < hoje
-    if (t.cancelado || venceu) vencidos++
+    if (d && d < hoje) vencidos++
     else ativos++
   })
-  _set('teTotal',   ids.length)
+  _set('teTotal',   _testesCache.length)
   _set('teAtivos',  ativos)
   _set('teVencidos',vencidos)
 
-  const tbody = document.getElementById('testeBody')
-  if (!ids.length) {
+  if (!_testesCache.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Nenhum login de teste criado.</td></tr>'
     return
   }
 
-  // enriquecer com dados de último login vindos de _users
-  tbody.innerHTML = ids.map(userId => {
-    const t = data[userId]
-    const u = _users.find(x => x.id === userId)
+  tbody.innerHTML = _testesCache.map(t => {
+    const u = _users.find(x => x.id === t.user_id)
     const d = t.validade ? new Date(t.validade) : null
     const dias = d ? Math.ceil((d - hoje) / 86400000) : null
-    const venceu = dias !== null && dias < 0
 
-    let diasHtml = '—'
-    let diasCls  = ''
+    let diasHtml = '—', diasCls = ''
     if (dias !== null) {
       if (dias < 0)       { diasHtml = `${Math.abs(dias)}d vencido`; diasCls='dias-venc' }
       else if (dias === 0){ diasHtml = 'Vence hoje';  diasCls='dias-warn' }
@@ -1086,33 +1087,35 @@ function renderTestes() {
       else                { diasHtml = `${dias}d`;    diasCls='dias-ok'   }
     }
 
-    const statusBadge = t.cancelado
-      ? '<span class="badge b-bloq">Cancelado</span>'
-      : venceu
-        ? '<span class="badge b-inadim">Vencido</span>'
+    const venceu = dias !== null && dias < 0
+    const statusBadge = venceu
+      ? '<span class="badge b-inadim">Vencido</span>'
+      : u?.status === 'bloqueado'
+        ? '<span class="badge b-bloq">Cancelado</span>'
         : '<span class="badge b-ativo">Ativo</span>'
 
-    const bloqLabel  = (u?.status !== 'ativo') ? 'Desbloquear' : 'Cancelar'
+    const bloqLabel  = (u?.status !== 'ativo') ? 'Reativar' : 'Cancelar'
     const bloqClass  = (u?.status !== 'ativo') ? 'a-desbloquear' : 'a-bloquear'
     const bloqAction = (u?.status !== 'ativo')
-      ? `toggleTeste('${userId}',false)`
-      : `toggleTeste('${userId}',true)`
+      ? `toggleTeste('${t.user_id}','${t.id}',false)`
+      : `toggleTeste('${t.user_id}','${t.id}',true)`
 
+    const rowId = t.id.replace(/-/g,'')
     return `<tr>
       <td><strong>${esc(t.nome||'—')}</strong>${t.notas?`<div style="font-size:10px;color:var(--texto3);margin-top:2px">${esc(t.notas)}</div>`:''}</td>
       <td class="mono" style="font-size:11px">${esc(t.email||'—')}</td>
-      <td><span class="senha-reveal" title="Clique para copiar" onclick="copiarSenha('${esc(t.senha||'')}',this)">${esc(t.senha||'—')}</span></td>
-      <td class="mono" style="font-size:11px">${fmtDate(t.criado)}</td>
+      <td><span class="senha-reveal" title="Clique para copiar" onclick="copiarSenha('${esc(t.senha_inicial||'')}',this)">${esc(t.senha_inicial||'—')}</span></td>
+      <td class="mono" style="font-size:11px">${fmtDate(t.aprovado_em)}</td>
       <td class="mono" style="font-size:11px">${t.validade?fmtDate(t.validade):'—'}</td>
       <td><span class="${diasCls}" style="font-size:12px">${diasHtml}</span></td>
       <td class="mono" style="font-size:11px">${u ? fmtDt(u.ultimo_login) : '—'}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="actions">
-          <button class="btn-act a-copiar" onclick="copiarCredenciais('${userId}')">Copiar</button>
-          <button class="btn-act a-renovar" onclick="openModalRenovar('${userId}','${esc(t.nome||'')}')">Renovar</button>
+          <button class="btn-act a-copiar" onclick="copiarCredenciaisTeste('${t.id}')">Copiar</button>
+          <button class="btn-act a-renovar" onclick="openModalRenovar('${t.id}','${esc(t.nome||'')}')">Renovar</button>
           <button class="btn-act ${bloqClass}" onclick="${bloqAction}">${bloqLabel}</button>
-          <button class="btn-act a-deletar" onclick="excluirTeste('${userId}','${esc(t.email||'')}')">Excluir</button>
+          <button class="btn-act a-deletar" onclick="excluirTeste('${t.user_id}','${t.id}','${esc(t.email||'')}')">Excluir</button>
         </div>
       </td>
     </tr>`
@@ -1160,24 +1163,21 @@ async function aprovarSolicitacao(requestId, nome, email, telefone) {
   const senha = gerarSenhaRand()
   const btn = document.querySelector(`button[onclick*="${requestId}"]`)
   if (btn) { btn.disabled=true; btn.textContent='Criando...' }
-  // 1. criar usuário via edge function
   const r = await call('create_user', { nome, email, senha, tipo: 'teste' })
   if (!r?.success) {
     toast(r?.error || 'Erro ao criar acesso.', 'er')
     if (btn) { btn.disabled=false; btn.textContent='✅ Criar e Enviar Acesso' }
     return
   }
-  // 2. marcar solicitação como aprovada
+  const validade = new Date(); validade.setDate(validade.getDate()+15)
   await _sb.from('solicitacoes_teste').update({
     status: 'aprovado',
     user_id: r.userId,
-    aprovado_em: new Date().toISOString()
+    aprovado_em: new Date().toISOString(),
+    senha_inicial: senha,
+    validade: validade.toISOString().slice(0,10),
+    notas: telefone ? `Tel: ${telefone}` : null
   }).eq('id', requestId)
-  // 3. salvar nos testes locais para aparecer na tabela de acessos
-  const validade = new Date(); validade.setDate(validade.getDate()+15)
-  const teData = testesData()
-  teData[r.userId] = { nome, email, senha, validade: validade.toISOString().slice(0,10), notas: `Tel: ${telefone||'—'}`, criado: today(), cancelado: false }
-  saveTestes(teData)
   toast(`Acesso criado e enviado para ${email}.`, 'ok')
   await loadUsers()
   renderTestes()
@@ -1211,15 +1211,19 @@ async function criarTeste() {
   const btn      = document.getElementById('btnCriarTeste')
   if (!nome||!email||!senha) { msgEl.textContent='Preencha nome, e-mail e senha.'; msgEl.className='msg er'; return }
   btn.disabled=true; btn.textContent='Criando...'
-  const r = await call('create_user', { nome, email, senha })
+  const r = await call('create_user', { nome, email, senha, tipo: 'teste' })
   btn.disabled=false; btn.textContent='Criar Acesso de Teste'
   if (r?.success) {
-    const data = testesData()
-    const uid  = r.userId || email
-    data[uid] = { nome, email, senha, validade, notas, criado: today(), cancelado: false }
-    saveTestes(data)
+    await _sb.from('solicitacoes_teste').insert({
+      nome, email, notas: notas||null,
+      status: 'aprovado',
+      user_id: r.userId,
+      aprovado_em: new Date().toISOString(),
+      senha_inicial: senha,
+      validade: validade || null
+    })
     closeModalTeste()
-    toast(`Acesso de teste criado para ${nome}.`,'ok')
+    toast(`Acesso de teste criado para ${nome}.`, 'ok')
     await loadUsers()
     renderTestes()
   } else {
@@ -1227,30 +1231,28 @@ async function criarTeste() {
   }
 }
 
-async function toggleTeste(userId, block) {
+async function toggleTeste(userId, testeId, block) {
   const label = block ? 'cancelar o acesso' : 'reativar o acesso'
   if (!confirm(`Deseja ${label} deste login de teste?`)) return
   const r = await call('toggle_user', { userId, block })
   if (r?.success) {
-    const data = testesData()
-    if (data[userId]) { data[userId].cancelado = block; saveTestes(data) }
-    toast(block?'Acesso cancelado.':'Acesso reativado.','ok')
+    toast(block ? 'Acesso cancelado.' : 'Acesso reativado.', 'ok')
     await loadUsers(); renderTestes()
-  } else toast('Erro ao atualizar.','er')
+  } else toast('Erro ao atualizar.', 'er')
 }
 
-async function excluirTeste(userId, email) {
+async function excluirTeste(userId, testeId, email) {
   if (!confirm(`Excluir permanentemente o login de teste ${email}?`)) return
   const r = await call('delete_user', { userId })
   if (r?.success) {
-    const data = testesData(); delete data[userId]; saveTestes(data)
-    toast('Login de teste excluído.','ok')
+    await _sb.from('solicitacoes_teste').delete().eq('id', testeId)
+    toast('Login de teste excluído.', 'ok')
     await loadUsers(); renderTestes(); await refreshStats()
-  } else toast('Erro ao excluir.','er')
+  } else toast('Erro ao excluir.', 'er')
 }
 
-function openModalRenovar(userId, nome) {
-  _renovarUserId = userId
+function openModalRenovar(testeId, nome) {
+  _renovarUserId = testeId
   document.getElementById('renovarNome').textContent = `Corretor: ${nome}`
   const d = new Date(); d.setDate(d.getDate()+7)
   document.getElementById('renovarData').value = d.toISOString().slice(0,10)
@@ -1258,18 +1260,26 @@ function openModalRenovar(userId, nome) {
 }
 function closeModalRenovar() { document.getElementById('modalRenovar').style.display='none'; _renovarUserId=null }
 
-function confirmarRenovar() {
+async function confirmarRenovar() {
   if (!_renovarUserId) return
   const novaData = document.getElementById('renovarData').value
   if (!novaData) { toast('Selecione uma data.','er'); return }
-  const data = testesData()
-  if (data[_renovarUserId]) { data[_renovarUserId].validade = novaData; data[_renovarUserId].cancelado = false; saveTestes(data) }
+  await _sb.from('solicitacoes_teste').update({ validade: novaData }).eq('id', _renovarUserId)
+  const t = _testesCache.find(x => x.id === _renovarUserId)
+  if (t?.user_id) {
+    const u = _users.find(x => x.id === t.user_id)
+    if (u?.status !== 'ativo') call('toggle_user', { userId: t.user_id, block: false })
+  }
   closeModalRenovar()
-  toast('Acesso renovado.','ok')
+  toast('Acesso renovado.', 'ok')
   renderTestes()
-  // reativar no Supabase se estiver bloqueado
-  const u = _users.find(x => x.id === _renovarUserId)
-  if (u?.status !== 'ativo') call('toggle_user', { userId: _renovarUserId, block: false })
+}
+
+function copiarCredenciaisTeste(testeId) {
+  const t = _testesCache.find(x => x.id === testeId)
+  if (!t) return
+  const txt = `*SimulaPro — Acesso de Teste*\n\nOlá, ${t.nome}!\n\nSeu acesso de teste está pronto:\n\n• *E-mail:* ${t.email}\n• *Senha:* ${t.senha_inicial||'—'}\n• *Link:* https://welingtonbonaeng-creator.github.io/simulador-financiamento-wc/\n• *Válido até:* ${t.validade ? new Date(t.validade).toLocaleDateString('pt-BR') : '—'}\n\nQualquer dúvida, é só me chamar!`
+  navigator.clipboard.writeText(txt).then(() => toast('Credenciais copiadas!','ok')).catch(() => toast('Erro ao copiar.','er'))
 }
 
 function copiarSenha(senha, el) {
