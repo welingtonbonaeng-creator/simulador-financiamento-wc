@@ -125,6 +125,43 @@ section{padding:5rem 1.5rem;}
 .feature-card h3{font-size:16px;font-weight:700;color:var(--texto);margin-bottom:.6rem;}
 .feature-card p{font-size:13px;color:var(--texto3);line-height:1.6;}
 
+/* AMORTIZAÇÃO */
+.amort-section{background:linear-gradient(145deg,#05235A,#0B3D91);padding:5rem 1.5rem;overflow:hidden;}
+.amort-inner{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;max-width:1100px;margin:0 auto;}
+.amort-tag{display:inline-block;background:rgba(255,183,77,.2);color:#FFB74D;font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem;}
+.amort-title{font-size:clamp(1.5rem,3vw,2.25rem);font-weight:800;color:#fff;line-height:1.2;margin-bottom:1rem;}
+.amort-title span{color:#FFB74D;}
+.amort-sub{font-size:15px;color:rgba(255,255,255,.7);line-height:1.7;margin-bottom:2rem;}
+.amort-list{list-style:none;display:flex;flex-direction:column;gap:1rem;}
+.amort-list li{display:flex;gap:1rem;align-items:flex-start;}
+.amort-list .al-icon{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-top:2px;}
+.amort-list .al-text strong{display:block;color:#fff;font-size:14px;font-weight:700;margin-bottom:2px;}
+.amort-list .al-text span{font-size:13px;color:rgba(255,255,255,.6);line-height:1.5;}
+/* mockup amortização */
+.amort-mock{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:1.5rem;backdrop-filter:blur(12px);}
+.amort-mock-hd{font-size:12px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem;}
+.amort-evento{background:rgba(255,255,255,.08);border-radius:10px;padding:1rem;margin-bottom:.75rem;border-left:3px solid #FFB74D;}
+.amort-evento-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;}
+.amort-evento-nome{font-size:13px;font-weight:700;color:#fff;}
+.amort-evento-val{font-size:14px;font-weight:800;color:#FFB74D;font-family:'DM Mono',monospace;}
+.amort-cols{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+.amort-col{background:rgba(255,255,255,.06);border-radius:8px;padding:.6rem .75rem;}
+.amort-col-label{font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.amort-col-val{font-size:13px;font-weight:700;font-family:'DM Mono',monospace;}
+.amort-col-val.verde{color:#4ADE80;}
+.amort-col-val.verm{color:#F87171;}
+.amort-col-val.branco{color:#fff;}
+.amort-resumo{margin-top:1rem;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:10px;padding:.875rem 1rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;text-align:center;}
+.amort-resumo-item .label{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:3px;}
+.amort-resumo-item .val{font-size:13px;font-weight:800;color:#4ADE80;font-family:'DM Mono',monospace;}
+.amort-opts{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.75rem;}
+.amort-opt{border-radius:8px;padding:.6rem .75rem;border:1px solid rgba(255,255,255,.15);cursor:pointer;}
+.amort-opt.a{background:rgba(11,61,145,.5);}
+.amort-opt.b{background:rgba(91,33,182,.3);}
+.amort-opt .opt-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.5);margin-bottom:3px;}
+.amort-opt .opt-val{font-size:12px;color:#fff;font-family:'DM Mono',monospace;}
+@media(max-width:900px){.amort-inner{grid-template-columns:1fr;gap:2.5rem;}}
+
 /* COMO FUNCIONA */
 .como{background:linear-gradient(135deg,#0B3D91,#1565C0);padding:5rem 1.5rem;}
 .como .section-title{color:#fff;}
@@ -557,6 +594,111 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
         <div class="feature-icon">🔒</div>
         <h3>Acesso Seguro e Individual</h3>
         <p>Login e senha exclusivos para cada corretor. Seus dados são seus — nenhum outro corretor vê suas simulações.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AMORTIZAÇÃO -->
+<section class="amort-section">
+  <div class="amort-inner">
+    <div class="fade-up">
+      <div class="amort-tag">Simulador de Amortização</div>
+      <h2 class="amort-title">Mostre ao cliente quanto ele<br/>economiza com <span>amortizações</span></h2>
+      <p class="amort-sub">O SimulaPro tem um simulador completo de amortizações — o corretor lança FGTS, PLR, 13º ou qualquer aporte extra e o sistema recalcula o financiamento na hora, com todas as opções do banco.</p>
+      <ul class="amort-list">
+        <li>
+          <div class="al-icon">➕</div>
+          <div class="al-text">
+            <strong>Múltiplas amortizações em sequência</strong>
+            <span>Lance quantos aportes quiser — FGTS aniversário, PLR, recurso próprio ou outros — e veja o impacto acumulado de todas.</span>
+          </div>
+        </li>
+        <li>
+          <div class="al-icon">🔀</div>
+          <div class="al-text">
+            <strong>SAC e PRICE com cenários diferentes</strong>
+            <span>No SAC mostra nova parcela e prazo cortado. No PRICE dá as duas opções: reduzir o prazo ou reduzir a parcela — o cliente escolhe.</span>
+          </div>
+        </li>
+        <li>
+          <div class="al-icon">💰</div>
+          <div class="al-text">
+            <strong>Economia real em juros calculada</strong>
+            <span>O sistema soma a economia total de juros e o prazo reduzido com todas as amortizações aplicadas — número que convence qualquer cliente.</span>
+          </div>
+        </li>
+        <li>
+          <div class="al-icon">⚠️</div>
+          <div class="al-text">
+            <strong>Alerta de excesso automático</strong>
+            <span>Se o cliente digitar um valor maior que o saldo disponível, o simulador avisa o valor efetivo e o excedente que não entra — sem confusão.</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- MOCKUP VISUAL -->
+    <div class="amort-mock fade-up">
+      <div class="amort-mock-hd">Simulação de amortização</div>
+
+      <div class="amort-evento">
+        <div class="amort-evento-hd">
+          <span class="amort-evento-nome">📅 Parcela 24 — FGTS Aniversário</span>
+          <span class="amort-evento-val">R$ 18.400</span>
+        </div>
+        <div class="amort-cols">
+          <div class="amort-col">
+            <div class="amort-col-label">Saldo antes</div>
+            <div class="amort-col-val branco">R$ 312.540</div>
+          </div>
+          <div class="amort-col">
+            <div class="amort-col-label">Saldo após</div>
+            <div class="amort-col-val verde">R$ 294.140</div>
+          </div>
+        </div>
+        <div class="amort-opts" style="margin-top:.6rem">
+          <div class="amort-opt a">
+            <div class="opt-label">Opção A — Reduzir prazo</div>
+            <div class="opt-val">420 → 387 meses · parcela mantida</div>
+          </div>
+          <div class="amort-opt b">
+            <div class="opt-label">Opção B — Reduzir parcela</div>
+            <div class="opt-val">R$ 2.841 → R$ 2.630 / mês</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="amort-evento" style="border-left-color:#818CF8">
+        <div class="amort-evento-hd">
+          <span class="amort-evento-nome">📅 Parcela 48 — PLR</span>
+          <span class="amort-evento-val" style="color:#818CF8">R$ 12.000</span>
+        </div>
+        <div class="amort-cols">
+          <div class="amort-col">
+            <div class="amort-col-label">Saldo antes</div>
+            <div class="amort-col-val branco">R$ 281.390</div>
+          </div>
+          <div class="amort-col">
+            <div class="amort-col-label">Saldo após</div>
+            <div class="amort-col-val verde">R$ 269.390</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="amort-resumo">
+        <div class="amort-resumo-item">
+          <div class="label">Total amortizado</div>
+          <div class="val">R$ 30.400</div>
+        </div>
+        <div class="amort-resumo-item">
+          <div class="label">Juros economizados</div>
+          <div class="val">R$ 87.320</div>
+        </div>
+        <div class="amort-resumo-item">
+          <div class="label">Prazo reduzido</div>
+          <div class="val">64 meses</div>
+        </div>
       </div>
     </div>
   </div>
