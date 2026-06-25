@@ -454,9 +454,8 @@ async function _confirmarTroca(){
     <div id="resumoObra" class="obra-res">
       <div class="sub" style="margin-bottom:5px">Cronograma da obra</div>
       <div id="obraLinhas"></div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:9px;padding-top:8px;border-top:1px solid var(--cinza3);font-size:12px">
-        <span>Total pago na obra: <strong id="totalObraPago">—</strong></span>
-        <span style="color:var(--azul)">Saldo a financiar: <strong id="saldoFin">—</strong></span>
+      <div style="margin-top:9px;padding-top:8px;border-top:1px solid var(--cinza3);font-size:12px;color:var(--texto2)">
+        📅 <strong id="obraMesesLabel">—</strong>
       </div>
     </div>
     <div id="avObra" class="av"></div>
@@ -1486,9 +1485,7 @@ function onObra() {
 
     res.querySelector('#obraLinhas').innerHTML = html || '<div style="font-size:12px;color:var(--texto3)">Preencha os campos.</div>';
 
-    const totalPagoObra = ato + fgtsUsar + totR + totM;
-    document.getElementById('totalObraPago').textContent = fb(totalPagoObra);
-    document.getElementById('saldoFin').textContent = fi(finAprov);
+    document.getElementById('obraMesesLabel').textContent = `${meses} mês${meses !== 1 ? 'es' : ''} de parcelas mensais`;
 
     if (false) { // placeholder — bloco de aviso removido
     } else {
