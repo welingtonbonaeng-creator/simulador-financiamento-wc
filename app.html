@@ -1327,10 +1327,10 @@ function onObra() {
   const mesesNecessarios = excedeTeto && tetoObra > 0 ? Math.ceil(saldoParaParcelas / tetoObra) : meses;
   const mesesExtras = Math.max(0, mesesNecessarios - meses);
 
-  // Parcela final = teto se excede, senão a ideal
-  const parcelaFinal = parcelaComTeto;
-  const totMCoberto = parcelaFinal * meses; // o que efetivamente cobre nos meses de obra
-  const saldoRestante = Math.max(0, saldoParaParcelas - totMCoberto); // o que sobra após os meses de obra com teto
+  // Parcela final = sempre o valor real necessário (teto 80% é aviso, não limite)
+  const parcelaFinal = parcelaSugerida;
+  const totMCoberto = parcelaFinal * meses;
+  const saldoRestante = 0; // sem residual: parcela cobre exatamente o saldo
 
   // Preenche a parcela mensal automaticamente
   if (parcelaFinal > 0) {
@@ -1429,12 +1429,10 @@ function onObra() {
     document.getElementById('totalObraPago').textContent = fb(totalPagoObra);
     document.getElementById('saldoFin').textContent = fi(finAprov);
 
-    if (excedeTeto && saldoRestante > 0) {
+    if (excedeTeto) {
       show('avObra', 'av wn',
-        `⚠️ Com o teto de 80% da parcela ${sistLabel} (<strong>${fb(tetoObra)}/mês</strong>), os ${meses} meses de obra cobrem ${fi(totMCoberto)} das parcelas. ` +
-        `Saldo restante: <strong>${fi(saldoRestante)}</strong> — ` +
-        `seriam necessários mais <strong>${mesesExtras} meses</strong> no mesmo teto (total ${mesesNecessarios} meses). ` +
-        `Considere aumentar o ato, FGTS ou reforços para cobrir o restante.`
+        `ℹ️ A parcela mensal de obra (${fb(parcelaFinal)}) excede o teto referencial de 80% da parcela ${sistLabel} (${fb(tetoObra)}/mês). ` +
+        `Confirme com o banco a viabilidade deste valor durante a obra.`
       );
     } else {
       const totalPago = ato + fgtsUsar + totR + totM;
