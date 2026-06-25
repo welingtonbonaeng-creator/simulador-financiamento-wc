@@ -94,6 +94,9 @@ header{background:var(--azul);padding:0 1.5rem;box-shadow:0 2px 20px rgba(11,61,
 .kv-azul{color:var(--azul);}
 .kv-verde{color:var(--verde);}
 .kv-verm{color:var(--vermelho);}
+.kv-laranja{color:var(--laranja);}
+.btn-icon{background:none;border:none;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px;transition:background .15s;}
+.btn-icon:hover{background:var(--cinza2);}
 .kv-larj{color:var(--laranja);}
 .kv-roxo{color:var(--roxo);}
 .kv-cinz{color:var(--texto3);}
@@ -415,11 +418,28 @@ tbody tr:hover td{background:var(--cinza1);}
         <div class="kpi-card"><div class="kpi-label">Total criados</div><div class="kpi-value kv-azul" id="teTotal">0</div></div>
         <div class="kpi-card"><div class="kpi-label">Ativos</div><div class="kpi-value kv-verde" id="teAtivos">0</div></div>
         <div class="kpi-card"><div class="kpi-label">Vencidos / Cancelados</div><div class="kpi-value kv-verm" id="teVencidos">0</div></div>
+        <div class="kpi-card" style="cursor:pointer" onclick="loadSolicitacoes()"><div class="kpi-label">Solicitações pendentes</div><div class="kpi-value kv-laranja" id="tePendentes">–</div></div>
       </div>
+
+      <!-- Solicitações pendentes -->
+      <div class="table-card" id="cardSolicitacoes" style="display:none">
+        <div class="table-hdr">
+          <div class="table-title">⏳ Solicitações de Teste</div>
+          <button class="btn-icon" onclick="loadSolicitacoes()" title="Atualizar">🔄</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Solicitado em</th><th>Status</th><th>Ação</th></tr></thead>
+            <tbody id="solicitacoesBody"><tr class="empty-row"><td colspan="6">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Acessos ativos -->
       <div class="table-card">
         <div class="table-hdr">
-          <div class="table-title">Logins de teste</div>
-          <button class="btn-new" onclick="openModalTeste()">+ Criar login de teste</button>
+          <div class="table-title">Acessos de Teste</div>
+          <button class="btn-new" onclick="openModalTeste()">+ Criar manualmente</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -569,7 +589,7 @@ function goTab(name) {
   else if (name==='corretores') renderCorretores()
   else if (name==='financeiro') renderFinanceiro()
   else if (name==='logs')       loadLogs()
-  else if (name==='testes')     renderTestes()
+  else if (name==='testes')     { renderTestes(); loadSolicitacoes() }
   else if (name==='config')     renderConfig()
 }
 
@@ -1094,6 +1114,72 @@ function renderTestes() {
       </td>
     </tr>`
   }).join('')
+}
+
+// ── SOLICITAÇÕES DE TESTE ─────────────────────────────────────
+async function loadSolicitacoes() {
+  document.getElementById('cardSolicitacoes').style.display = 'block'
+  const tbody = document.getElementById('solicitacoesBody')
+  tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Carregando...</td></tr>'
+  const { data, error } = await _sb.from('solicitacoes_teste').select('*').order('criado_em', { ascending: false })
+  if (error) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Erro: ${esc(error.message)}</td></tr>`; return }
+  const rows = data || []
+  const pendentes = rows.filter(r => r.status === 'pendente').length
+  _set('tePendentes', pendentes)
+  if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Nenhuma solicitação encontrada.</td></tr>'; return }
+  tbody.innerHTML = rows.map(r => {
+    const dt = r.criado_em ? new Date(r.criado_em).toLocaleString('pt-BR') : '—'
+    const statusBadge = r.status === 'pendente'
+      ? '<span class="badge b-inadim">Pendente</span>'
+      : r.status === 'aprovado'
+        ? '<span class="badge b-ativo">Aprovado</span>'
+        : `<span class="badge">${esc(r.status)}</span>`
+    const acaoBt = r.status === 'pendente'
+      ? `<button class="btn-act a-desbloquear" onclick="aprovarSolicitacao('${r.id}','${esc(r.nome)}','${esc(r.email)}','${esc(r.telefone||'')}')">✅ Criar e Enviar Acesso</button>`
+      : '<span style="font-size:12px;color:var(--texto3)">—</span>'
+    return `<tr>
+      <td><strong>${esc(r.nome)}</strong></td>
+      <td class="mono" style="font-size:11px">${esc(r.email)}</td>
+      <td style="font-size:12px">${esc(r.telefone||'—')}</td>
+      <td class="mono" style="font-size:11px">${dt}</td>
+      <td>${statusBadge}</td>
+      <td>${acaoBt}</td>
+    </tr>`
+  }).join('')
+}
+
+function gerarSenhaRand() {
+  const c = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789'
+  return Array.from({length:8},()=>c[Math.floor(Math.random()*c.length)]).join('')
+}
+
+async function aprovarSolicitacao(requestId, nome, email, telefone) {
+  if (!confirm(`Criar acesso de teste para ${nome} (${email})?`)) return
+  const senha = gerarSenhaRand()
+  const btn = document.querySelector(`button[onclick*="${requestId}"]`)
+  if (btn) { btn.disabled=true; btn.textContent='Criando...' }
+  // 1. criar usuário via edge function
+  const r = await call('create_user', { nome, email, senha, tipo: 'teste' })
+  if (!r?.success) {
+    toast(r?.error || 'Erro ao criar acesso.', 'er')
+    if (btn) { btn.disabled=false; btn.textContent='✅ Criar e Enviar Acesso' }
+    return
+  }
+  // 2. marcar solicitação como aprovada
+  await _sb.from('solicitacoes_teste').update({
+    status: 'aprovado',
+    user_id: r.userId,
+    aprovado_em: new Date().toISOString()
+  }).eq('id', requestId)
+  // 3. salvar nos testes locais para aparecer na tabela de acessos
+  const validade = new Date(); validade.setDate(validade.getDate()+15)
+  const teData = testesData()
+  teData[r.userId] = { nome, email, senha, validade: validade.toISOString().slice(0,10), notas: `Tel: ${telefone||'—'}`, criado: today(), cancelado: false }
+  saveTestes(teData)
+  toast(`Acesso criado e enviado para ${email}.`, 'ok')
+  await loadUsers()
+  renderTestes()
+  loadSolicitacoes()
 }
 
 function openModalTeste() {
