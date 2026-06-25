@@ -416,13 +416,31 @@ async function _confirmarTroca(){
       <div class="field"><label>Total reforços</label><input type="text" id="totalRef" readonly placeholder="R$ 0,00"/></div>
     </div>
     <div id="refDatasBox" style="display:none;margin-top:6px"></div>
-    <div class="sub">Parcelas mensais durante a obra <span style="font-weight:400;text-transform:none;font-size:10px;color:var(--verde)">— calculada automaticamente</span></div>
-    <div class="av in show" style="display:block;margin-bottom:8px;font-size:12px">
-      📐 Fórmula: <strong>(Valor imóvel − Financiado − Ato − FGTS − Reforços) ÷ Meses de obra</strong>
+    <div class="sub" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+      <span>Parcelas mensais durante a obra</span>
+      <button id="btnCustomObra" onclick="toggleModoObra()" style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1.5px solid var(--azul);background:#fff;color:var(--azul);cursor:pointer;">✏️ Personalizar</button>
     </div>
-    <div class="g2">
-      <div class="field"><label>Parcela mensal de obra <span style="font-weight:400;font-size:10px">— máx. 80% da parcela do financiamento</span></label><input type="text" id="mensalObra" readonly placeholder="Calculado ao informar a data"/></div>
-      <div class="field"><label>Total mensais</label><input type="text" id="totalMensOb" readonly placeholder="R$ 0,00"/></div>
+
+    <!-- Modo automático -->
+    <div id="modoAutoObra">
+      <div class="av in show" style="display:block;margin-bottom:8px;font-size:12px">
+        📐 Fórmula: <strong>(Valor imóvel − Financiado − Ato − FGTS − Reforços) ÷ Meses de obra</strong>
+      </div>
+      <div class="g2">
+        <div class="field"><label>Parcela mensal uniforme</label><input type="text" id="mensalObra" readonly placeholder="Calculado ao informar a data"/></div>
+        <div class="field"><label>Total mensais</label><input type="text" id="totalMensOb" readonly placeholder="R$ 0,00"/></div>
+      </div>
+    </div>
+
+    <!-- Modo personalizado -->
+    <div id="modoCustomObra" style="display:none">
+      <div class="av in show" style="display:block;margin-bottom:8px;font-size:12px;background:#FFF7ED;border-color:#FCD9A8">
+        💡 Defina grupos de parcelas. O <strong>último grupo é calculado automaticamente</strong> com o saldo restante.
+      </div>
+      <div id="gruposObraContainer" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+      <button onclick="addGrupoObra()" style="font-size:12px;font-weight:600;padding:6px 14px;border-radius:8px;border:1.5px dashed var(--cinza3);background:#fff;color:var(--texto2);cursor:pointer;width:100%">+ Adicionar grupo</button>
+      <div class="field" style="margin-top:10px"><label>Total mensais</label><input type="text" id="totalMensOb" readonly placeholder="R$ 0,00"/></div>
+      <input type="hidden" id="mensalObra"/>
     </div>
 
     <!-- Botão preencher restante da parcela (oculto - agora é automático) -->
@@ -1132,6 +1150,74 @@ function preencherAuto() {
 /* ══════════════════════════════════════
    OBRA — PARCELAMENTO E CRONOGRAMA
    ══════════════════════════════════════ */
+// ── MODO PERSONALIZADO DE OBRA ────────────────────────────────
+function toggleModoObra() {
+  _obraCustomMode = !_obraCustomMode;
+  document.getElementById('modoAutoObra').style.display   = _obraCustomMode ? 'none'  : 'block';
+  document.getElementById('modoCustomObra').style.display = _obraCustomMode ? 'block' : 'none';
+  const btn = document.getElementById('btnCustomObra');
+  btn.textContent = _obraCustomMode ? '⚡ Automático' : '✏️ Personalizar';
+  btn.style.background = _obraCustomMode ? 'var(--azul)' : '#fff';
+  btn.style.color      = _obraCustomMode ? '#fff' : 'var(--azul)';
+  if (_obraCustomMode && _obraCustomGrupos.length === 0) addGrupoObra();
+  onObra();
+}
+
+function addGrupoObra() {
+  _obraCustomGrupos.push({ meses: 1, valor: 0 });
+  renderGruposObra();
+  onObra();
+}
+
+function removeGrupoObra(i) {
+  _obraCustomGrupos.splice(i, 1);
+  renderGruposObra();
+  onObra();
+}
+
+function onGrupoObraChange(i, campo, val) {
+  if (campo === 'meses') _obraCustomGrupos[i].meses = Math.max(1, parseInt(val) || 1);
+  if (campo === 'valor') _obraCustomGrupos[i].valor = pv(val);
+  renderGruposObra();
+  onObra();
+}
+
+function renderGruposObra() {
+  const meses  = _obraMesesTotal;
+  const saldo  = _obraSaldoTotal;
+  const usedM  = _obraCustomGrupos.reduce((s,g) => s + g.meses, 0);
+  const usedV  = _obraCustomGrupos.reduce((s,g) => s + (g.meses * g.valor), 0);
+  const restoM = Math.max(0, meses - usedM);
+  const restoV = restoM > 0 ? Math.max(0, saldo - usedV) / restoM : 0;
+
+  const c = document.getElementById('gruposObraContainer');
+  c.innerHTML = _obraCustomGrupos.map((g, i) => `
+    <div style="display:flex;gap:8px;align-items:flex-end;background:var(--cinza1);border-radius:10px;padding:10px 12px">
+      <div class="field" style="margin:0;flex:0 0 90px">
+        <label style="font-size:10px">Qtd. de meses</label>
+        <input type="number" min="1" value="${g.meses}" oninput="onGrupoObraChange(${i},'meses',this.value)" style="font-size:13px;text-align:center"/>
+      </div>
+      <div class="field" style="margin:0;flex:1">
+        <label style="font-size:10px">Valor por mês</label>
+        <input type="text" value="${g.valor > 0 ? fi(g.valor) : ''}" placeholder="R$ 0,00" oninput="M(this);onGrupoObraChange(${i},'valor',this.value)" style="font-size:13px"/>
+      </div>
+      <div style="font-size:11px;color:var(--texto3);padding-bottom:10px;white-space:nowrap">= ${fb(g.meses * g.valor)}</div>
+      <button onclick="removeGrupoObra(${i})" style="background:var(--vermelhoClaro);border:none;border-radius:8px;color:var(--vermelho);font-weight:700;font-size:14px;width:32px;height:32px;cursor:pointer;flex-shrink:0;margin-bottom:2px">✕</button>
+    </div>`).join('') +
+    `<div style="display:flex;gap:8px;align-items:flex-end;background:#D1FAE5;border:1px solid #6EE7B7;border-radius:10px;padding:10px 12px">
+      <div class="field" style="margin:0;flex:0 0 90px">
+        <label style="font-size:10px;color:#065F46">Meses restantes</label>
+        <input type="text" readonly value="${restoM}" style="font-size:13px;text-align:center;background:#fff;color:#065F46;font-weight:700"/>
+      </div>
+      <div class="field" style="margin:0;flex:1">
+        <label style="font-size:10px;color:#065F46">Valor por mês (auto)</label>
+        <input type="text" readonly value="${restoM > 0 ? fi(restoV) : '—'}" style="font-size:13px;background:#fff;color:#065F46;font-weight:700"/>
+      </div>
+      <div style="font-size:11px;color:#065F46;padding-bottom:10px;white-space:nowrap">= ${fb(restoM * restoV)}</div>
+      <div style="width:32px;flex-shrink:0"></div>
+    </div>`;
+}
+
 function onObra() {
   // Sempre recalcula fx/sub a partir da renda atual (não depende do estado
   // anterior das variáveis globais) — evita usar taxa de fallback (10%) ou
@@ -1290,17 +1376,33 @@ function onObra() {
   const parcelaFinal = meses > 0 ? saldoParaParcelas / meses : 0;
   const excedeTeto = false; // teto 80% não se aplica à entrada parcelada durante a obra
 
-  // Preenche a parcela mensal automaticamente
-  if (parcelaFinal > 0) {
-    setVal('mensalObra', parcelaFinal);
-  } else {
-    document.getElementById('mensalObra').value = '';
-  }
+  // Salvar estado para uso no modo personalizado
+  _obraMesesTotal = meses;
+  _obraSaldoTotal = saldoParaParcelas;
 
-  const mens = parcelaFinal;
-  const totM = meses > 0 ? mens * meses : 0;
-  if (totM > 0) setVal('totalMensOb', totM);
-  else document.getElementById('totalMensOb').value = '';
+  let mens, totM;
+
+  if (_obraCustomMode) {
+    // Modo personalizado: somar grupos + resto automático
+    const usedM = _obraCustomGrupos.reduce((s,g) => s + g.meses, 0);
+    const usedV = _obraCustomGrupos.reduce((s,g) => s + (g.meses * g.valor), 0);
+    const restoM = Math.max(0, meses - usedM);
+    const restoV = restoM > 0 ? Math.max(0, saldoParaParcelas - usedV) / restoM : 0;
+    totM = usedV + restoM * restoV;
+    mens = meses > 0 ? totM / meses : 0; // média para compatibilidade com PDF
+    document.getElementById('mensalObra').value = mens > 0 ? mens.toFixed(2) : '0';
+    if (totM > 0) setVal('totalMensOb', totM);
+    else document.getElementById('totalMensOb').value = '';
+    renderGruposObra();
+  } else {
+    // Modo automático (original)
+    mens = parcelaFinal;
+    totM = meses > 0 ? mens * meses : 0;
+    if (parcelaFinal > 0) setVal('mensalObra', parcelaFinal);
+    else document.getElementById('mensalObra').value = '';
+    if (totM > 0) setVal('totalMensOb', totM);
+    else document.getElementById('totalMensOb').value = '';
+  }
 
   // ── Resumo cronograma ──
   const res = document.getElementById('resumoObra');
@@ -1323,8 +1425,19 @@ function onObra() {
       }
       html += `<div class="obra-linha"><span>📅 Reforço ${i} — ${refLabel}</span><span><strong>${fb(vlrIndiv)}</strong></span></div>`;
     }
-    if (mens > 0) {
-      html += `<div class="obra-linha"><span>📆 ${meses}× parcelas mensais de obra</span><span>${meses} × ${fb(mens)} = <strong>${fb(totM)}</strong></span></div>`;
+    if (totM > 0) {
+      if (_obraCustomMode && _obraCustomGrupos.length > 0) {
+        const usedM = _obraCustomGrupos.reduce((s,g) => s+g.meses, 0);
+        const usedV = _obraCustomGrupos.reduce((s,g) => s+(g.meses*g.valor), 0);
+        const restoM = Math.max(0, meses - usedM);
+        const restoV = restoM > 0 ? Math.max(0, saldoParaParcelas - usedV) / restoM : 0;
+        _obraCustomGrupos.forEach((g,i) => {
+          html += `<div class="obra-linha"><span>📆 Grupo ${i+1}: ${g.meses}× parcelas mensais</span><span>${g.meses} × ${fb(g.valor)} = <strong>${fb(g.meses*g.valor)}</strong></span></div>`;
+        });
+        if (restoM > 0) html += `<div class="obra-linha"><span>📆 Restante: ${restoM}× parcelas mensais</span><span>${restoM} × ${fb(restoV)} = <strong>${fb(restoM*restoV)}</strong></span></div>`;
+      } else {
+        html += `<div class="obra-linha"><span>📆 ${meses}× parcelas mensais de obra</span><span>${meses} × ${fb(mens)} = <strong>${fb(totM)}</strong></span></div>`;
+      }
 
       // ── Bloco resumo do financiamento bancário ──
       const nFin = prazoA * 12;
@@ -2855,6 +2968,10 @@ function preencherAmort() {
 }
 
 let _amRowCnt = 0;
+let _obraCustomMode = false;
+let _obraCustomGrupos = []; // [{meses, valor}]
+let _obraMesesTotal = 0;
+let _obraSaldoTotal = 0;
 
 function amAddRow(defParcela, defValor) {
   const b = window._amortBase;
