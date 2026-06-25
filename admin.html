@@ -194,6 +194,16 @@ tbody tr:hover td{background:var(--cinza1);}
 .btn-rm{background:var(--vermelhoClaro);color:var(--vermelho);border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;}
 .btn-add-plano{padding:6px 14px;background:var(--cinza1);color:var(--texto2);border:1.5px solid var(--cinza2);border-radius:var(--radius2);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-top:2px;}
 
+/* TESTES */
+.teste-hero{display:grid;grid-template-columns:repeat(3,1fr);gap:.85rem;margin-bottom:1.25rem;}
+.senha-reveal{font-family:'DM Mono',monospace;font-size:11px;background:var(--cinza1);border:1px solid var(--cinza2);border-radius:6px;padding:3px 7px;cursor:pointer;user-select:all;letter-spacing:.05em;}
+.senha-reveal:hover{background:var(--azulclaro);border-color:var(--azul3);}
+.dias-ok{color:var(--verde);font-weight:700;}
+.dias-warn{color:var(--laranja);font-weight:700;}
+.dias-venc{color:var(--vermelho);font-weight:700;}
+.a-copiar{background:#F0FDF4;color:#166534;}
+.a-renovar{background:#FFF3E0;color:#C05A00;}
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:var(--radius2);font-size:13px;font-weight:500;z-index:999;animation:toast-in .2s ease;box-shadow:0 4px 20px rgba(0,0,0,.15);}
 .toast.ok{background:#1B6E3F;color:#fff;}
@@ -245,6 +255,7 @@ tbody tr:hover td{background:var(--cinza1);}
       <button class="nav-item" data-tab="corretores" onclick="goTab('corretores')"><span class="ni">👥</span>Corretores</button>
       <button class="nav-item" data-tab="financeiro" onclick="goTab('financeiro')"><span class="ni">💰</span>Financeiro</button>
       <button class="nav-item" data-tab="logs" onclick="goTab('logs')"><span class="ni">📋</span>Logs</button>
+      <button class="nav-item" data-tab="testes" onclick="goTab('testes')"><span class="ni">🧪</span>Logins Teste</button>
       <div class="sidebar-section" style="margin-top:.5rem">Sistema</div>
       <button class="nav-item" data-tab="config" onclick="goTab('config')"><span class="ni">⚙️</span>Configurações</button>
     </div>
@@ -397,6 +408,28 @@ tbody tr:hover td{background:var(--cinza1);}
       </div>
     </div>
 
+    <!-- TESTES -->
+    <div class="page" id="tab-testes">
+      <div class="page-hd"><div class="page-title">Logins de Teste</div><div class="page-sub">Acesso temporário para corretores avaliarem o SimulaPro</div></div>
+      <div class="teste-hero">
+        <div class="kpi-card"><div class="kpi-label">Total criados</div><div class="kpi-value kv-azul" id="teTotal">0</div></div>
+        <div class="kpi-card"><div class="kpi-label">Ativos</div><div class="kpi-value kv-verde" id="teAtivos">0</div></div>
+        <div class="kpi-card"><div class="kpi-label">Vencidos / Cancelados</div><div class="kpi-value kv-verm" id="teVencidos">0</div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-hdr">
+          <div class="table-title">Logins de teste</div>
+          <button class="btn-new" onclick="openModalTeste()">+ Criar login de teste</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>E-mail</th><th>Senha</th><th>Criado em</th><th>Válido até</th><th>Dias restantes</th><th>Último login</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="testeBody"><tr class="empty-row"><td colspan="9">Nenhum login de teste criado.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /screen-app -->
 
@@ -417,6 +450,44 @@ tbody tr:hover td{background:var(--cinza1);}
     <div class="modal-foot">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-primary" id="btnCriar" onclick="criarCorretor()" style="width:auto;padding:9px 20px">Criar e Enviar Acesso</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TESTE -->
+<div class="modal-overlay" id="modalTeste" style="display:none" onclick="if(event.target===this)closeModalTeste()">
+  <div class="modal-box">
+    <div class="modal-hdr"><h3>Novo Login de Teste</h3><button class="modal-close" onclick="closeModalTeste()">×</button></div>
+    <div class="modal-body">
+      <div id="modalTesteMsg" class="msg"></div>
+      <div class="field"><label>Nome do corretor</label><input type="text" id="teNome" placeholder="Ex: Carlos Mendes"/></div>
+      <div class="field"><label>E-mail de acesso</label><input type="email" id="teEmail" placeholder="carlos@imobiliaria.com"/></div>
+      <div class="senha-row">
+        <div class="field"><label>Senha</label><input type="text" id="teSenha" placeholder="Gerada automaticamente"/></div>
+        <button class="btn-gerar" onclick="gerarSenhaTeste()">🎲 Gerar</button>
+      </div>
+      <div class="field"><label>Válido até</label><input type="date" id="teValidade"/></div>
+      <div class="field"><label>Observações</label><textarea id="teNotas" placeholder="Nome da imobiliária, telefone, contexto…"></textarea></div>
+      <p style="font-size:11px;color:var(--texto3);margin-top:4px">O e-mail com as credenciais será enviado automaticamente. Você também verá a senha aqui para compartilhar via WhatsApp.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModalTeste()">Cancelar</button>
+      <button class="btn-primary" id="btnCriarTeste" onclick="criarTeste()" style="width:auto;padding:9px 20px">Criar Acesso de Teste</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RENOVAR TESTE -->
+<div class="modal-overlay" id="modalRenovar" style="display:none" onclick="if(event.target===this)closeModalRenovar()">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-hdr"><h3>Renovar Acesso</h3><button class="modal-close" onclick="closeModalRenovar()">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;margin-bottom:1rem" id="renovarNome"></p>
+      <div class="field"><label>Nova data limite</label><input type="date" id="renovarData"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModalRenovar()">Cancelar</button>
+      <button class="btn-primary" onclick="confirmarRenovar()" style="width:auto;padding:9px 20px">Renovar</button>
     </div>
   </div>
 </div>
@@ -498,6 +569,7 @@ function goTab(name) {
   else if (name==='corretores') renderCorretores()
   else if (name==='financeiro') renderFinanceiro()
   else if (name==='logs')       loadLogs()
+  else if (name==='testes')     renderTestes()
   else if (name==='config')     renderConfig()
 }
 
@@ -941,6 +1013,197 @@ function toast(msg, tipo='ok') {
   el.className = `toast ${tipo}`; el.textContent = msg
   document.body.appendChild(el)
   setTimeout(()=>el.remove(), 3500)
+}
+
+// ── TESTES ───────────────────────────────────────────────────
+const TESTE_KEY = 'simuadmin_testes'
+let _renovarUserId = null
+
+function testesData() {
+  try { return JSON.parse(localStorage.getItem(TESTE_KEY)||'{}') } catch { return {} }
+}
+function saveTestes(d) { localStorage.setItem(TESTE_KEY, JSON.stringify(d)) }
+
+function renderTestes() {
+  const data  = testesData()
+  const hoje  = new Date(); hoje.setHours(0,0,0,0)
+  const ids   = Object.keys(data)
+  let ativos=0, vencidos=0
+  ids.forEach(id => {
+    const t = data[id]
+    const d = t.validade ? new Date(t.validade) : null
+    const venceu = d && d < hoje
+    if (t.cancelado || venceu) vencidos++
+    else ativos++
+  })
+  _set('teTotal',   ids.length)
+  _set('teAtivos',  ativos)
+  _set('teVencidos',vencidos)
+
+  const tbody = document.getElementById('testeBody')
+  if (!ids.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Nenhum login de teste criado.</td></tr>'
+    return
+  }
+
+  // enriquecer com dados de último login vindos de _users
+  tbody.innerHTML = ids.map(userId => {
+    const t = data[userId]
+    const u = _users.find(x => x.id === userId)
+    const d = t.validade ? new Date(t.validade) : null
+    const dias = d ? Math.ceil((d - hoje) / 86400000) : null
+    const venceu = dias !== null && dias < 0
+
+    let diasHtml = '—'
+    let diasCls  = ''
+    if (dias !== null) {
+      if (dias < 0)       { diasHtml = `${Math.abs(dias)}d vencido`; diasCls='dias-venc' }
+      else if (dias === 0){ diasHtml = 'Vence hoje';  diasCls='dias-warn' }
+      else if (dias <= 3) { diasHtml = `${dias}d`;    diasCls='dias-warn' }
+      else                { diasHtml = `${dias}d`;    diasCls='dias-ok'   }
+    }
+
+    const statusBadge = t.cancelado
+      ? '<span class="badge b-bloq">Cancelado</span>'
+      : venceu
+        ? '<span class="badge b-inadim">Vencido</span>'
+        : '<span class="badge b-ativo">Ativo</span>'
+
+    const bloqLabel  = (u?.status !== 'ativo') ? 'Desbloquear' : 'Cancelar'
+    const bloqClass  = (u?.status !== 'ativo') ? 'a-desbloquear' : 'a-bloquear'
+    const bloqAction = (u?.status !== 'ativo')
+      ? `toggleTeste('${userId}',false)`
+      : `toggleTeste('${userId}',true)`
+
+    return `<tr>
+      <td><strong>${esc(t.nome||'—')}</strong>${t.notas?`<div style="font-size:10px;color:var(--texto3);margin-top:2px">${esc(t.notas)}</div>`:''}</td>
+      <td class="mono" style="font-size:11px">${esc(t.email||'—')}</td>
+      <td><span class="senha-reveal" title="Clique para copiar" onclick="copiarSenha('${esc(t.senha||'')}',this)">${esc(t.senha||'—')}</span></td>
+      <td class="mono" style="font-size:11px">${fmtDate(t.criado)}</td>
+      <td class="mono" style="font-size:11px">${t.validade?fmtDate(t.validade):'—'}</td>
+      <td><span class="${diasCls}" style="font-size:12px">${diasHtml}</span></td>
+      <td class="mono" style="font-size:11px">${u ? fmtDt(u.ultimo_login) : '—'}</td>
+      <td>${statusBadge}</td>
+      <td>
+        <div class="actions">
+          <button class="btn-act a-copiar" onclick="copiarCredenciais('${userId}')">Copiar</button>
+          <button class="btn-act a-renovar" onclick="openModalRenovar('${userId}','${esc(t.nome||'')}')">Renovar</button>
+          <button class="btn-act ${bloqClass}" onclick="${bloqAction}">${bloqLabel}</button>
+          <button class="btn-act a-deletar" onclick="excluirTeste('${userId}','${esc(t.email||'')}')">Excluir</button>
+        </div>
+      </td>
+    </tr>`
+  }).join('')
+}
+
+function openModalTeste() {
+  document.getElementById('teNome').value  = ''
+  document.getElementById('teEmail').value = ''
+  document.getElementById('teNotas').value = ''
+  document.getElementById('modalTesteMsg').className = 'msg'
+  gerarSenhaTeste()
+  const d = new Date(); d.setDate(d.getDate()+7)
+  document.getElementById('teValidade').value = d.toISOString().slice(0,10)
+  document.getElementById('modalTeste').style.display = 'flex'
+}
+function closeModalTeste() { document.getElementById('modalTeste').style.display = 'none' }
+
+function gerarSenhaTeste() {
+  const c = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789'
+  document.getElementById('teSenha').value = Array.from({length:8},()=>c[Math.floor(Math.random()*c.length)]).join('')
+}
+
+async function criarTeste() {
+  const nome     = document.getElementById('teNome').value.trim()
+  const email    = document.getElementById('teEmail').value.trim()
+  const senha    = document.getElementById('teSenha').value.trim()
+  const validade = document.getElementById('teValidade').value
+  const notas    = document.getElementById('teNotas').value.trim()
+  const msgEl    = document.getElementById('modalTesteMsg')
+  const btn      = document.getElementById('btnCriarTeste')
+  if (!nome||!email||!senha) { msgEl.textContent='Preencha nome, e-mail e senha.'; msgEl.className='msg er'; return }
+  btn.disabled=true; btn.textContent='Criando...'
+  const r = await call('create_user', { nome, email, senha })
+  btn.disabled=false; btn.textContent='Criar Acesso de Teste'
+  if (r?.success) {
+    const data = testesData()
+    const uid  = r.userId || email
+    data[uid] = { nome, email, senha, validade, notas, criado: today(), cancelado: false }
+    saveTestes(data)
+    closeModalTeste()
+    toast(`Acesso de teste criado para ${nome}.`,'ok')
+    await loadUsers()
+    renderTestes()
+  } else {
+    msgEl.textContent = r?.error||'Erro ao criar acesso.'; msgEl.className='msg er'
+  }
+}
+
+async function toggleTeste(userId, block) {
+  const label = block ? 'cancelar o acesso' : 'reativar o acesso'
+  if (!confirm(`Deseja ${label} deste login de teste?`)) return
+  const r = await call('toggle_user', { userId, block })
+  if (r?.success) {
+    const data = testesData()
+    if (data[userId]) { data[userId].cancelado = block; saveTestes(data) }
+    toast(block?'Acesso cancelado.':'Acesso reativado.','ok')
+    await loadUsers(); renderTestes()
+  } else toast('Erro ao atualizar.','er')
+}
+
+async function excluirTeste(userId, email) {
+  if (!confirm(`Excluir permanentemente o login de teste ${email}?`)) return
+  const r = await call('delete_user', { userId })
+  if (r?.success) {
+    const data = testesData(); delete data[userId]; saveTestes(data)
+    toast('Login de teste excluído.','ok')
+    await loadUsers(); renderTestes(); await refreshStats()
+  } else toast('Erro ao excluir.','er')
+}
+
+function openModalRenovar(userId, nome) {
+  _renovarUserId = userId
+  document.getElementById('renovarNome').textContent = `Corretor: ${nome}`
+  const d = new Date(); d.setDate(d.getDate()+7)
+  document.getElementById('renovarData').value = d.toISOString().slice(0,10)
+  document.getElementById('modalRenovar').style.display = 'flex'
+}
+function closeModalRenovar() { document.getElementById('modalRenovar').style.display='none'; _renovarUserId=null }
+
+function confirmarRenovar() {
+  if (!_renovarUserId) return
+  const novaData = document.getElementById('renovarData').value
+  if (!novaData) { toast('Selecione uma data.','er'); return }
+  const data = testesData()
+  if (data[_renovarUserId]) { data[_renovarUserId].validade = novaData; data[_renovarUserId].cancelado = false; saveTestes(data) }
+  closeModalRenovar()
+  toast('Acesso renovado.','ok')
+  renderTestes()
+  // reativar no Supabase se estiver bloqueado
+  const u = _users.find(x => x.id === _renovarUserId)
+  if (u?.status !== 'ativo') call('toggle_user', { userId: _renovarUserId, block: false })
+}
+
+function copiarSenha(senha, el) {
+  navigator.clipboard.writeText(senha).then(()=>{
+    const orig = el.textContent
+    el.textContent = '✓ copiado'
+    setTimeout(()=>{ el.textContent = orig },1500)
+  })
+}
+
+function copiarCredenciais(userId) {
+  const data = testesData()
+  const t    = data[userId]
+  if (!t) return
+  const valStr = t.validade ? `Válido até: ${fmtDate(t.validade)}` : ''
+  const txt = `SimulaPro — Acesso de Teste\n` +
+    `E-mail: ${t.email}\n` +
+    `Senha: ${t.senha}\n` +
+    `Link: https://welingtonbonaeng-creator.github.io/simulador-financiamento-wc/\n` +
+    (valStr ? valStr+'\n' : '') +
+    `\nEm caso de dúvidas: simulador.wc@gmail.com`
+  navigator.clipboard.writeText(txt).then(()=>toast('Credenciais copiadas!','ok'))
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
