@@ -422,10 +422,13 @@ tbody tr:hover td{background:var(--cinza1);}
       </div>
 
       <!-- Solicitações pendentes -->
-      <div class="table-card" id="cardSolicitacoes" style="display:none">
-        <div class="table-hdr">
-          <div class="table-title">⏳ Solicitações de Teste</div>
-          <button class="btn-icon" onclick="loadSolicitacoes()" title="Atualizar">🔄</button>
+      <div class="table-card" id="cardSolicitacoes" style="border:2px solid #E0EAFF">
+        <div class="table-hdr" style="background:#F0F4FF;border-radius:var(--radius) var(--radius) 0 0;padding:1rem 1.25rem">
+          <div>
+            <div class="table-title" style="color:var(--azul)">📥 Solicitações de Acesso de Teste</div>
+            <div style="font-size:11px;color:var(--texto3);margin-top:2px">Corretores que pediram teste pelo site — clique em "Criar e Enviar Acesso" para aprovar</div>
+          </div>
+          <button class="btn-icon" onclick="loadSolicitacoes()" title="Atualizar lista">🔄 Atualizar</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -1118,7 +1121,6 @@ function renderTestes() {
 
 // ── SOLICITAÇÕES DE TESTE ─────────────────────────────────────
 async function loadSolicitacoes() {
-  document.getElementById('cardSolicitacoes').style.display = 'block'
   const tbody = document.getElementById('solicitacoesBody')
   tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Carregando...</td></tr>'
   const { data, error } = await _sb.from('solicitacoes_teste').select('*').order('criado_em', { ascending: false })
