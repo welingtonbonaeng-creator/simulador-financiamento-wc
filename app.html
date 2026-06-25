@@ -1000,9 +1000,9 @@ function onImovel() {
   }
 
   const vaEl = document.getElementById('vAval');
-  // Auto-preenche +10% se campo estiver vazio
-  if (!pv(vaEl.value)) setVal('vAval', vi * 1.10);
-  const va = pv(vaEl.value);
+  // Auto-preenche +10% só se campo vazio E o usuário não está digitando nele
+  if (!pv(vaEl.value) && document.activeElement !== vaEl) setVal('vAval', vi * 1.10);
+  const va = pv(vaEl.value) || vi * 1.10;
 
   // getPct() retorna 0.80 mesmo se fx=null
   const pct = getPct();
