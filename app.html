@@ -1442,6 +1442,7 @@ function onObra() {
       }
 
       // ── Bloco resumo do financiamento bancário ──
+      const prazoA = parseInt(document.getElementById('prazoSlider').value) || 30;
       const nFin = prazoA * 12;
       const taxaMesF = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
       // SAC
