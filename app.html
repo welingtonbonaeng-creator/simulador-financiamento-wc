@@ -174,15 +174,36 @@ footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--texto3);}
 <script>
 (function(){document.documentElement.style.visibility='hidden';})();
 const _sb=supabase.createClient('https://uefnirdmhtsbpdxnonnd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s');
-_sb.auth.getSession().then(function(r){
+const _EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/simulapro';
+_sb.auth.getSession().then(async function(r){
   var s=r.data.session;
   if(!s){window.location.replace('index.html');return;}
-  document.documentElement.style.visibility='';
   window._sb=_sb;window._session=s;
+
+  /* Carregar FAIXAS do servidor (protege dados do app contra cópia) */
+  try {
+    var fr=await fetch(_EDGE,{method:'POST',
+      headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({action:'get_faixas'})});
+    var fd=await fr.json();
+    if(!fd.FAIXAS) throw new Error('sem dados');
+    /* Restaura Infinity (serializado como null pelo JSON) */
+    fd.FAIXAS.forEach(function(f){
+      if(f.rMax===null) f.rMax=Infinity;
+      if(f.iMax===null) f.iMax=Infinity;
+      f.subs.forEach(function(s){ if(s.a===null) s.a=Infinity; });
+    });
+    FAIXAS=fd.FAIXAS;
+    SEGURO_FAIXAS=fd.SEGURO_FAIXAS;
+  } catch(e) {
+    alert('Erro ao carregar o simulador. Faça login novamente.');
+    window.location.replace('index.html'); return;
+  }
+
+  document.documentElement.style.visibility='';
   document.addEventListener('DOMContentLoaded',function(){
     var el=document.getElementById('_userEmail');
     if(el)el.textContent=s.user.email;
-    // Validade padrão: hoje + 7 dias
     var vEl=document.getElementById('validadeSimulacao');
     if(vEl){ var d=new Date(); d.setDate(d.getDate()+7); vEl.value=d.toISOString().split('T')[0]; }
   });
@@ -666,28 +687,9 @@ async function _confirmarTroca(){
    8. Botões de preenchimento automático
    ══════════════════════════════════════════════════════════ */
 
-/* ── DADOS DAS FAIXAS ── */
-const FAIXAS = [
-  { nome:'Faixa 1', tag:'f1', rMax:2850,  iMax:275000, maxPct:0.80, sbpe:false,
-    subs:[{a:2160,n:4.25,e:4.75,p100k:525},{a:2850,n:4.50,e:5.00,p100k:542}] },
-  { nome:'Faixa 2', tag:'f2', rMax:5000,  iMax:275000, maxPct:0.80, sbpe:false,
-    subs:[{a:3200,n:4.75,e:5.25,p100k:560},{a:3500,n:5.00,e:5.50,p100k:575},{a:4000,n:5.50,e:6.00,p100k:620},{a:5000,n:6.50,e:7.00,p100k:690}] },
-  { nome:'Faixa 3', tag:'f3', rMax:9600,  iMax:400000, maxPct:0.80, sbpe:false,
-    subs:[{a:9600,n:7.66,e:8.16,p100k:776}] },
-  { nome:'Faixa 4', tag:'f4', rMax:13000, iMax:600000, maxPct:0.80, sbpe:false,
-    subs:[{a:13000,n:10.00,e:10.00,p100k:930}] },
-  { nome:'SBPE',   tag:'fsbpe', rMax:Infinity, iMax:Infinity, maxPct:0.80, maxPctSAC:0.90, sbpe:true,
-    subs:[{a:Infinity,n:11.49,e:11.49,p100k:976,p100k_sac:1172}] },
-];
-
-/* ── SEGURO DE OBRA GRADUAL ── */
-// Anos calculados dinamicamente a partir da data de entrega (não hardcoded)
-const SEGURO_FAIXAS = [
-  { fase:'início da obra',    mInicio:1,  mFim:12, minR:500,  maxR:1000, pctObra:'0% – 30%',  pctProg:30 },
-  { fase:'obra em andamento', mInicio:13, mFim:24, minR:1100, maxR:1500, pctObra:'30% – 60%', pctProg:60 },
-  { fase:'obra final',        mInicio:25, mFim:30, minR:1600, maxR:3000, pctObra:'60% – 80%', pctProg:80 },
-  { fase:'conclusão',         mInicio:31, mFim:36, minR:2200, maxR:3000, pctObra:'80% – 100%', pctProg:100 },
-];
+/* ── DADOS DAS FAIXAS — carregados do servidor após login ── */
+let FAIXAS = null;
+let SEGURO_FAIXAS = null;
 
 /* ── ESTADO GLOBAL ── */
 let fx = null, sub = null, tipoTaxa = 'n', prazoMaxAnos = 35, fgtsPode = false, usaRedutor = true;
@@ -1441,7 +1443,7 @@ function onObra() {
 
       // ── Bloco resumo do financiamento bancário ──
       const nFin = prazoA * 12;
-      const taxaMesF = taxaMes; // já calculado acima
+      const taxaMesF = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
       // SAC
       const amortSAC = finAprov / nFin;
       const parcSAC1 = amortSAC + (finAprov * taxaMesF);
@@ -1897,241 +1899,181 @@ function setTab(t) {
 }
 
 /* ══════════════════════════════════════
-   SIMULAR — CÁLCULO PRINCIPAL
+   SIMULAR — CHAMA EDGE FUNCTION
    ══════════════════════════════════════ */
-function simular() {
-  // Validações
-  if (!sub) { alert('Preencha a renda para identificar a faixa MCMV.'); return; }
+async function simular() {
+  if (!sub)  { alert('Preencha a renda para identificar a faixa MCMV.'); return; }
   if (!document.getElementById('nasc').value) { alert('Informe a data de nascimento para calcular o prazo.'); return; }
   const vi = pv(document.getElementById('vImovel').value);
-  if (!vi) { alert('Informe o valor do imóvel.'); return; }
+  if (!vi)   { alert('Informe o valor do imóvel.'); return; }
 
-  const va = pv(document.getElementById('vAval').value) || vi * 1.10;
-  const ato = pv(document.getElementById('ato').value);
+  const btn = document.getElementById('btnSimular');
+  const origHTML = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Calculando...'; }
 
-  // ── Financiamento calculado SEPARADAMENTE para SAC e PRICE ──
-  // Cada sistema tem seu próprio % máx. financiado (getPct) e seu próprio
-  // teto de comprometimento de renda (getPctRenda: 30% SAC / 25% PRICE em
-  // SBPE). Calcular um único 'fin' para os dois sistemas estava aprovando
-  // o mesmo financiamento em ambos, ignorando o teto mais restritivo do PRICE.
-  const r = pv(document.getElementById('renda').value);
+  try {
+    const s = window._session;
+    const tabAtivo = document.querySelector('.res-tab.ton');
+    const sistemaAtivo = (!tabAtivo || tabAtivo.textContent.includes('SAC')) ? 'sac' : 'price';
 
-  function calcFinanciamentoPara(isSAC) {
-    const pctLocal = getPct(isSAC);
-    const maxFinLocal = va * pctLocal;
-    const p100kLocal = getP100k(isSAC);
-    const pctRendaLocal = getPctRenda(isSAC);
-    const fgtsMaxLocal = calcFGTSMax(vi, pctLocal, ato);
-    const fgtsDispLocal = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
-    const fgtsUsarLocal = Math.min(fgtsDispLocal, fgtsMaxLocal);
-    const totalEntradaLocal = ato + fgtsUsarLocal;
-    const capTeoricaLocal = (r > 0 && p100kLocal > 0) ? (r * pctRendaLocal / p100kLocal) * 100000 : Infinity;
-    let finLocal = Math.max(0, vi - totalEntradaLocal);
-    finLocal = Math.min(finLocal, maxFinLocal, capTeoricaLocal);
-    return { fin: finLocal, totalEntrada: totalEntradaLocal, fgtsUsar: fgtsUsarLocal, pct: pctLocal, p100k: p100kLocal, pctRenda: pctRendaLocal };
-  }
-
-  const calcSAC = calcFinanciamentoPara(true);
-  const calcPRICE = calcFinanciamentoPara(false);
-
-  // Variáveis usadas no restante da função (compatibilidade com código existente
-  // que ainda assume um 'fin' único — usamos o financiamento do sistema
-  // atualmente ativo na aba para essas partes, e os valores específicos
-  // calcSAC.fin / calcPRICE.fin para os blocos de cada sistema).
-  const pct = getPct();
-  const maxFin = va * pct;
-  const fgtsDisp = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
-  const fgtsMax = calcFGTSMax(vi, pct, ato);
-  const fgtsUsar = Math.min(fgtsDisp, fgtsMax);
-  const totalEntrada = ato + fgtsUsar;
-  const p100k = getP100k();
-  const pctRendaCalc = getPctRenda();
-  const parcelaMax30 = r * pctRendaCalc;
-  const capTeorica = (parcelaMax30 / p100k) * 100000;
-  let fin = Math.max(0, vi - totalEntrada);
-  fin = Math.min(fin, maxFin, capTeorica);
-
-  if (calcSAC.fin <= 100 || calcPRICE.fin <= 100) {
-    alert('Valor financiado inválido. Verifique os dados (renda, valor do imóvel ou entrada).');
-    return;
-  }
-  const finSAC = calcSAC.fin;
-  const finPRICE = calcPRICE.fin;
-
-  const prazoA = parseInt(document.getElementById('prazoSlider').value) || 30;
-  const taxa = (tipoTaxa === 'n' ? sub.n : sub.e) / 100 / 12;
-  // SBPE PRICE: sempre 360 meses (30 anos) conforme regra Caixa
-  const prazoPrice = (fx && fx.sbpe) ? 30 : prazoA;
-  const n = prazoA * 12;
-  const nPrice = prazoPrice * 12;
-
-  // ── SAC ──
-  const amSAC = finSAC / n;
-  let sS = finSAC, tjS = 0, rS = [];
-  for (let i = 1; i <= n; i++) {
-    const j = sS * taxa;
-    rS.push({ m: i, p: amSAC + j, a: amSAC, j, s: Math.max(0, sS - amSAC) });
-    tjS += j; sS -= amSAC;
-  }
-
-  // ── PRICE ── (SBPE usa sempre 360 meses)
-  const coef = (taxa * Math.pow(1 + taxa, nPrice)) / (Math.pow(1 + taxa, nPrice) - 1);
-  const pP = finPRICE * coef;
-  let sP = finPRICE, tjP = 0, rP = [];
-  for (let i = 1; i <= nPrice; i++) {
-    const j = sP * taxa, a = pP - j;
-    rP.push({ m: i, p: pP, a, j, s: Math.max(0, sP - a) });
-    tjP += j; sP -= a;
-  }
-
-  // ── FASE 1: Obra ──
-  const mesesObra = parseInt(document.getElementById('mesesObra').value) || 0;
-  const segTotal = pv(document.getElementById('seguroTotal').value);
-  const segMed = mesesObra > 0 ? segTotal / mesesObra : 0;
-  const mens = pv(document.getElementById('mensalObra').value);
-  const f1 = document.getElementById('fase1');
-
-  if (mesesObra > 0) {
-    // ── Calcular teto do seguro baseado no sistema ativo (SAC ou PRICE) ──
-    const taxaSegF1 = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
-    const nSegF1 = prazoA * 12;
-    const tabAtivoF1 = document.querySelector('.res-tab.ton');
-    const usandoSACf1 = !tabAtivoF1 || tabAtivoF1.textContent.includes('SAC');
-    const finAtivoF1 = usandoSACf1 ? finSAC : finPRICE;
-    let parcelaRefF1;
-    if (usandoSACf1) {
-      const amort = finAtivoF1 / nSegF1;
-      parcelaRefF1 = amort + (finAtivoF1 * taxaSegF1);
-    } else {
-      const coefF1 = nSegF1 > 0 && taxaSegF1 > 0
-        ? (taxaSegF1 * Math.pow(1 + taxaSegF1, nSegF1)) / (Math.pow(1 + taxaSegF1, nSegF1) - 1)
-        : 1 / nSegF1;
-      parcelaRefF1 = finAtivoF1 * coefF1;
-    }
-    const coefF1price = nSegF1 > 0 && taxaSegF1 > 0
-      ? (taxaSegF1 * Math.pow(1 + taxaSegF1, nSegF1)) / (Math.pow(1 + taxaSegF1, nSegF1) - 1)
-      : 1 / nSegF1;
-    const parcelaPRICEf1 = finPRICE * coefF1price;
-    const sistLabelF1 = usandoSACf1
-      ? 'SAC (1ª parcela ' + fb(parcelaRefF1) + ')'
-      : 'PRICE ' + fb(parcelaRefF1);
-
-    // ── Faixas proporcionais ao financiado real com anos dinâmicos ──
-    // Calcula data de início real (lançamento se disponível, senão retroativo pela entrega)
-    const dtEntregaF1El = document.getElementById('dtEntrega');
-    const dtLancF1El = document.getElementById('dtLancamento');
-    let dtInicioF1 = new Date();
-    let totalMesesF1 = mesesObra;
-    let offsetF1 = 0;
-    if (dtLancF1El && dtLancF1El.value) {
-      dtInicioF1 = new Date(dtLancF1El.value + 'T12:00:00');
-      if (dtEntregaF1El && dtEntregaF1El.value) {
-        const entF1 = new Date(dtEntregaF1El.value + 'T12:00:00');
-        totalMesesF1 = Math.max(mesesObra, (entF1.getFullYear() - dtInicioF1.getFullYear()) * 12 + (entF1.getMonth() - dtInicioF1.getMonth()));
-        const hojeF1 = new Date();
-        offsetF1 = Math.max(0, (hojeF1.getFullYear() - dtInicioF1.getFullYear()) * 12 + (hojeF1.getMonth() - dtInicioF1.getMonth()));
-      }
-    } else if (dtEntregaF1El && dtEntregaF1El.value) {
-      dtInicioF1 = new Date(dtEntregaF1El.value + 'T12:00:00');
-      dtInicioF1.setMonth(dtInicioF1.getMonth() - mesesObra);
-    }
-
-    // Curva progressiva em 3 segmentos (terços do prazo da obra total)
-    const tetoSegF1 = parcelaRefF1 * 0.95; // teto real: 95% puro da parcela no último mês da obra
-    const gruposF1 = {};
-    for (let m = 1; m <= mesesObra; m++) {
-      const posAbsF1 = offsetF1 + m;
-      const pisoF1 = 0.15;
-      const valFinal = Math.round(parcelaRefF1 * pctSeguroObra(posAbsF1, totalMesesF1, pisoF1));
-      const dtMes = new Date(dtInicioF1);
-      dtMes.setMonth(dtMes.getMonth() + offsetF1 + m - 1);
-      const anoMes = dtMes.getFullYear();
-      const pctRel = (offsetF1 + m) / totalMesesF1;
-      const fase = pctRel <= 0.33 ? 'início da obra' : pctRel <= 0.66 ? 'obra em andamento' : 'obra final'; // conclusão aplicada só no último grupo abaixo
-      const chave = `${anoMes}|||${fase}`;
-      if (!gruposF1[chave]) {
-        gruposF1[chave] = { ano: anoMes, fase, min: valFinal, max: valFinal, mInicio: m, mFim: m };
-      } else {
-        gruposF1[chave].min = Math.min(gruposF1[chave].min, valFinal);
-        gruposF1[chave].max = Math.max(gruposF1[chave].max, valFinal);
-        gruposF1[chave].mFim = m;
-      }
-    }
-
-    // Renomeia o último grupo de gruposF1 para "conclusão"
-    const listaF1 = Object.values(gruposF1);
-    if (listaF1.length > 0) listaF1[listaF1.length - 1].fase = 'conclusão';
-
-    let segTimeline = '';
-    listaF1.forEach(g => {
-      const limitado = g.max >= Math.round(tetoSegF1) - 1;
-      segTimeline += `
-        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--cinza2);font-size:12px">
-          <span>${g.ano} — ${g.fase} (meses ${g.mInicio}–${g.mFim})</span>
-          <span style="color:${limitado ? 'var(--vermelho)' : 'var(--laranja)'};font-weight:600">
-            ${fi(g.min)} – ${fi(g.max)}/mês${limitado ? ' <span style="font-size:10px">[teto]</span>' : ''}
-          </span>
-        </div>`;
+    const resp = await fetch(_EDGE, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action:       'simular',
+        renda:        pv(document.getElementById('renda').value),
+        vImovel:      vi,
+        vAval:        pv(document.getElementById('vAval').value) || vi * 1.10,
+        ato:          pv(document.getElementById('ato').value),
+        fgtsPode,
+        fgtsDisp:     fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0,
+        prazoAnos:    parseInt(document.getElementById('prazoSlider').value) || 30,
+        mesesObra:    parseInt(document.getElementById('mesesObra').value) || 0,
+        tipoTaxa,
+        dtEntrega:    document.getElementById('dtEntrega').value,
+        dtLancamento: document.getElementById('dtLancamento').value,
+        sistemaAtivo,
+      })
     });
 
-    f1.innerHTML = `
-      <div class="bonif">🔒 <strong>Bonificação ativa:</strong> Após assinatura CEF, saldo de ${fi(finAtivoF1)} fica
-        <strong>congelado sem INCC</strong> + isenção de documentação. Economia estimada: R$ 211.600.</div>
-      <div class="mets">
-        <div class="met"><div class="ml">Duração da obra</div><div class="mv">${mesesObra} meses</div></div>
-        <div class="met"><div class="ml">Parcela mensal obra</div><div class="mv bl">${fb(mens || 0)}</div></div>
-        <div class="met"><div class="ml">Seguro (média/mês)</div><div class="mv am">${fb(segMed)}</div></div>
-        <div class="met"><div class="ml">Total mensal obra+seg</div><div class="mv">${fb((mens || 0) + segMed)}</div></div>
-        <div class="met"><div class="ml">Seguro total obra</div><div class="mv am">${fi(segTotal)}</div></div>
-        <div class="met"><div class="ml">Saldo congelado</div><div class="mv gr">${fi(finAtivoF1)}</div></div>
-      </div>
-      <div style="background:var(--cinza1);border-radius:var(--radius2);padding:10px 12px">
-        <div class="sub" style="margin-bottom:5px">📈 Evolução gradual do seguro de obra</div>
-        <div style="font-size:11px;color:var(--texto2);margin-bottom:6px">
-          Teto: 95% da parcela ${sistLabelF1} = <strong style="color:var(--azul)">${fb(tetoSegF1)}</strong>
-        </div>
-        ${segTimeline}
-        <div style="font-size:11px;color:var(--texto3);margin-top:6px">
-          Seguro sobe conforme % de obra concluída. Custo total estimado ≈ ${usandoSACf1 ? '12%' : '10%'} do financiado de ${fi(finAtivoF1)} (pode variar conforme a duração da obra).
-        </div>
-      </div>`;
-  } else {
-    f1.innerHTML = '<p style="font-size:12px;color:var(--texto3)">Informe a data de entrega para ver os custos durante a obra.</p>';
+    const d = await resp.json();
+    if (d.error) throw new Error(d.error);
+    if (d.finSAC <= 100 || d.finPRICE <= 100) {
+      alert('Valor financiado inválido. Verifique os dados (renda, valor do imóvel ou entrada).');
+      return;
+    }
+
+    /* Atualiza estado global com dados do servidor */
+    fx        = d.faixa;
+    sub       = d.sub;
+    tipoTaxa  = d.tipoTaxa;
+    if (fx.rMax === null) fx.rMax = Infinity;
+    if (fx.iMax === null) fx.iMax = Infinity;
+
+    const { finSAC, finPRICE, calcSAC, calcPRICE, tjS, tjP, pP,
+            prazoA, prazoPrice, n, nPrice, parcelaSAC1, parcelaSACult,
+            tabelaSAC: rS, tabelaPRICE: rP } = d;
+
+    const ato       = pv(document.getElementById('ato').value);
+    const mesesObra = parseInt(document.getElementById('mesesObra').value) || 0;
+    const segTotal  = d.seguroTotal || 0;
+    const segMed    = mesesObra > 0 ? segTotal / mesesObra : 0;
+    const mens      = pv(document.getElementById('mensalObra').value);
+    const f1        = document.getElementById('fase1');
+
+    /* Atualiza campo seguroTotal no DOM para compatibilidade com gerarPDF */
+    if (segTotal > 0) setVal('seguroTotal', segTotal);
+
+    /* ── FASE 1: Obra ── */
+    if (mesesObra > 0) {
+      const usandoSACf1 = sistemaAtivo === 'sac';
+      const finAtivoF1  = usandoSACf1 ? finSAC : finPRICE;
+      const parcelaRefF1 = usandoSACf1 ? parcelaSAC1 : pP;
+      const tetoSegF1   = d.seguroLimite || parcelaRefF1 * 0.95;
+      const sistLabelF1 = usandoSACf1
+        ? 'SAC (1ª parcela ' + fb(parcelaRefF1) + ')'
+        : 'PRICE ' + fb(parcelaRefF1);
+
+      /* Recalcula grupos visuais para o timeline usando detalhes do servidor */
+      const dtEntregaF1El  = document.getElementById('dtEntrega');
+      const dtLancF1El     = document.getElementById('dtLancamento');
+      const totalMesesF1   = d.seguroTotalMeses || mesesObra;
+      const offsetF1       = d.seguroOffset || 0;
+      let dtInicioF1 = new Date();
+      if (dtLancF1El && dtLancF1El.value) {
+        dtInicioF1 = new Date(dtLancF1El.value + 'T12:00:00');
+      } else if (dtEntregaF1El && dtEntregaF1El.value) {
+        dtInicioF1 = new Date(dtEntregaF1El.value + 'T12:00:00');
+        dtInicioF1.setMonth(dtInicioF1.getMonth() - mesesObra);
+      }
+
+      const gruposF1 = {};
+      (d.seguroDetalhes || []).forEach(function(item) {
+        const dtMes = new Date(dtInicioF1);
+        dtMes.setMonth(dtMes.getMonth() + offsetF1 + item.m - 1);
+        const anoMes = dtMes.getFullYear();
+        const pctRel = (offsetF1 + item.m) / totalMesesF1;
+        const fase   = pctRel <= 0.33 ? 'início da obra' : pctRel <= 0.66 ? 'obra em andamento' : 'obra final';
+        const chave  = anoMes + '|||' + fase;
+        if (!gruposF1[chave]) {
+          gruposF1[chave] = { ano: anoMes, fase, min: item.valDisplay, max: item.valDisplay, mInicio: item.m, mFim: item.m };
+        } else {
+          gruposF1[chave].min = Math.min(gruposF1[chave].min, item.valDisplay);
+          gruposF1[chave].max = Math.max(gruposF1[chave].max, item.valDisplay);
+          gruposF1[chave].mFim = item.m;
+        }
+      });
+      const listaF1 = Object.values(gruposF1);
+      if (listaF1.length > 0) listaF1[listaF1.length - 1].fase = 'conclusão';
+
+      let segTimeline = '';
+      listaF1.forEach(function(g) {
+        const limitado = g.max >= Math.round(tetoSegF1) - 1;
+        segTimeline += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--cinza2);font-size:12px">' +
+          '<span>' + g.ano + ' — ' + g.fase + ' (meses ' + g.mInicio + '–' + g.mFim + ')</span>' +
+          '<span style="color:' + (limitado ? 'var(--vermelho)' : 'var(--laranja)') + ';font-weight:600">' +
+          fi(g.min) + ' – ' + fi(g.max) + '/mês' + (limitado ? ' <span style="font-size:10px">[teto]</span>' : '') +
+          '</span></div>';
+      });
+
+      f1.innerHTML =
+        '<div class="bonif">🔒 <strong>Bonificação ativa:</strong> Após assinatura CEF, saldo de ' + fi(finAtivoF1) + ' fica' +
+        ' <strong>congelado sem INCC</strong> + isenção de documentação. Economia estimada: R$ 211.600.</div>' +
+        '<div class="mets">' +
+        '<div class="met"><div class="ml">Duração da obra</div><div class="mv">' + mesesObra + ' meses</div></div>' +
+        '<div class="met"><div class="ml">Parcela mensal obra</div><div class="mv bl">' + fb(mens || 0) + '</div></div>' +
+        '<div class="met"><div class="ml">Seguro (média/mês)</div><div class="mv am">' + fb(segMed) + '</div></div>' +
+        '<div class="met"><div class="ml">Total mensal obra+seg</div><div class="mv">' + fb((mens || 0) + segMed) + '</div></div>' +
+        '<div class="met"><div class="ml">Seguro total obra</div><div class="mv am">' + fi(segTotal) + '</div></div>' +
+        '<div class="met"><div class="ml">Saldo congelado</div><div class="mv gr">' + fi(finAtivoF1) + '</div></div>' +
+        '</div>' +
+        '<div style="background:var(--cinza1);border-radius:var(--radius2);padding:10px 12px">' +
+        '<div class="sub" style="margin-bottom:5px">📈 Evolução gradual do seguro de obra</div>' +
+        '<div style="font-size:11px;color:var(--texto2);margin-bottom:6px">Teto: 95% da parcela ' + sistLabelF1 + ' = <strong style="color:var(--azul)">' + fb(tetoSegF1) + '</strong></div>' +
+        segTimeline +
+        '<div style="font-size:11px;color:var(--texto3);margin-top:6px">Seguro sobe conforme % de obra concluída. Custo total estimado ≈ ' + (usandoSACf1 ? '12%' : '10%') + ' do financiado de ' + fi(finAtivoF1) + ' (pode variar conforme a duração da obra).</div>' +
+        '</div>';
+    } else {
+      f1.innerHTML = '<p style="font-size:12px;color:var(--texto3)">Informe a data de entrega para ver os custos durante a obra.</p>';
+    }
+
+    /* ── FASE 2: Financiamento ── */
+    const taxaAA = d.tipoTaxa === 'n' ? d.sub.n : d.sub.e;
+    rMets('mSAC',   vi, ato, calcSAC.fgtsUsar,   calcSAC.totalEntrada,   finSAC,   tjS, parcelaSAC1, parcelaSACult, taxaAA, prazoA,     'sac');
+    rMets('mPRICE', vi, ato, calcPRICE.fgtsUsar, calcPRICE.totalEntrada, finPRICE, tjP, pP,          pP,            taxaAA, prazoPrice, 'price');
+    rBar('bSAC',   finSAC,   tjS);
+    rBar('bPRICE', finPRICE, tjP);
+    rTab('tSAC',   rS);
+    rTab('tPRICE', rP);
+
+    /* ── VALORIZAÇÃO ── */
+    const finAtivo         = sistemaAtivo === 'sac' ? finSAC   : finPRICE;
+    const totalEntradaAtivo = sistemaAtivo === 'sac' ? calcSAC.totalEntrada : calcPRICE.totalEntrada;
+    const fgtsUsarAtivo     = sistemaAtivo === 'sac' ? calcSAC.fgtsUsar     : calcPRICE.fgtsUsar;
+
+    window._simDadosVal = {
+      vi, fin: finAtivo, finSAC, finPRICE,
+      totalEntrada: totalEntradaAtivo, segTotal,
+      parcelaPrice: pP, prazoPrice,
+      parcelaSAC1, parcelaSACult, prazoSAC: prazoA,
+      sistemaAtivo,
+      ato: pv(document.getElementById('ato')?.value),
+      fgts: fgtsUsarAtivo,
+    };
+    atualizarValorizacao();
+    atualizarEconomia();
+    preencherAmort();
+
+    document.getElementById('resultado').style.display = '';
+    setTimeout(function() {
+      document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+
+  } catch(e) {
+    alert('Erro ao calcular: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = origHTML; }
   }
-
-  // ── FASE 2: Financiamento ──
-  rMets('mSAC', vi, ato, calcSAC.fgtsUsar, calcSAC.totalEntrada, finSAC, tjS, rS[0].p, rS[n-1].p, (tipoTaxa==='n'?sub.n:sub.e), prazoA, 'sac');
-  rMets('mPRICE', vi, ato, calcPRICE.fgtsUsar, calcPRICE.totalEntrada, finPRICE, tjP, pP, pP, (tipoTaxa==='n'?sub.n:sub.e), prazoPrice, 'price');
-  rBar('bSAC', finSAC, tjS);
-  rBar('bPRICE', finPRICE, tjP);
-  rTab('tSAC', rS);
-  rTab('tPRICE', rP);
-
-  // ── VALORIZAÇÃO ──
-  // Guarda dados para recalculo ao mudar % (inclui seguro total para abater do lucro)
-  // Detecta qual sistema está ativo no momento da simulação
-  const tabAtivoFinal = document.querySelector('.res-tab.ton');
-  const sistemaAtivo = (!tabAtivoFinal || tabAtivoFinal.textContent.includes('SAC')) ? 'sac' : 'price';
-
-  // Financiamento e entrada exibidos na proposta seguem o sistema ATIVO no
-  // momento (SAC usa finSAC/30% renda, PRICE usa finPRICE/25% renda — cada
-  // um com seu próprio teto de capacidade, em vez de compartilhar um único
-  // financiamento entre os dois sistemas).
-  const finAtivo = sistemaAtivo === 'sac' ? finSAC : finPRICE;
-  const totalEntradaAtivo = sistemaAtivo === 'sac' ? calcSAC.totalEntrada : calcPRICE.totalEntrada;
-  const fgtsUsarAtivo = sistemaAtivo === 'sac' ? calcSAC.fgtsUsar : calcPRICE.fgtsUsar;
-
-  const _atoVal  = pv(document.getElementById('ato')?.value);
-  const _fgtsVal = fgtsUsarAtivo;
-  window._simDadosVal = { vi, fin: finAtivo, finSAC, finPRICE, totalEntrada: totalEntradaAtivo, segTotal, parcelaPrice: pP, prazoPrice,
-    parcelaSAC1: rS[0].p, parcelaSACult: rS[n-1].p, prazoSAC: prazoA, sistemaAtivo,
-    ato: _atoVal, fgts: _fgtsVal };
-  atualizarValorizacao();
-  atualizarEconomia();
-  preencherAmort();
-
-  document.getElementById('resultado').style.display = '';
-  setTimeout(() => document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
 /* ══════════════════════════════════════
