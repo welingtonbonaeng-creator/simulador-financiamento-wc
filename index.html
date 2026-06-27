@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
 <title>Acesso — SimulaPro</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -120,20 +121,20 @@ body{display:flex;min-height:100vh;background:#0B3D91;}
   <div class="form-title">Bem-vindo de volta</div>
   <div class="form-sub">Entre com suas credenciais para acessar o simulador</div>
 
-  <div class="form">
+  <form class="form" id="loginForm" onsubmit="login();return false;">
     <div id="msg" class="msg"></div>
     <div class="field">
       <label>E-mail</label>
-      <input type="email" id="email" placeholder="seu@email.com" autocomplete="email"/>
+      <input type="email" id="email" placeholder="seu@email.com" autocomplete="username"/>
     </div>
     <div class="field">
       <label>Senha</label>
-      <input type="password" id="senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"/>
+      <input type="password" id="senha" placeholder="••••••••" autocomplete="current-password"/>
     </div>
-    <button class="btn-login" id="btnLogin" onclick="login()">Entrar no SimulaPro</button>
+    <button type="submit" class="btn-login" id="btnLogin">Entrar no SimulaPro</button>
     <div class="divider"><span>ou</span></div>
-    <button class="btn-esqueci" onclick="esqueciSenha()">Esqueci minha senha</button>
-  </div>
+    <button type="button" class="btn-esqueci" onclick="esqueciSenha()">Esqueci minha senha</button>
+  </form>
 
   <div class="right-footer">Acesso exclusivo para corretores credenciados</div>
 </div>
@@ -170,9 +171,8 @@ async function esqueciSenha(){
   const email=document.getElementById('email').value.trim();
   if(!email){setMsg('Digite seu e-mail acima primeiro.','er');return;}
   const base=window.location.href.replace('index.html','').replace(/\/$/,'')+'/';
-  const {error}=await _sb.auth.resetPasswordForEmail(email,{redirectTo:base+'app.html'});
-  if(error){setMsg('Erro ao enviar. Verifique o e-mail.','er');return;}
-  setMsg('Link enviado! Verifique sua caixa de entrada.','ok');
+  await _sb.auth.resetPasswordForEmail(email,{redirectTo:base+'app.html'});
+  setMsg('Se este e-mail estiver cadastrado, você receberá o link em breve.','ok');
 }
 </script>
 </body>
