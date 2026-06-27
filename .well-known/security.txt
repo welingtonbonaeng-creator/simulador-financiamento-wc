@@ -1,0 +1,5 @@
+Contact: mailto:p4nico.leto@gmail.com
+Preferred-Languages: pt-BR, en
+Scope: https://welingtonbonaeng-creator.github.io/simulador-financiamento-wc/
+Policy: Reporte vulnerabilidades diretamente para o e-mail acima.
+Expires: 2027-06-26T00:00:00.000Z
