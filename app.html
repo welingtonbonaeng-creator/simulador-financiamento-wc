@@ -823,6 +823,47 @@ function getP100k(isSACOverride) {
   return sub.p100k; // MCMV: nominal/PRICE
 }
 
+/* ── p100k DINÂMICO PARA SIRC ──────────────────────────────────────────
+   Caixa calcula o prazo máximo a partir da IDADE NA ENTREGA (idade atual
+   + meses de obra), não da idade hoje. Prazo mais curto → p100k maior →
+   menos financiamento aprovado pelo mesmo SIRC.
+   ────────────────────────────────────────────────────────────────────── */
+function calcP100kDinamico(taxaAnual, prazoMeses) {
+  if (!taxaAnual || !prazoMeses) return getP100k();
+  const i = taxaAnual / 100 / 12;
+  const n = prazoMeses;
+  const fator = Math.pow(1 + i, n);
+  return (i * fator) / (fator - 1) * 100000;
+}
+
+function getPrazoSIRCMeses() {
+  const sliderAnos = parseInt(document.getElementById('prazoSlider')?.value) || 30;
+  const sliderMeses = sliderAnos * 12;
+  const nasc = document.getElementById('nasc')?.value;
+  if (!nasc) return sliderMeses;
+
+  const hoje = new Date(), d = new Date(nasc);
+  let anos = hoje.getFullYear() - d.getFullYear();
+  let mesR  = hoje.getMonth() - d.getMonth();
+  if (hoje.getDate() < d.getDate()) mesR--;
+  if (mesR < 0) { anos--; mesR += 12; }
+  const idadeMeses = anos * 12 + mesR;
+
+  const mesesObraStr = document.getElementById('mesesObra')?.value || '';
+  const mesesObra = parseInt(mesesObraStr) || 0;
+
+  // Regra Caixa: prazo máximo = 966 meses − idade atual − meses de obra
+  const maxAjustado = Math.max(0, 966 - idadeMeses - mesesObra);
+  return Math.min(sliderMeses, maxAjustado);
+}
+
+function getP100kSIRC() {
+  if (!sub) return 776;
+  // SIRC usa sempre PRICE (parcela fixa — base da restrição de crédito)
+  const taxa = tipoTaxa === 'n' ? sub.n : sub.e;
+  return calcP100kDinamico(taxa, getPrazoSIRCMeses());
+}
+
 /* ══════════════════════════════════════
    FGTS — ELEGIBILIDADE
    ══════════════════════════════════════ */
@@ -980,7 +1021,7 @@ function calcCapacidade() {
   const parcelaMax = sircAtivo ? parcelaSIRC : parcelaRenda;
 
   // ── PASSO 2: Capacidade teórica ──────────────────────
-  const p100k = getP100k();
+  const p100k = sircAtivo ? getP100kSIRC() : getP100k();
   const capTeorica = (parcelaMax / p100k) * 100000;
 
   // ── PASSO 3: Limite do programa ──────────────────────
@@ -1182,8 +1223,9 @@ function onEntrada() {
   const pctRenda = getPctRenda();
   const _sirc = getSIRC();
   const parcelaEfetiva = _sirc > 0 ? _sirc : (r * pctRenda);
-  const capTeorica = (parcelaEfetiva > 0 && p100k > 0)
-    ? Math.round((parcelaEfetiva / p100k) * 100000)
+  const p100kEfetivo = _sirc > 0 ? getP100kSIRC() : p100k;
+  const capTeorica = (parcelaEfetiva > 0 && p100kEfetivo > 0)
+    ? Math.round((parcelaEfetiva / p100kEfetivo) * 100000)
     : Infinity;
 
   // Financiado bruto (vi - entrada solicitada)
@@ -1467,8 +1509,9 @@ function onObra() {
   // Limite parcela (SIRC quando preenchida, senão 30% da renda)
   const _sircObra = getSIRC();
   const _parcelaEfetivaObra = _sircObra > 0 ? _sircObra : (r * getPctRenda());
-  const capTeorica = (r > 0 && p100k > 0 && _parcelaEfetivaObra > 0)
-    ? Math.round((_parcelaEfetivaObra / p100k) * 100000)
+  const p100kObra = _sircObra > 0 ? getP100kSIRC() : p100k;
+  const capTeorica = (r > 0 && p100kObra > 0 && _parcelaEfetivaObra > 0)
+    ? Math.round((_parcelaEfetivaObra / p100kObra) * 100000)
     : Infinity;
   // Financiado aprovado (já aplicado os dois limites)
   const finAprov = Math.min(vi, limBanco, capTeorica);
@@ -1622,7 +1665,8 @@ function calcEntradaFaltando() {
   const limBanco = va * pct;
   const _sircEF = getSIRC();
   const _parcelaEF = _sircEF > 0 ? _sircEF : (r * getPctRenda());
-  const capTeorica = (r > 0 && p100k > 0 && _parcelaEF > 0) ? Math.round((_parcelaEF / p100k) * 100000) : Infinity;
+  const p100kEF = _sircEF > 0 ? getP100kSIRC() : p100k;
+  const capTeorica = (r > 0 && p100kEF > 0 && _parcelaEF > 0) ? Math.round((_parcelaEF / p100kEF) * 100000) : Infinity;
   const finAprov = Math.min(vi, limBanco, capTeorica);
   const entradaNecessaria = Math.max(0, vi - finAprov);
   // Já comprometido: ato + FGTS + reforços
@@ -2039,6 +2083,7 @@ async function simular() {
         fgtsPode,
         fgtsDisp:     fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0,
         parcelaSIRC:  getSIRC(),
+        dataNasc:     document.getElementById('nasc').value,
         prazoAnos:    parseInt(document.getElementById('prazoSlider').value) || 30,
         mesesObra:    parseInt(document.getElementById('mesesObra').value) || 0,
         tipoTaxa,
