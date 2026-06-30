@@ -857,11 +857,24 @@ function getPrazoSIRCMeses() {
   return Math.min(sliderMeses, maxAjustado);
 }
 
-function getP100kSIRC() {
+function getP100kSIRC(isSACOverride) {
   if (!sub) return 776;
-  // SIRC usa sempre PRICE (parcela fixa — base da restrição de crédito)
-  const taxa = tipoTaxa === 'n' ? sub.n : sub.e;
-  return calcP100kDinamico(taxa, getPrazoSIRCMeses());
+  const taxa      = tipoTaxa === 'n' ? sub.n : sub.e;
+  const prazoMeses = getPrazoSIRCMeses();
+  const i         = taxa / 100 / 12;
+
+  // Espelha getP100k(): SBPE verifica o tab ativo; MCMV sempre usa PRICE como referência
+  if (fx && fx.sbpe) {
+    const isSAC = isSACOverride !== undefined ? isSACOverride : (() => {
+      const tabAtivo = document.querySelector('.res-tab.ton');
+      return !tabAtivo || tabAtivo.textContent.includes('SAC');
+    })();
+    if (isSAC) {
+      // SAC: 1ª parcela = fin × (1/n + i)
+      return (1 / prazoMeses + i) * 100000;
+    }
+  }
+  return calcP100kDinamico(taxa, prazoMeses); // PRICE
 }
 
 /* ══════════════════════════════════════
