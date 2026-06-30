@@ -364,6 +364,22 @@ async function _confirmarTroca(){
       <div class="field"><label>Data de nascimento</label><input type="date" id="nasc" onchange="onIdade()"/></div>
       <div class="field"><label>Idade</label><input type="text" id="idadeDisplay" readonly placeholder="—"/></div>
     </div>
+
+    <!-- SIRC — Restrição de crédito (opcional) -->
+    <div style="background:#FFFBEB;border:1.5px solid #D97706;border-radius:var(--radius2);padding:10px 13px;margin-bottom:9px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:.04em">⚠️ Restrição SIRC</span>
+        <span style="font-size:10px;color:#78716C">Opcional — preencha apenas se o cliente tiver parcela máxima por restrição de crédito</span>
+      </div>
+      <div style="max-width:280px">
+        <div class="field">
+          <label style="color:#92400E">Parcela máx. SIRC <span style="font-weight:400;font-size:10px;color:#78716C">(substitui o cálculo de 30% da renda)</span></label>
+          <input type="text" id="parcelaSIRC" placeholder="R$ 0,00" oninput="M(this);onSIRC()" style="border-color:#D97706;background:#FFFDF5"/>
+        </div>
+      </div>
+      <div id="sircBadge" style="display:none;margin-top:7px;font-size:12px;padding:7px 11px;border-radius:var(--radius2);background:#FEF3E8;color:#8A3F00;border:1px solid #FCD9A8;line-height:1.5"></div>
+    </div>
+
     <div id="fcCard" class="fcard"><div class="ft" id="fcTit"></div><div class="fx" id="fcInfo"></div>
       <div id="redutorBox" style="display:none;margin-top:8px">
         <div class="trow">
@@ -373,7 +389,7 @@ async function _confirmarTroca(){
       </div>
     </div>
     <div id="capBox" class="cap-box">
-      <div class="sub" style="margin-bottom:6px">📊 Capacidade de pagamento — 30% da renda</div>
+      <div class="sub" style="margin-bottom:6px" id="capBoxTitle">📊 Capacidade de pagamento — 30% da renda</div>
       <div class="cap-grid" id="capGrid"></div>
       <div id="capObs" class="regra-ouro"></div>
     </div>
@@ -918,14 +934,39 @@ function atualizarBotoesRedutor() {
    4. Financiado aprovado = min(cap. teórica, limite programa)
    5. Parcela real = (financiado / 100.000) × parcela por R$100k
    ══════════════════════════════════════ */
+function getSIRC() {
+  const el = document.getElementById('parcelaSIRC');
+  return el ? pv(el.value) : 0;
+}
+
+function onSIRC() {
+  const sirc = getSIRC();
+  const badge = document.getElementById('sircBadge');
+  const title = document.getElementById('capBoxTitle');
+  if (sirc > 0) {
+    badge.style.display = 'block';
+    badge.innerHTML = '⚠️ <strong>SIRC ativo:</strong> parcela máxima limitada a <strong>' + fb(sirc) + '/mês</strong> por restrição de crédito. O financiamento será calculado com base nessa parcela.';
+    if (title) title.textContent = '📊 Capacidade de pagamento — Parcela SIRC';
+  } else {
+    badge.style.display = 'none';
+    if (title) title.textContent = '📊 Capacidade de pagamento — 30% da renda';
+  }
+  calcCapacidade();
+  onEntrada();
+}
+
 function calcCapacidade() {
   if (!fx || !sub) return;
   const r = pv(document.getElementById('renda').value);
   if (!r) return;
 
+  const parcelaSIRC = getSIRC();
+  const sircAtivo = parcelaSIRC > 0;
+
   // ── PASSO 1: Parcela máxima ──────────────────────────
   const pctRenda = getPctRenda();
-  const parcelaMax = r * pctRenda;
+  const parcelaRenda = r * pctRenda;
+  const parcelaMax = sircAtivo ? parcelaSIRC : parcelaRenda;
 
   // ── PASSO 2: Capacidade teórica ──────────────────────
   const p100k = getP100k();
@@ -940,8 +981,8 @@ function calcCapacidade() {
   // ── PASSO 4: Financiado aprovado ─────────────────────
   const finAprov = limProg > 0 ? Math.min(capTeorica, limProg) : capTeorica;
   const limitadoPor = limProg > 0
-    ? (capTeorica <= limProg ? 'renda' : 'programa')
-    : 'renda';
+    ? (capTeorica <= limProg ? (sircAtivo ? 'SIRC' : 'renda') : 'programa')
+    : (sircAtivo ? 'SIRC' : 'renda');
 
   // ── PASSO 5: Parcela real recalculada ────────────────
   const parcelaReal = finAprov > 0 ? (finAprov / 100000) * p100k : 0;
@@ -950,26 +991,37 @@ function calcCapacidade() {
 
   document.getElementById('capBox').className = 'cap-box show';
 
-  // Montar o HTML passo a passo, visual igual ao guia
-  document.getElementById('capGrid').innerHTML = `
+  const passo1HTML = sircAtivo ? `
+    <div class="cap-i" style="border-left:3px solid #D97706;background:#FFFBEB">
+      <div class="cap-l" style="color:#92400E">① Parcela máx. — SIRC (restrição de crédito)</div>
+      <div class="cap-v" style="color:#92400E">
+        SIRC: <strong>${fb(parcelaSIRC)}</strong>
+        <span style="font-size:10px;color:#A16207;margin-left:6px">(sem SIRC seria: ${fi(r)} × ${(pctRenda*100).toFixed(0)}% = ${fb(parcelaRenda)})</span>
+      </div>
+    </div>
+  ` : `
     <div class="cap-i" style="border-left:3px solid var(--azul)">
       <div class="cap-l">① Parcela máx. (renda × ${(pctRenda*100).toFixed(0)}%)</div>
       <div class="cap-v cv-az">${fi(r)} × ${(pctRenda*100).toFixed(0)}% = <strong>${fi(parcelaMax)}</strong></div>
     </div>
+  `;
+
+  document.getElementById('capGrid').innerHTML = `
+    ${passo1HTML}
     <div class="cap-i" style="border-left:3px solid var(--verde)">
       <div class="cap-l">② Cap. teórica = (parcela ÷ R$${p100k}) × 100k</div>
-      <div class="cap-v cv-vd">(${fi(parcelaMax)} ÷ R$ ${p100k}) × 100k = <strong>${fi(capTeorica)}</strong></div>
+      <div class="cap-v cv-vd">(${fb(parcelaMax)} ÷ R$ ${p100k}) × 100k = <strong>${fi(capTeorica)}</strong></div>
     </div>
     ${vi > 0 ? `
     <div class="cap-i" style="border-left:3px solid var(--laranja)">
       <div class="cap-l">③ Limite programa (${(pct*100).toFixed(0)}% da avaliação)</div>
       <div class="cap-v cv-am">${fi(va)} × ${(pct*100).toFixed(0)}% = <strong>${fi(limProg)}</strong></div>
     </div>
-    <div class="cap-i" style="border-left:3px solid var(--vermelho);background:${limitadoPor==='renda'?'#EAF4EE':'#FDE8E8'}">
+    <div class="cap-i" style="border-left:3px solid var(--vermelho);background:${limitadoPor==='renda'||limitadoPor==='SIRC'?'#EAF4EE':'#FDE8E8'}">
       <div class="cap-l">④ Financiado aprovado = menor entre ② e ③</div>
-      <div class="cap-v" style="color:${limitadoPor==='renda'?'var(--verde)':'var(--vermelho)'}">
+      <div class="cap-v" style="color:${limitadoPor==='renda'||limitadoPor==='SIRC'?'var(--verde)':'var(--vermelho)'}">
         min(${fi(capTeorica)}, ${fi(limProg)}) = <strong>${fi(finAprov)}</strong>
-        <span style="font-size:10px;font-weight:600;margin-left:4px">[limitado pela ${limitadoPor==='renda'?'renda':'avaliação'}]</span>
+        <span style="font-size:10px;font-weight:600;margin-left:4px">[limitado pela ${limitadoPor==='SIRC'?'parcela SIRC':limitadoPor==='renda'?'renda':'avaliação'}]</span>
       </div>
     </div>
     ` : ''}
@@ -985,8 +1037,9 @@ function calcCapacidade() {
     </div>
   `;
 
+  const origemCap = sircAtivo ? 'parcela SIRC' : 'renda';
   document.getElementById('capObs').innerHTML =
-    `⭐ <strong>Regra de Ouro:</strong> o banco aprova o <strong>menor</strong> entre ② capacidade (${fi(capTeorica)}) e ③ limite do programa (${vi > 0 ? fi(limProg) : '—'}).
+    `${sircAtivo ? '⚠️ <strong>SIRC ativo</strong>' : '⭐ <strong>Regra de Ouro:</strong>'} o banco aprova o <strong>menor</strong> entre ② capacidade por ${origemCap} (${fi(capTeorica)}) e ③ limite do programa (${vi > 0 ? fi(limProg) : '—'}).
     Financiado aprovado: <strong style="color:var(--azul)">${fi(finAprov)}</strong> · Parcela estimada: <strong style="color:var(--azul)">${fb(parcelaReal)}</strong>/mês.`;
 }
 
@@ -1114,10 +1167,12 @@ function onEntrada() {
   // Limite 1: banco (80% da avaliação)
   const limBanco = maxFin;
 
-  // Limite 2: renda (capacidade de pagamento — 30% MCMV/SBPE-SAC, 25% SBPE-PRICE)
+  // Limite 2: parcela efetiva (SIRC quando preenchida, senão 30% da renda)
   const pctRenda = getPctRenda();
-  const capTeorica = (r > 0 && p100k > 0)
-    ? Math.round((r * pctRenda / p100k) * 100000)
+  const _sirc = getSIRC();
+  const parcelaEfetiva = _sirc > 0 ? _sirc : (r * pctRenda);
+  const capTeorica = (parcelaEfetiva > 0 && p100k > 0)
+    ? Math.round((parcelaEfetiva / p100k) * 100000)
     : Infinity;
 
   // Financiado bruto (vi - entrada solicitada)
@@ -1950,6 +2005,7 @@ async function simular() {
         ato:          pv(document.getElementById('ato').value),
         fgtsPode,
         fgtsDisp:     fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0,
+        parcelaSIRC:  getSIRC(),
         prazoAnos:    parseInt(document.getElementById('prazoSlider').value) || 30,
         mesesObra:    parseInt(document.getElementById('mesesObra').value) || 0,
         tipoTaxa,
