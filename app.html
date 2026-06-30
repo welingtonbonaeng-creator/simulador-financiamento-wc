@@ -1039,10 +1039,11 @@ function onImovel() {
        Se ato = 0 → FGTS máx = 70k
        Se ato = 30k → FGTS máx = 40k
    ══════════════════════════════════════ */
-function calcFGTSMax(vi, pct, ato) {
-  // MCMV: deve financiar mínimo R$50k | SBPE: mínimo R$100k
+function calcFGTSMax(vi, va, pct, ato) {
+  // Dois limites: (1) FGTS ≤ va (avaliação Caixa) e (2) financiamento residual ≥ minFin
   const minFin = (fx && fx.sbpe) ? 100000 : 50000;
-  return Math.max(0, vi - minFin - ato);
+  const limRegra = vi - minFin - ato;
+  return Math.max(0, Math.min(va, limRegra));
 }
 
 function onEntrada() {
@@ -1056,8 +1057,13 @@ function onEntrada() {
 
   // ── FGTS teto ──
   const fgtsDisp = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
-  const fgtsMax = calcFGTSMax(vi, pct, ato); // = vi - minFin - ato
+  const fgtsMax = calcFGTSMax(vi, va, pct, ato);
   const fgtsUsar = Math.min(fgtsDisp, fgtsMax);
+
+  // Identificar qual dos dois limites é o vinculante
+  const _limVA    = va;
+  const _limRegra = Math.max(0, vi - minFin - ato);
+  const _limitadoPorVA = _limVA < _limRegra;
 
   // ── Exibir box FGTS ──
   const fgtsBox = document.getElementById('fgtsBox');
@@ -1067,8 +1073,11 @@ function onEntrada() {
     fgtsBox.className = 'fgts-box show';
     document.getElementById('fgtsGrid').innerHTML = `
       <div class="fgts-item"><div class="fgts-lbl">Valor de Venda</div><div class="fgts-val">${fi(vi)}</div></div>
+      <div class="fgts-item"><div class="fgts-lbl">Avaliação Caixa (teto FGTS)</div><div class="fgts-val" style="color:#4A2C8A">${fi(va)}</div></div>
       <div class="fgts-item"><div class="fgts-lbl">${minFinLabel}</div><div class="fgts-val cv-am">${fi(minFin)}</div></div>
       <div class="fgts-item"><div class="fgts-lbl">Ato informado</div><div class="fgts-val">${fi(ato)}</div></div>
+      <div class="fgts-item"><div class="fgts-lbl">Limite pela avaliação</div><div class="fgts-val" style="color:${_limitadoPorVA?'#991B1B':'#6B7280'}">${fi(_limVA)}${_limitadoPorVA?' ← vinculante':''}</div></div>
+      <div class="fgts-item"><div class="fgts-lbl">Limite pela regra mín.</div><div class="fgts-val" style="color:${!_limitadoPorVA && _limRegra<_limVA?'#991B1B':'#6B7280'}">${fi(_limRegra)}${!_limitadoPorVA && _limRegra>=0?' ← vinculante':''}</div></div>
       <div class="fgts-item"><div class="fgts-lbl">FGTS disponível</div><div class="fgts-val">${fi(fgtsDisp)}</div></div>
       <div class="fgts-item" style="border-color:${excede ? '#EF4444' : '#7C3AED'}">
         <div class="fgts-lbl">FGTS máx. utilizável</div>
@@ -1080,9 +1089,12 @@ function onEntrada() {
       </div>
     `;
     if (excede) {
+      const motivoLimite = _limitadoPorVA
+        ? 'FGTS não pode exceder a avaliação Caixa de ' + fi(va)
+        : 'para financiar o mínimo de ' + fi(minFin) + ' (vi ' + fi(vi) + ' − mín ' + fi(minFin) + ' − ato ' + fi(ato) + ')';
       show('avFGTS', 'av wn',
         '⚠️ FGTS de ' + fi(fgtsDisp) + ' excede o limite. Será utilizado apenas <strong>' + fi(fgtsMax) +
-        '</strong>. (Valor de venda ' + fi(vi) + ' − mín. financiado ' + fi(minFin) + ' − ato ' + fi(ato) + ' = FGTS máx. ' + fi(fgtsMax) + ')');
+        '</strong> — ' + motivoLimite + '.');
     } else {
       document.getElementById('avFGTS').style.display = 'none';
     }
@@ -1117,6 +1129,16 @@ function onEntrada() {
   if (financiado > 0) setVal('vFinanciado', financiado);
   else document.getElementById('vFinanciado').value = '';
 
+  // Alertar se entrada (ato) sozinha já deixaria o financiamento abaixo do mínimo
+  const _minFinAlert = (fx && fx.sbpe) ? 100000 : 50000;
+  const _finSemFGTS = vi - ato;
+  if (vi > 0 && ato > 0 && _finSemFGTS < _minFinAlert) {
+    const minLabel = (fx && fx.sbpe) ? 'SBPE (mín. R$100k)' : 'MCMV (mín. R$50k)';
+    show('avLimite', 'av er',
+      '⛔ Ato de ' + fi(ato) + ' deixa o financiamento em ' + fi(_finSemFGTS) +
+      ', abaixo do mínimo exigido pelo ' + minLabel + '. Reduza o ato.');
+  }
+
   // Qual limite foi aplicado?
   const limitePelo = financiadoBruto <= limBanco && financiadoBruto <= capTeorica
     ? 'entrada informada'
@@ -1141,7 +1163,7 @@ function preencherAuto() {
   const entMinVenda = vi * (1 - pct);
   const fgtsDisp = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
   // FGTS máx sem ato ainda = entrada necessária inteira
-  const fgtsMaxSemAto = calcFGTSMax(vi, pct, 0);
+  const fgtsMaxSemAto = calcFGTSMax(vi, va, pct, 0);
   const fgtsUsarSemAto = Math.min(fgtsDisp, fgtsMaxSemAto);
   // Ato = o que falta da entrada mínima após o FGTS
   const novoAto = Math.max(0, entMinVenda - fgtsUsarSemAto);
@@ -1367,7 +1389,7 @@ function onObra() {
 
   // FGTS dentro do teto
   const fgtsUsar = fgtsPode
-    ? Math.min(pv(document.getElementById('fgtsDisp').value), calcFGTSMax(vi, pct, ato))
+    ? Math.min(pv(document.getElementById('fgtsDisp').value), calcFGTSMax(vi, va, pct, ato))
     : 0;
 
   // Entrada = vi − financiado. O saldo restante (após ato + FGTS + reforços) é
@@ -1506,7 +1528,7 @@ function calcEntradaFaltando() {
   const ato = pv(document.getElementById('ato').value);
   const pct = getPct();
   const fgtsUsar = fgtsPode
-    ? Math.min(pv(document.getElementById('fgtsDisp').value), calcFGTSMax(vi, pct, ato))
+    ? Math.min(pv(document.getElementById('fgtsDisp').value), calcFGTSMax(vi, va, pct, ato))
     : 0;
   // Entrada necessária = venda − máx financiado (correto para imóveis na planta)
   const r = pv(document.getElementById('renda').value);
