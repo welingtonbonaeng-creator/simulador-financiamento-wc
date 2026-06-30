@@ -433,7 +433,11 @@ async function _confirmarTroca(){
       <div class="fgts-grid" id="fgtsGrid"></div>
     </div>
 
-    <div class="field" style="margin-top:7px"><label style="color:#065F46;font-weight:700">Valor financiado aprovado <span style="font-weight:400;font-size:10px">(já aplicado limite de renda e banco)</span></label><input type="text" id="vFinanciado" readonly placeholder="R$ 0,00" style="background:#D1FAE5;color:#065F46;font-weight:700;border-color:#6EE7B7;"/></div>
+    <div class="field" style="margin-top:7px">
+      <label style="color:#065F46;font-weight:700">Valor financiado aprovado <span style="font-weight:400;font-size:10px">(já aplicado limite de renda e banco)</span></label>
+      <input type="text" id="vFinanciado" readonly placeholder="R$ 0,00" style="background:#D1FAE5;color:#065F46;font-weight:700;border-color:#6EE7B7;"/>
+    </div>
+    <div id="sircObs" style="display:none;margin-top:6px;font-size:12px;padding:8px 12px;border-radius:var(--radius2);background:#FEF3E8;color:#8A3F00;border:1px solid #FCD9A8;line-height:1.6"></div>
   </div>
 </div>
 
@@ -1184,6 +1188,22 @@ function onEntrada() {
   if (financiado > 0) setVal('vFinanciado', financiado);
   else document.getElementById('vFinanciado').value = '';
 
+  // ── Observação SIRC ──
+  const sircObs = document.getElementById('sircObs');
+  if (sircObs) {
+    if (_sirc > 0 && financiado > 0) {
+      // Calcula o que seria sem SIRC para mostrar na observação
+      const capSemSIRC = (r > 0 && p100k > 0) ? Math.round((r * pctRenda / p100k) * 100000) : Infinity;
+      const finSemSIRC = Math.min(financiadoBruto, limBanco, isFinite(capSemSIRC) ? capSemSIRC : financiadoBruto);
+      sircObs.style.display = 'block';
+      sircObs.innerHTML = '⚠️ <strong>Cliente restrito por parcela SIRC.</strong> ' +
+        'Valor liberado com restrição: <strong>' + fi(financiado) + '</strong>. ' +
+        'Sem restrição SIRC, o valor seria: <strong>' + fi(finSemSIRC) + '</strong>.';
+    } else {
+      sircObs.style.display = 'none';
+    }
+  }
+
   // Alertar se entrada (ato) sozinha já deixaria o financiamento abaixo do mínimo
   const _minFinAlert = (fx && fx.sbpe) ? 100000 : 50000;
   const _finSemFGTS = vi - ato;
@@ -1437,8 +1457,12 @@ function onObra() {
 
   // Limite banco
   const limBanco = va * pct;
-  // Limite renda
-  const capTeorica = (r > 0 && p100k > 0) ? Math.round((r * getPctRenda() / p100k) * 100000) : Infinity;
+  // Limite parcela (SIRC quando preenchida, senão 30% da renda)
+  const _sircObra = getSIRC();
+  const _parcelaEfetivaObra = _sircObra > 0 ? _sircObra : (r * getPctRenda());
+  const capTeorica = (r > 0 && p100k > 0 && _parcelaEfetivaObra > 0)
+    ? Math.round((_parcelaEfetivaObra / p100k) * 100000)
+    : Infinity;
   // Financiado aprovado (já aplicado os dois limites)
   const finAprov = Math.min(vi, limBanco, capTeorica);
 
@@ -1589,7 +1613,9 @@ function calcEntradaFaltando() {
   const r = pv(document.getElementById('renda').value);
   const p100k = getP100k();
   const limBanco = va * pct;
-  const capTeorica = (r > 0 && p100k > 0) ? Math.round((r * getPctRenda() / p100k) * 100000) : Infinity;
+  const _sircEF = getSIRC();
+  const _parcelaEF = _sircEF > 0 ? _sircEF : (r * getPctRenda());
+  const capTeorica = (r > 0 && p100k > 0 && _parcelaEF > 0) ? Math.round((_parcelaEF / p100k) * 100000) : Infinity;
   const finAprov = Math.min(vi, limBanco, capTeorica);
   const entradaNecessaria = Math.max(0, vi - finAprov);
   // Já comprometido: ato + FGTS + reforços
