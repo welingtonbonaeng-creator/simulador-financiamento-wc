@@ -132,6 +132,17 @@ main{max-width:960px;margin:0 auto;padding:1.1rem 1.1rem 3rem;}
 /* BTN SIMULAR */
 .btn-sim{width:100%;padding:13px;background:linear-gradient(135deg,var(--azul),var(--azul3));color:#fff;border:none;border-radius:var(--radius);font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;box-shadow:0 4px 20px rgba(11,61,145,.25);transition:all .2s;}
 .btn-sim:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(11,61,145,.33);}
+/* Sistema SAC/PRICE inline */
+.sis-tabs{display:flex;gap:6px;margin-bottom:10px;}
+.sis-tab{flex:1;padding:9px 10px;text-align:center;font-size:12px;font-weight:700;border:1.5px solid var(--cinza2);border-radius:var(--radius2);cursor:pointer;background:#fff;color:var(--texto2);transition:all .15s;line-height:1.4;}
+.sis-tab.ton{background:var(--azulclaro);border-color:var(--azul3);color:var(--azul);}
+.sis-tab:hover:not(.ton){background:var(--cinza1);}
+.comp-fin{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.comp-fin-item{background:var(--cinza1);border-radius:var(--radius2);padding:10px 12px;border:1.5px solid var(--cinza2);}
+.comp-fin-item.ativo{background:var(--azulclaro);border-color:var(--azul3);}
+.comp-fin-label{font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+.comp-fin-valor{font-size:17px;font-weight:800;color:var(--azul);}
+.comp-fin-sub{font-size:10px;color:var(--texto3);margin-top:2px;}
 /* Resultado */
 #resultado{animation:fi .3s ease;}
 .res-tabs{display:flex;gap:7px;margin-bottom:.85rem;}
@@ -433,7 +444,32 @@ async function _confirmarTroca(){
       <div class="fgts-grid" id="fgtsGrid"></div>
     </div>
 
-    <div class="field" style="margin-top:7px">
+    <hr class="sep" style="margin-top:10px"/>
+    <div class="sub" style="margin-bottom:6px">Sistema de amortização</div>
+    <div class="sis-tabs">
+      <div class="sis-tab" id="sisTabSAC" onclick="setTab('sac')">
+        🔽 SAC<br><span id="sisSacSub" style="font-weight:400;font-size:10px">Parcelas decrescentes · 90% (SBPE)</span>
+      </div>
+      <div class="sis-tab ton" id="sisTabPRICE" onclick="setTab('price')">
+        📐 PRICE<br><span id="sisPriceSub" style="font-weight:400;font-size:10px">Parcela fixa · 80%</span>
+      </div>
+    </div>
+
+    <!-- Comparação SAC vs PRICE -->
+    <div class="comp-fin" id="compFinBox" style="display:none">
+      <div class="comp-fin-item" id="compSAC" onclick="setTab('sac')" style="cursor:pointer">
+        <div class="comp-fin-label">🔽 SAC</div>
+        <div class="comp-fin-valor" id="compSACval">—</div>
+        <div class="comp-fin-sub" id="compSACsub"></div>
+      </div>
+      <div class="comp-fin-item ton" id="compPRICE" onclick="setTab('price')" style="cursor:pointer">
+        <div class="comp-fin-label">📐 PRICE</div>
+        <div class="comp-fin-valor" id="compPRICEval">—</div>
+        <div class="comp-fin-sub" id="compPRICEsub"></div>
+      </div>
+    </div>
+
+    <div class="field">
       <label style="color:#065F46;font-weight:700">Valor financiado aprovado <span style="font-weight:400;font-size:10px">(já aplicado limite de renda e banco)</span></label>
       <input type="text" id="vFinanciado" readonly placeholder="R$ 0,00" style="background:#D1FAE5;color:#065F46;font-weight:700;border-color:#6EE7B7;"/>
     </div>
@@ -942,6 +978,12 @@ function atualizarCardFaixa() {
   // Detectar se imóvel ultrapassa limite da faixa MCMV → avisar SBPE
   const acimaDaFaixa = !fx.sbpe && vi > 0 && vi > fx.iMax;
 
+  // Atualiza subtítulos dos tabs inline SAC/PRICE conforme faixa
+  const sisSacSub   = document.getElementById('sisSacSub');
+  const sisPriceSub = document.getElementById('sisPriceSub');
+  if (sisSacSub)   sisSacSub.textContent   = fx.sbpe ? 'Parcelas decrescentes · 90% da av.' : 'Parcelas decrescentes · 80%';
+  if (sisPriceSub) sisPriceSub.textContent = fx.sbpe ? 'Parcela fixa · 80% da av.' : 'Parcela fixa · 80%';
+
   if (fx.sbpe) {
     card.className = 'fcard show fsbpe';
     document.getElementById('fcTit').textContent = 'SBPE — Renda acima de R$ 13.000 (fora do MCMV)';
@@ -992,6 +1034,50 @@ function atualizarBotoesRedutor() {
    4. Financiado aprovado = min(cap. teórica, limite programa)
    5. Parcela real = (financiado / 100.000) × parcela por R$100k
    ══════════════════════════════════════ */
+/* Atualiza o box de comparação SAC vs PRICE em Dados do Imóvel */
+function _atualizarCompFin(vi, va, ato, r, sirc) {
+  const box = document.getElementById('compFinBox');
+  if (!box || !fx || !sub || !vi || (!r && !sirc)) { if (box) box.style.display = 'none'; return; }
+
+  const fgtsV = fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0;
+  const finSAC   = _calcFinLocal(true,  vi, va, ato, r, fgtsV, sirc);
+  const finPRICE = _calcFinLocal(false, vi, va, ato, r, fgtsV, sirc);
+
+  if (!finSAC && !finPRICE) { box.style.display = 'none'; return; }
+
+  const isSBPE = fx && fx.sbpe;
+  const tabAtivo = document.querySelector('.res-tab.ton');
+  const isSACAtivo = !tabAtivo || tabAtivo.textContent.includes('SAC');
+
+  document.getElementById('compSACval').textContent   = fi(finSAC);
+  document.getElementById('compPRICEval').textContent = fi(finPRICE);
+  document.getElementById('compSACsub').textContent   = isSBPE ? '90% da avaliação' : '80% da avaliação';
+  document.getElementById('compPRICEsub').textContent = '80% da avaliação';
+
+  document.getElementById('compSAC').classList.toggle('ativo', isSACAtivo);
+  document.getElementById('compSAC').classList.toggle('ton', isSACAtivo);
+  document.getElementById('compPRICE').classList.toggle('ativo', !isSACAtivo);
+  document.getElementById('compPRICE').classList.toggle('ton', !isSACAtivo);
+
+  box.style.display = 'grid';
+}
+
+/* Calcula financiamento local para qualquer sistema sem alterar o DOM */
+function _calcFinLocal(isSAC, vi, va, ato, r, fgtsDispVal, sirc) {
+  if (!fx || !sub || !vi) return 0;
+  const pct     = getPct(isSAC);
+  const limBanco = va * pct;
+  const p100k   = sirc > 0 ? getP100kSIRC(isSAC) : getP100k(isSAC);
+  const pctR    = getPctRenda(isSAC);
+  const fgtsMax = calcFGTSMax(vi, va, pct, ato);
+  const fgtsUsar = fgtsPode ? Math.min(fgtsDispVal, fgtsMax) : 0;
+  const totalEnt = ato + fgtsUsar;
+  const parcela = sirc > 0 ? sirc : (r * pctR);
+  const cap     = (parcela > 0 && p100k > 0) ? Math.round(parcela / p100k * 100000) : Infinity;
+  const finBruto = Math.max(0, vi - totalEnt);
+  return Math.min(finBruto, limBanco, isFinite(cap) ? cap : finBruto);
+}
+
 function getSIRC() {
   const el = document.getElementById('parcelaSIRC');
   if (!el || !el.value.trim()) return 0;
@@ -1286,6 +1372,9 @@ function onEntrada() {
 
   // Badge entrada no header Período de Obra
   atualizarBadgeEntrada();
+
+  // ── Box comparação SAC vs PRICE ──
+  _atualizarCompFin(vi, va, ato, r, _sirc);
 
   calcSeguro();
   calcCapacidade();
@@ -2036,6 +2125,16 @@ function atualizarValorizacao() {
 function setTab(t) {
   document.querySelectorAll('.res-tab').forEach((el, i) =>
     el.classList.toggle('ton', (i === 0 && t === 'sac') || (i === 1 && t === 'price')));
+  // Sincroniza tabs inline em Dados do Imóvel
+  const sisTabSAC   = document.getElementById('sisTabSAC');
+  const sisTabPRICE = document.getElementById('sisTabPRICE');
+  if (sisTabSAC)   sisTabSAC.classList.toggle('ton', t === 'sac');
+  if (sisTabPRICE) sisTabPRICE.classList.toggle('ton', t === 'price');
+  // Sincroniza box de comparação (borda ativa)
+  const compSAC   = document.getElementById('compSAC');
+  const compPRICE = document.getElementById('compPRICE');
+  if (compSAC)   { compSAC.classList.toggle('ativo', t === 'sac');   compSAC.classList.toggle('ton', t === 'sac'); }
+  if (compPRICE) { compPRICE.classList.toggle('ativo', t === 'price'); compPRICE.classList.toggle('ton', t === 'price'); }
   document.getElementById('pSAC').style.display = t === 'sac' ? '' : 'none';
   document.getElementById('pPRICE').style.display = t === 'price' ? '' : 'none';
 
