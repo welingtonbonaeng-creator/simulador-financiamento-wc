@@ -1379,15 +1379,11 @@ async function verHistorico(email, lastSeenAt) {
 
   document.getElementById('modalHist').style.display = 'flex'
 
-  const { data, error } = await _sb
-    .from('auth_logs')
-    .select('*')
-    .eq('email', email)
-    .order('created_at', { ascending: false })
-    .limit(50)
+  const resp = await call('get_user_history', { email })
+  const data = resp?.logs
 
   const listEl = document.getElementById('histList')
-  if (error || !data?.length) {
+  if (!data?.length) {
     listEl.innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Nenhum registro encontrado.</div>'
     return
   }
