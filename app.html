@@ -2158,13 +2158,15 @@ function atualizarValorizacao() {
   const _tabAgoraVal = document.querySelector('.res-tab.ton');
   const _sistemaAgoraVal = (_tabAgoraVal && _tabAgoraVal.textContent.includes('PRICE')) ? 'price' : 'sac';
   const finAgora = _sistemaAgoraVal === 'sac' ? (d.finSAC ?? d.fin) : (d.finPRICE ?? d.fin);
-  const lucro = valorFuturo - finAgora - d.totalEntrada - seguro;
+  // Entrada real = tudo que o cliente paga além do banco: ato + parcelas obra + FGTS = vi - financiado
+  const entradaReal = d.vi - finAgora;
+  const lucro = valorFuturo - finAgora - entradaReal - seguro;
   document.getElementById('valGrid').innerHTML = `
     <div class="val-item azul"><div class="vi-lbl">Valor hoje</div><div class="vi-val azul">${fi(d.vi)}</div></div>
     <div class="val-item azul"><div class="vi-lbl">Valorização est. (${Math.round(pct*100)}%)</div><div class="vi-val azul">${fi(d.vi * pct)}</div></div>
     <div class="val-item"><div class="vi-lbl">Valor na entrega</div><div class="vi-val">${fi(valorFuturo)}</div></div>
     <div class="val-item"><div class="vi-lbl">Financiado aprovado</div><div class="vi-val" style="color:var(--laranja)">${fi(finAgora)}</div></div>
-    <div class="val-item"><div class="vi-lbl">Entrada total</div><div class="vi-val" style="color:var(--texto2)">${fi(d.totalEntrada)}</div></div>
+    <div class="val-item"><div class="vi-lbl">Entrada total (ato + obra + FGTS)</div><div class="vi-val" style="color:var(--texto2)">${fi(entradaReal)}</div></div>
     ${seguro > 0 ? `<div class="val-item"><div class="vi-lbl">Seguro de obra pago</div><div class="vi-val" style="color:var(--vermelho)">− ${fi(seguro)}</div></div>` : ''}
     <div class="val-item"><div class="vi-lbl">Lucro estimado</div><div class="vi-val" style="color:${lucro>=0?'var(--verde)':'var(--vermelho)'}">${fi(lucro)}</div></div>
   `;
@@ -2494,7 +2496,7 @@ function gerarPDF() {
   // simular() (d.finSAC / d.finPRICE), em vez do d.fin genérico que reflete
   // só o sistema que estava ativo quando o botão "Calcular" foi clicado.
   const finPDF = sistemaAtivo === 'sac' ? (d.finSAC ?? d.fin) : (d.finPRICE ?? d.fin);
-  const totalEntradaPDF = d.totalEntrada; // entrada (ato+FGTS) é a mesma independente do sistema na prática atual
+  const totalEntradaPDF = d.vi - finPDF; // entrada total = venda − financiado (ato + parcelas obra + FGTS)
 
   // Seguro de obra: SEMPRE recalculado aqui com finPDF e o sistema realmente
   // ativo agora (em vez de ler d.segTotal, que reflete só o sistema que
