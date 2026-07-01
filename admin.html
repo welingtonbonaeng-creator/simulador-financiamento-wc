@@ -136,6 +136,21 @@ tbody tr:hover td{background:var(--cinza1);}
 .b-ev-create{background:var(--verdeClaro);color:var(--verde);}
 .b-ev-other{background:var(--cinza2);color:var(--texto2);}
 
+/* ONLINE DOT */
+.dot-on{display:inline-block;width:8px;height:8px;border-radius:50%;background:#1B6E3F;margin-right:5px;flex-shrink:0;box-shadow:0 0 0 2px rgba(27,110,63,.2);animation:pulse-on 2s infinite;}
+.dot-off{display:inline-block;width:8px;height:8px;border-radius:50%;background:#C8CDD8;margin-right:5px;flex-shrink:0;}
+@keyframes pulse-on{0%,100%{box-shadow:0 0 0 2px rgba(27,110,63,.2)}50%{box-shadow:0 0 0 4px rgba(27,110,63,.1)}}
+
+/* HISTÓRICO MODAL */
+.hist-list{max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;}
+.hist-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--cinza1);border-radius:var(--radius2);border-left:3px solid var(--cinza3);}
+.hist-item.ev-login{border-left-color:var(--azul3);}
+.hist-item.ev-logout{border-left-color:var(--vermelho);}
+.hist-item.ev-heart{border-left-color:var(--verde);}
+.hist-ev{font-size:11px;font-weight:700;min-width:90px;color:var(--texto);}
+.hist-dt{font-size:11px;font-family:'DM Mono',monospace;color:var(--texto3);white-space:nowrap;}
+.hist-det{font-size:10px;color:var(--texto3);margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+
 /* ACTION BUTTONS */
 .actions{display:flex;gap:5px;flex-wrap:wrap;}
 .btn-act{padding:4px 9px;border:none;border-radius:6px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
@@ -542,6 +557,27 @@ tbody tr:hover td{background:var(--cinza1);}
   </div>
 </div>
 
+<!-- MODAL HISTÓRICO DE ACESSO -->
+<div class="modal-overlay" id="modalHist" style="display:none" onclick="if(event.target===this)closeModalHist()">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-hdr">
+      <h3 id="histTitle">Histórico de Acesso</h3>
+      <button class="modal-close" onclick="closeModalHist()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="histOnlineStatus" style="margin-bottom:12px"></div>
+      <div style="font-size:11px;color:var(--texto3);margin-bottom:8px">Últimos 50 eventos — login, logout, heartbeat e atividade</div>
+      <div class="hist-list" id="histList">
+        <div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Carregando...</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModalHist()">Fechar</button>
+      <button class="btn-sm" onclick="verLogsUser(_histEmail)">Ver todos os logs →</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SURL   = 'https://uefnirdmhtsbpdxnonnd.supabase.co'
 const SKEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s'
@@ -683,26 +719,43 @@ function renderCorretores(q='') {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${q?'Nenhum resultado.':'Nenhum corretor.'}</td></tr>`
     return
   }
+  const now = Date.now()
   tbody.innerHTML = list.map(u => {
-    const ativo = u.status==='ativo'
-    const ass   = (fin.assinaturas||{})[u.id]
-    const plBadge  = ass ? badgePlano(ass.plano) : '<span style="color:var(--texto3);font-size:10px">—</span>'
-    const stBadge  = ass ? badgeStatus(ass.status) : '<span style="color:var(--texto3);font-size:10px">—</span>'
+    const ativo   = u.status==='ativo'
+    const ass     = (fin.assinaturas||{})[u.id]
+    const plBadge = ass ? badgePlano(ass.plano) : '<span style="color:var(--texto3);font-size:10px">—</span>'
+    const stBadge = ass ? badgeStatus(ass.status) : '<span style="color:var(--texto3);font-size:10px">—</span>'
+    const online  = u.last_seen_at && (now - new Date(u.last_seen_at).getTime()) < 5*60*1000
+    const dot     = online ? '<span class="dot-on" title="Online agora"></span>' : '<span class="dot-off" title="Offline"></span>'
+    let loginHtml
+    if (u.ultimo_login) {
+      loginHtml = `<div style="font-weight:600">${fmtDt(u.ultimo_login)}</div>`
+      if (online) {
+        loginHtml += `<div style="font-size:10px;color:var(--verde);font-weight:700;margin-top:2px">🟢 Online agora</div>`
+      } else if (u.last_seen_at && u.last_seen_at !== u.ultimo_login) {
+        loginHtml += `<div style="font-size:10px;color:var(--texto3);margin-top:2px">Visto: ${fmtDt(u.last_seen_at)}</div>`
+      }
+    } else {
+      loginHtml = online
+        ? `<div style="color:var(--verde);font-weight:700;font-size:11px">🟢 Online agora</div>`
+        : `<span style="color:var(--texto3)">Nunca</span>`
+    }
+    const lastSeenEsc = esc(u.last_seen_at||'')
     return `<tr>
       <td><strong>${esc(u.nome||'—')}</strong></td>
       <td class="mono" style="font-size:11px">${esc(u.email)}</td>
-      <td><span class="badge ${ativo?'b-ativo':'b-bloq'}">${ativo?'Ativo':'Bloqueado'}</span></td>
+      <td style="white-space:nowrap">${dot}<span class="badge ${ativo?'b-ativo':'b-bloq'}">${ativo?'Ativo':'Bloqueado'}</span></td>
       <td>${plBadge}</td>
       <td>${stBadge}</td>
       <td class="mono" style="font-size:11px">${fmtDate(u.data_criacao)}</td>
-      <td class="mono" style="font-size:11px">${fmtDt(u.ultimo_login)}</td>
+      <td style="font-size:11px">${loginHtml}</td>
       <td>
         <div class="actions">
           ${ativo
             ? `<button class="btn-act a-bloquear" onclick="toggleUser('${u.id}',true)">Bloquear</button>`
             : `<button class="btn-act a-desbloquear" onclick="toggleUser('${u.id}',false)">Desbloquear</button>`}
           <button class="btn-act a-editar" onclick="openModalFin('${u.id}','${esc(u.nome||'')}','${esc(u.email)}')">Plano</button>
-          <button class="btn-act a-logs" onclick="verLogsUser('${esc(u.email)}')">Logs</button>
+          <button class="btn-act a-logs" onclick="verHistorico('${esc(u.email)}','${lastSeenEsc}')">Histórico</button>
           <button class="btn-act a-deletar" onclick="deletarUser('${u.id}','${esc(u.email)}')">Excluir</button>
         </div>
       </td>
@@ -1303,6 +1356,61 @@ function copiarCredenciais(userId) {
     (valStr ? valStr+'\n' : '') +
     `\nEm caso de dúvidas: simulador.wc@gmail.com`
   navigator.clipboard.writeText(txt).then(()=>toast('Credenciais copiadas!','ok'))
+}
+
+// ── HISTÓRICO DE ACESSO ───────────────────────────────────────
+let _histEmail = ''
+
+async function verHistorico(email, lastSeenAt) {
+  _histEmail = email
+  document.getElementById('histTitle').textContent = `Histórico — ${email}`
+  document.getElementById('histList').innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Carregando...</div>'
+
+  const now     = Date.now()
+  const online  = lastSeenAt && (now - new Date(lastSeenAt).getTime()) < 5*60*1000
+  const statusEl = document.getElementById('histOnlineStatus')
+  statusEl.innerHTML = online
+    ? `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--verdeClaro);border-radius:var(--radius2);font-size:12px;font-weight:600;color:var(--verde)">
+         <span class="dot-on"></span>Online agora — última atividade: ${fmtDt(lastSeenAt)}
+       </div>`
+    : `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--cinza2);border-radius:var(--radius2);font-size:12px;color:var(--texto3)">
+         <span class="dot-off"></span>Offline — último acesso: ${lastSeenAt ? fmtDt(lastSeenAt) : 'nunca registrado'}
+       </div>`
+
+  document.getElementById('modalHist').style.display = 'flex'
+
+  const { data, error } = await _sb
+    .from('auth_logs')
+    .select('*')
+    .eq('email', email)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  const listEl = document.getElementById('histList')
+  if (error || !data?.length) {
+    listEl.innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Nenhum registro encontrado.</div>'
+    return
+  }
+
+  const evIcon  = { login:'🔑', logout:'🚪', page_view:'👁️', heartbeat:'💚', admin_create_user:'➕', admin_block:'🔒', admin_unblock:'🔓', admin_delete:'🗑️' }
+  const evClass = { login:'ev-login', logout:'ev-logout', heartbeat:'ev-heart', page_view:'ev-login' }
+
+  listEl.innerHTML = data.map(l => {
+    const ev  = l.action || l.event || l.evento || 'acesso'
+    const cls = evClass[ev] || ''
+    const ico = evIcon[ev] || '•'
+    const ua  = (l.user_agent||'').replace(/Mozilla\/[\d.]+ \(/,'').split(')')[0]
+    return `<div class="hist-item ${cls}">
+      <span class="hist-ev">${ico} ${esc(ev)}</span>
+      <span class="hist-dt">${fmtDt(l.created_at)}</span>
+      ${ua ? `<span class="hist-det" title="${esc(l.user_agent||'')}">${esc(ua.trim().slice(0,40))}</span>` : ''}
+    </div>`
+  }).join('')
+}
+
+function closeModalHist() {
+  document.getElementById('modalHist').style.display = 'none'
+  _histEmail = ''
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
