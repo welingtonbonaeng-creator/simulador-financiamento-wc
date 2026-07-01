@@ -2145,31 +2145,36 @@ function updTaxa() {
 }
 
 /* ── ABAS RESULTADO ── */
+let _valorizTimer = null;
 function atualizarValorizacao() {
   const d = window._simDadosVal;
   if (!d) return;
-  const pct = Math.max(1, parseFloat(document.getElementById('pctValorizacao')?.value) || 60) / 100;
-  const valorFuturo = d.vi * (1 + pct);
-  const seguro = d.segTotal || 0;
-  // Sempre lê a aba REAL ativa agora (não o sistemaAtivo congelado no momento
-  // do cálculo) — assim, ao trocar de aba sem reclicar "Calcular", o valor
-  // financiado mostrado já é o correto para aquele sistema (30% SAC / 25%
-  // PRICE em SBPE), evitando mostrar o mesmo financiamento nos dois.
+  const pct = Math.max(1, parseFloat(document.getElementById('pctValorizacao')?.value) || 60);
+  // Sempre lê a aba REAL ativa agora — SAC e PRICE têm financiados diferentes (SBPE 30%/25%)
   const _tabAgoraVal = document.querySelector('.res-tab.ton');
   const _sistemaAgoraVal = (_tabAgoraVal && _tabAgoraVal.textContent.includes('PRICE')) ? 'price' : 'sac';
   const finAgora = _sistemaAgoraVal === 'sac' ? (d.finSAC ?? d.fin) : (d.finPRICE ?? d.fin);
-  // Entrada real = tudo que o cliente paga além do banco: ato + parcelas obra + FGTS = vi - financiado
-  const entradaReal = d.vi - finAgora;
-  const lucro = valorFuturo - finAgora - entradaReal - seguro;
-  document.getElementById('valGrid').innerHTML = `
-    <div class="val-item azul"><div class="vi-lbl">Valor hoje</div><div class="vi-val azul">${fi(d.vi)}</div></div>
-    <div class="val-item azul"><div class="vi-lbl">Valorização est. (${Math.round(pct*100)}%)</div><div class="vi-val azul">${fi(d.vi * pct)}</div></div>
-    <div class="val-item"><div class="vi-lbl">Valor na entrega</div><div class="vi-val">${fi(valorFuturo)}</div></div>
-    <div class="val-item"><div class="vi-lbl">Financiado aprovado</div><div class="vi-val" style="color:var(--laranja)">${fi(finAgora)}</div></div>
-    <div class="val-item"><div class="vi-lbl">Entrada total (ato + obra + FGTS)</div><div class="vi-val" style="color:var(--texto2)">${fi(entradaReal)}</div></div>
-    ${seguro > 0 ? `<div class="val-item"><div class="vi-lbl">Seguro de obra pago</div><div class="vi-val" style="color:var(--vermelho)">− ${fi(seguro)}</div></div>` : ''}
-    <div class="val-item"><div class="vi-lbl">Lucro estimado</div><div class="vi-val" style="color:${lucro>=0?'var(--verde)':'var(--vermelho)'}">${fi(lucro)}</div></div>
-  `;
+  const seguro = d.segTotal || 0;
+  clearTimeout(_valorizTimer);
+  _valorizTimer = setTimeout(async function() {
+    const s = window._session;
+    if (!s) return;
+    const r = await fetch(_EDGE, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'calc_valorizacao', vi: d.vi, fin: finAgora, pctValorizacao: pct, seguroTotal: seguro })
+    }).then(function(x){ return x.json(); }).catch(function(){ return null; });
+    if (!r) return;
+    document.getElementById('valGrid').innerHTML = `
+      <div class="val-item azul"><div class="vi-lbl">Valor hoje</div><div class="vi-val azul">${fi(d.vi)}</div></div>
+      <div class="val-item azul"><div class="vi-lbl">Valorização est. (${pct}%)</div><div class="vi-val azul">${fi(d.vi * pct / 100)}</div></div>
+      <div class="val-item"><div class="vi-lbl">Valor na entrega</div><div class="vi-val">${fi(r.valorFuturo)}</div></div>
+      <div class="val-item"><div class="vi-lbl">Financiado aprovado</div><div class="vi-val" style="color:var(--laranja)">${fi(finAgora)}</div></div>
+      <div class="val-item"><div class="vi-lbl">Entrada total (ato + obra + FGTS)</div><div class="vi-val" style="color:var(--texto2)">${fi(r.entradaTotal)}</div></div>
+      ${seguro > 0 ? `<div class="val-item"><div class="vi-lbl">Seguro de obra pago</div><div class="vi-val" style="color:var(--vermelho)">− ${fi(seguro)}</div></div>` : ''}
+      <div class="val-item"><div class="vi-lbl">Lucro estimado</div><div class="vi-val" style="color:${r.lucro>=0?'var(--verde)':'var(--vermelho)'}">${fi(r.lucro)}</div></div>
+    `;
+  }, 280);
 }
 
 function setTab(t) {
@@ -2468,7 +2473,7 @@ function atualizarEconomia() {
 /* ══════════════════════════════════════
    GERAR PDF
    ══════════════════════════════════════ */
-function gerarPDF() {
+async function gerarPDF() {
   const d = window._simDadosVal;
   if (!d) { alert('Realize a simulação antes de exportar.'); return; }
 
@@ -2496,7 +2501,6 @@ function gerarPDF() {
   // simular() (d.finSAC / d.finPRICE), em vez do d.fin genérico que reflete
   // só o sistema que estava ativo quando o botão "Calcular" foi clicado.
   const finPDF = sistemaAtivo === 'sac' ? (d.finSAC ?? d.fin) : (d.finPRICE ?? d.fin);
-  const totalEntradaPDF = d.vi - finPDF; // entrada total = venda − financiado (ato + parcelas obra + FGTS)
 
   // Seguro de obra: SEMPRE recalculado aqui com finPDF e o sistema realmente
   // ativo agora (em vez de ler d.segTotal, que reflete só o sistema que
@@ -2512,7 +2516,14 @@ function gerarPDF() {
     _dtLancPDF, _dtEntregaPDF
   ).total;
 
-  const lucro = vEntrega - finPDF - totalEntradaPDF - seguro;
+  const _s = window._session;
+  const _vlRes = _s ? await fetch(_EDGE, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + _s.access_token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'calc_valorizacao', vi: d.vi, fin: finPDF, pctValorizacao: pct, seguroTotal: seguro })
+  }).then(function(x){ return x.json(); }).catch(function(){ return null; }) : null;
+  const totalEntradaPDF = _vlRes ? _vlRes.entradaTotal : (d.vi - finPDF);
+  const lucro = _vlRes ? _vlRes.lucro : (vEntrega - d.vi - seguro);
   const eco = window._econDados || {};
   const faixa = window.fx ? window.fx.nome : '—';
   let parcelaDestaque, parcelaDetalhe;
