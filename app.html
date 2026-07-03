@@ -1029,32 +1029,35 @@ function getPctRenda(isSACOverride) {
   }
   return 0.30;
 }
-function getP100k(isSACOverride) {
-  if (!sub) return 776;
-  // Regra de aprovação bancária: MCMV (Faixas 1-4) usa parcela PRICE como referência
-  // para o limite de 30% da renda; SBPE usa a parcela SAC (1ª, maior) — mais
-  // conservadora, evitando aprovar financiamento que a parcela real SAC não suporta.
-  if (fx && fx.sbpe && sub.p100k_sac) {
-    const isSAC = isSACOverride !== undefined ? isSACOverride : (() => {
-      const tabAtivo = document.querySelector('.res-tab.ton');
-      return !tabAtivo || tabAtivo.textContent.includes('SAC');
-    })();
-    return isSAC ? sub.p100k_sac : sub.p100k;
-  }
-  return sub.p100k; // MCMV: nominal/PRICE
-}
-
-/* ── p100k DINÂMICO PARA SIRC ──────────────────────────────────────────
-   Caixa calcula o prazo máximo a partir da IDADE NA ENTREGA (idade atual
-   + meses de obra), não da idade hoje. Prazo mais curto → p100k maior →
-   menos financiamento aprovado pelo mesmo SIRC.
+/* ── p100k DINÂMICO ────────────────────────────────────────────────────
+   SAC: usa coef da 1ª parcela (amort + juros = 1/n + i) — a maior.
+   PRICE: usa coef da parcela fixa (tabela Price).
    ────────────────────────────────────────────────────────────────────── */
-function calcP100kDinamico(taxaAnual, prazoMeses) {
-  if (!taxaAnual || !prazoMeses) return getP100k();
+function calcP100kDinamico(taxaAnual, prazoMeses, isSAC) {
+  if (!taxaAnual || !prazoMeses) return sub ? sub.p100k : 776;
   const i = taxaAnual / 100 / 12;
   const n = prazoMeses;
+  if (isSAC) return (1 / n + i) * 100000;
   const fator = Math.pow(1 + i, n);
   return (i * fator) / (fator - 1) * 100000;
+}
+
+function getP100k(isSACOverride) {
+  if (!sub) return 776;
+  const isSAC = isSACOverride !== undefined ? isSACOverride : (() => {
+    const tabAtivo = document.querySelector('.res-tab.ton');
+    return !tabAtivo || tabAtivo.textContent.includes('SAC');
+  })();
+  if (fx && fx.sbpe && sub.p100k_sac) {
+    return isSAC ? sub.p100k_sac : sub.p100k;
+  }
+  // MCMV: usa p100k dinâmico — SAC usa coef da 1ª parcela (maior), PRICE usa tabela
+  if (isSAC) {
+    const taxa = (tipoTaxa === 'n' ? sub.n : sub.e);
+    const prazoAnos = parseInt(document.getElementById('prazoSlider')?.value) || 30;
+    return calcP100kDinamico(taxa, prazoAnos * 12, true);
+  }
+  return sub.p100k;
 }
 
 function getPrazoSIRCMeses() {
@@ -1084,18 +1087,12 @@ function getP100kSIRC(isSACOverride) {
   const prazoMeses = getPrazoSIRCMeses();
   const i         = taxa / 100 / 12;
 
-  // Espelha getP100k(): SBPE verifica o tab ativo; MCMV sempre usa PRICE como referência
-  if (fx && fx.sbpe) {
-    const isSAC = isSACOverride !== undefined ? isSACOverride : (() => {
-      const tabAtivo = document.querySelector('.res-tab.ton');
-      return !tabAtivo || tabAtivo.textContent.includes('SAC');
-    })();
-    if (isSAC) {
-      // SAC: 1ª parcela = fin × (1/n + i)
-      return (1 / prazoMeses + i) * 100000;
-    }
-  }
-  return calcP100kDinamico(taxa, prazoMeses); // PRICE
+  const isSAC = isSACOverride !== undefined ? isSACOverride : (() => {
+    const tabAtivo = document.querySelector('.res-tab.ton');
+    return !tabAtivo || tabAtivo.textContent.includes('SAC');
+  })();
+  if (isSAC) return (1 / prazoMeses + i) * 100000; // SAC: 1ª parcela (maior)
+  return calcP100kDinamico(taxa, prazoMeses, false); // PRICE
 }
 
 /* ══════════════════════════════════════
