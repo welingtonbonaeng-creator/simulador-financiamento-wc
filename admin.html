@@ -159,6 +159,17 @@ tbody tr:hover td{background:var(--cinza1);}
 .a-deletar{background:var(--cinza2);color:var(--texto2);}
 .a-editar{background:var(--azulclaro);color:var(--azul);}
 .a-logs{background:var(--roxoClaro);color:var(--roxo);}
+.a-sims{background:#FEF3E8;color:#C05A00;}
+
+/* SIMULAÇÕES MODAL */
+.sim-list{max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.sim-item{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:8px 12px;background:var(--cinza1);border-radius:var(--radius2);border-left:3px solid;}
+.sim-item.sim-caixa{border-left-color:#1E40AF;background:#F0F7FF;}
+.sim-item.sim-const{border-left-color:#1B6E3F;background:#F0FDF4;}
+.sim-tipo{font-size:11px;font-weight:700;}
+.sim-meta{font-size:11px;color:var(--texto3);}
+.sim-dt{font-size:10px;font-family:'DM Mono',monospace;color:var(--texto3);white-space:nowrap;text-align:right;}
+.sim-badge-count{display:inline-flex;align-items:center;gap:4px;background:#FEF3E8;color:#C05A00;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;}
 
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:500;padding:1rem;}
@@ -323,7 +334,7 @@ tbody tr:hover td{background:var(--cinza1);}
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Nome</th><th>E-mail</th><th>Status</th><th>Plano</th><th>Assinatura</th><th>Criado em</th><th>Último login</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Nome</th><th>E-mail</th><th>Status</th><th>Plano</th><th>Assinatura</th><th>Criado em</th><th>Último login</th><th>Sims</th><th>Ações</th></tr></thead>
             <tbody id="usersBody"><tr class="empty-row"><td colspan="8">Carregando...</td></tr></tbody>
           </table>
         </div>
@@ -578,6 +589,26 @@ tbody tr:hover td{background:var(--cinza1);}
   </div>
 </div>
 
+<!-- MODAL SIMULAÇÕES -->
+<div class="modal-overlay" id="modalSims" style="display:none" onclick="if(event.target===this)closeModalSims()">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-hdr" style="background:linear-gradient(135deg,#C05A00,#E07A00)">
+      <h3 id="simsTitle" style="color:#fff">Simulações</h3>
+      <button class="modal-close" onclick="closeModalSims()" style="color:#fff;background:rgba(255,255,255,.15)">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="simsResumo" style="margin-bottom:12px"></div>
+      <div style="font-size:11px;color:var(--texto3);margin-bottom:8px">Até 200 simulações mais recentes — mais novo primeiro</div>
+      <div class="sim-list" id="simsList">
+        <div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Carregando...</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModalSims()">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SURL   = 'https://uefnirdmhtsbpdxnonnd.supabase.co'
 const SKEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s'
@@ -716,7 +747,7 @@ function renderCorretores(q='') {
     : _users
   const tbody = document.getElementById('usersBody')
   if (!list.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${q?'Nenhum resultado.':'Nenhum corretor.'}</td></tr>`
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${q?'Nenhum resultado.':'Nenhum corretor.'}</td></tr>`
     return
   }
   const now = Date.now()
@@ -749,6 +780,11 @@ function renderCorretores(q='') {
       <td>${stBadge}</td>
       <td class="mono" style="font-size:11px">${fmtDate(u.data_criacao)}</td>
       <td style="font-size:11px">${loginHtml}</td>
+      <td style="text-align:center">
+        ${u.sim_count > 0
+          ? `<span class="sim-badge-count" title="${u.sim_count} simulações realizadas">📊 ${u.sim_count}</span>`
+          : `<span style="color:var(--texto3);font-size:10px">—</span>`}
+      </td>
       <td>
         <div class="actions">
           ${ativo
@@ -756,6 +792,9 @@ function renderCorretores(q='') {
             : `<button class="btn-act a-desbloquear" onclick="toggleUser('${u.id}',false)">Desbloquear</button>`}
           <button class="btn-act a-editar" onclick="openModalFin('${u.id}','${esc(u.nome||'')}','${esc(u.email)}')">Plano</button>
           <button class="btn-act a-logs" onclick="verHistorico('${esc(u.email)}','${lastSeenEsc}')">Histórico</button>
+          ${u.sim_count > 0
+            ? `<button class="btn-act a-sims" onclick="verSimulacoes('${esc(u.email)}','${esc(u.nome||u.email)}')">📊 Sims</button>`
+            : ''}
           <button class="btn-act a-deletar" onclick="deletarUser('${u.id}','${esc(u.email)}')">Excluir</button>
         </div>
       </td>
@@ -1407,6 +1446,70 @@ async function verHistorico(email, lastSeenAt) {
 function closeModalHist() {
   document.getElementById('modalHist').style.display = 'none'
   _histEmail = ''
+}
+
+// ── SIMULAÇÕES POR USUÁRIO ────────────────────────────────────
+async function verSimulacoes(email, nome) {
+  document.getElementById('simsTitle').textContent = `Simulações — ${nome}`
+  document.getElementById('simsResumo').innerHTML = ''
+  document.getElementById('simsList').innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Carregando...</div>'
+  document.getElementById('modalSims').style.display = 'flex'
+
+  const resp = await call('get_user_sims', { email })
+  const data = resp?.sims
+
+  if (!data?.length) {
+    document.getElementById('simsList').innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Nenhuma simulação registrada.</div>'
+    return
+  }
+
+  // Resumo
+  const totalCaixa = data.filter(s => s.action === 'simulacao').length
+  const totalConst = data.filter(s => s.action === 'simulacao_construtora').length
+  document.getElementById('simsResumo').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px">
+      <div style="background:#F0F7FF;border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-size:10px;font-weight:700;color:#1E40AF;text-transform:uppercase;margin-bottom:3px">Total</div>
+        <div style="font-size:20px;font-weight:800;color:#1E40AF">${data.length}</div>
+      </div>
+      <div style="background:#EBF5FF;border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-size:10px;font-weight:700;color:#1E40AF;text-transform:uppercase;margin-bottom:3px">Caixa</div>
+        <div style="font-size:20px;font-weight:800;color:#1E40AF">${totalCaixa}</div>
+      </div>
+      <div style="background:#F0FDF4;border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-size:10px;font-weight:700;color:#1B6E3F;text-transform:uppercase;margin-bottom:3px">Construtora</div>
+        <div style="font-size:20px;font-weight:800;color:#1B6E3F">${totalConst}</div>
+      </div>
+    </div>`
+
+  // Lista
+  document.getElementById('simsList').innerHTML = data.map(s => {
+    const isCaixa = s.action === 'simulacao'
+    const cls     = isCaixa ? 'sim-caixa' : 'sim-const'
+    let meta = {}
+    try { meta = JSON.parse(s.user_agent || '{}') } catch {}
+    const tipo   = isCaixa ? '🏦 Caixa' : '🏗️ Construtora'
+    const faixa  = meta.faixa ? `Faixa: ${meta.faixa.replace('f','').replace('sbpe','SBPE')}` : ''
+    const viStr  = meta.vi ? `Imóvel: ${fbr(meta.vi)}` : ''
+    const pctStr = meta.pctPre ? `Pré ${meta.pctPre}%` : ''
+    const detalhe = [faixa, viStr, pctStr].filter(Boolean).join(' · ')
+    return `<div class="sim-item ${cls}">
+      <div>
+        <div class="sim-tipo">${tipo}</div>
+        ${detalhe ? `<div class="sim-meta">${detalhe}</div>` : ''}
+      </div>
+      <div></div>
+      <div class="sim-dt">${fmtDt(s.created_at)}</div>
+    </div>`
+  }).join('')
+}
+
+function fbr(v) {
+  return 'R$' + Math.round(v/1000) + 'k'
+}
+
+function closeModalSims() {
+  document.getElementById('modalSims').style.display = 'none'
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
