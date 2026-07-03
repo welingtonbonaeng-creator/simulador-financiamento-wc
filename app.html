@@ -1051,13 +1051,11 @@ function getP100k(isSACOverride) {
   if (fx && fx.sbpe && sub.p100k_sac) {
     return isSAC ? sub.p100k_sac : sub.p100k;
   }
-  // MCMV: usa p100k dinâmico — SAC usa coef da 1ª parcela (maior), PRICE usa tabela
-  if (isSAC) {
-    const taxa = (tipoTaxa === 'n' ? sub.n : sub.e);
-    const prazoAnos = parseInt(document.getElementById('prazoSlider')?.value) || 30;
-    return calcP100kDinamico(taxa, prazoAnos * 12, true);
-  }
-  return sub.p100k;
+  // MCMV: p100k dinâmico para SAC e PRICE baseado no prazo selecionado
+  // (o valor da tabela é referência para 30 anos; prazos maiores reduzem o coef e aumentam o cap)
+  const taxa2 = (tipoTaxa === 'n' ? sub.n : sub.e);
+  const prazoAnos2 = parseInt(document.getElementById('prazoSlider')?.value) || 30;
+  return calcP100kDinamico(taxa2, prazoAnos2 * 12, isSAC);
 }
 
 function getPrazoSIRCMeses() {
