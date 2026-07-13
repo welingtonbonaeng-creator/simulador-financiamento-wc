@@ -300,7 +300,7 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
 <section class="hero">
   <div class="hero-inner">
     <div class="hero-content">
-      <div class="hero-badge"><span></span> 🔥 Oferta Founders — Apenas 10 vagas</div>
+      <div class="hero-badge"><span></span> 🔥 Plano anual sai por R$50/mês</div>
       <h1>Feche mais propostas.<br/>Perca menos <span>tempo</span>.</h1>
       <p class="hero-sub">O SimulaPro calcula financiamento imobiliário em minutos — taxas oficiais, regras da Caixa, FGTS, seguro e renda mínima. Tudo pronto para apresentar ao cliente.</p>
       <div class="hero-ctas">
@@ -782,9 +782,9 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
       <p class="section-sub">Uma venda a mais por mês já paga o plano por anos. Sem contratos, cancela quando quiser.</p>
     </div>
     <div class="preco-grid">
-      <div class="preco-card blurred fade-up">
+      <div class="preco-card fade-up">
         <div class="preco-nome">Plano Mensal</div>
-        <div class="preco-valor">R$97<small>/mês</small></div>
+        <div class="preco-valor">R$70<small>/mês</small></div>
         <div class="preco-periodo">Cobrado mensalmente · Cancela quando quiser</div>
         <ul class="preco-features">
           <li>Simulações ilimitadas</li>
@@ -793,23 +793,21 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
           <li>Login e senha exclusivos</li>
           <li>Atualizações automáticas de taxas</li>
         </ul>
-        <a href="#" class="btn-preco azul">Assinar Mensal</a>
+        <a href="#" class="btn-preco azul" onclick="abrirCheckout('mensal');return false;">Assinar Mensal</a>
       </div>
-      <div class="preco-card destaque blurred fade-up">
-        <div class="preco-badge">🔥 OFERTA FOUNDERS</div>
-        <div class="preco-nome">Plano Founders</div>
-        <div class="preco-valor">R$67<small>/mês</small></div>
-        <div class="preco-periodo">Preço fixo para sempre · Primeiros 10 corretores</div>
+      <div class="preco-card destaque fade-up">
+        <div class="preco-badge">🔥 MELHOR PREÇO</div>
+        <div class="preco-nome">Plano Anual</div>
+        <div class="preco-valor">R$50<small>/mês</small></div>
+        <div class="preco-periodo">R$600 cobrado à vista uma vez por ano</div>
         <ul class="preco-features">
           <li class="laranja">Tudo do plano mensal</li>
-          <li class="laranja">Preço travado — nunca aumenta</li>
+          <li class="laranja">Economia de R$240 por ano</li>
+          <li class="laranja">Preço travado pelos 12 meses</li>
           <li class="laranja">Acesso prioritário a novos recursos</li>
           <li class="laranja">Suporte direto com o desenvolvedor</li>
-          <li class="laranja">Badge exclusivo de Corretor Founders</li>
         </ul>
-        <a href="#" class="btn-preco laranja">Garantir Minha Vaga →</a>
-        <div class="vagas">7 de 10 vagas preenchidas</div>
-        <div class="vagas-bar"><div class="vagas-fill" id="vagasFill"></div></div>
+        <a href="#" class="btn-preco laranja" onclick="abrirCheckout('anual');return false;">Assinar Plano Anual →</a>
       </div>
     </div>
 
@@ -850,6 +848,36 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
       <div class="success-icon">✅</div>
       <h4>Solicitação enviada!</h4>
       <p>Você receberá um e-mail com seu acesso em até 24 horas. Fique de olho na caixa de entrada.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal checkout (assinatura Asaas) -->
+<div class="modal-overlay" id="modalCheckout">
+  <div class="modal-box">
+    <div id="checkoutForm">
+      <h3 id="checkoutTitulo">💳 Assinar SimulaPro</h3>
+      <p id="checkoutSub">Preencha seus dados para gerar o pagamento — cartão, Pix ou boleto.</p>
+      <div class="modal-field">
+        <label for="ckNome">Nome completo</label>
+        <input type="text" id="ckNome" placeholder="Ex: João Silva" autocomplete="name"/>
+      </div>
+      <div class="modal-field">
+        <label for="ckEmail">E-mail</label>
+        <input type="email" id="ckEmail" placeholder="seu@email.com" autocomplete="email"/>
+      </div>
+      <div class="modal-field">
+        <label for="ckCpf">CPF</label>
+        <input type="text" id="ckCpf" placeholder="000.000.000-00" autocomplete="off"/>
+      </div>
+      <div class="modal-field">
+        <label for="ckTel">WhatsApp / Telefone</label>
+        <input type="tel" id="ckTel" placeholder="(21) 99999-9999" autocomplete="tel"/>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-modal-cancel" onclick="fecharCheckout()">Cancelar</button>
+        <button class="btn-modal-submit" id="btnCheckout" onclick="enviarCheckout()">Ir para pagamento →</button>
+      </div>
     </div>
   </div>
 </div>
@@ -905,9 +933,9 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
       </div>
       <div class="faq-item fade-up">
         <div class="faq-q" onclick="toggleFaq(this)">
-          O preço Founders é realmente fixo para sempre? <span class="faq-arrow">⌄</span>
+          Qual a diferença entre o plano mensal e o anual? <span class="faq-arrow">⌄</span>
         </div>
-        <div class="faq-a"><div class="faq-a-inner">Sim. Os primeiros 10 corretores que assinarem garantem um preço especial fixo para sempre — mesmo quando o preço regular subir. É o benefício de acreditar no produto desde o início.</div></div>
+        <div class="faq-a"><div class="faq-a-inner">O plano mensal custa R$70 e é cobrado todo mês. O plano anual sai por R$50/mês — cobrado uma única vez por ano (R$600) — uma economia de R$240 no período. Os dois dão acesso completo ao SimulaPro.</div></div>
       </div>
       <div class="faq-item fade-up">
         <div class="faq-q" onclick="toggleFaq(this)">
@@ -987,11 +1015,6 @@ function toggleFaq(el){
   if(!isOpen)item.classList.add('open');
 }
 
-// Vagas fill animation
-setTimeout(function(){
-  var fill=document.getElementById('vagasFill');
-  if(fill)fill.style.width='70%';
-},500);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -1018,6 +1041,55 @@ function fecharModalTeste(){
 document.getElementById('modalTeste').addEventListener('click',function(e){
   if(e.target===this)fecharModalTeste();
 });
+
+var _planoSelecionado = null;
+function abrirCheckout(plano){
+  _planoSelecionado = plano;
+  var nomes = { mensal:'Plano Mensal — R$70/mês', anual:'Plano Anual — R$600/ano (R$50/mês)' };
+  document.getElementById('checkoutTitulo').textContent = '💳 Assinar ' + (plano==='anual'?'Plano Anual':'Plano Mensal');
+  document.getElementById('checkoutSub').textContent = nomes[plano] + ' — preencha seus dados para gerar o pagamento.';
+  document.getElementById('modalCheckout').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function fecharCheckout(){
+  document.getElementById('modalCheckout').classList.remove('open');
+  document.body.style.overflow='';
+  document.getElementById('ckNome').value='';
+  document.getElementById('ckEmail').value='';
+  document.getElementById('ckCpf').value='';
+  document.getElementById('ckTel').value='';
+}
+document.getElementById('modalCheckout').addEventListener('click',function(e){
+  if(e.target===this)fecharCheckout();
+});
+
+async function enviarCheckout(){
+  var nome=document.getElementById('ckNome').value.trim();
+  var email=document.getElementById('ckEmail').value.trim();
+  var cpf=document.getElementById('ckCpf').value.replace(/\D/g,'');
+  var tel=document.getElementById('ckTel').value.trim();
+  if(!nome){alert('Informe seu nome completo.');return;}
+  if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
+  if(cpf.length!==11){alert('Informe um CPF válido.');return;}
+  var btn=document.getElementById('btnCheckout');
+  btn.disabled=true;btn.textContent='Gerando pagamento...';
+  try{
+    var res=await _sb.functions.invoke('admin-action',{body:{
+      action:'asaas_checkout',
+      payload:{ nome:nome, email:email, cpfCnpj:cpf, telefone:tel, plano:_planoSelecionado }
+    }});
+    if(res.error) throw res.error;
+    if(res.data && res.data.error) throw new Error(res.data.error);
+    if(res.data && res.data.checkoutUrl){
+      window.location.href = res.data.checkoutUrl;
+    } else {
+      throw new Error('Não recebemos o link de pagamento.');
+    }
+  }catch(e){
+    alert('Erro ao gerar pagamento: ' + (e.message||'tente novamente') );
+    btn.disabled=false;btn.textContent='Ir para pagamento →';
+  }
+}
 
 async function enviarSolicitacaoTeste(){
   var nome=document.getElementById('testeNome').value.trim();
