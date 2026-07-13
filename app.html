@@ -402,6 +402,14 @@ async function _confirmarTroca(){
       <div class="field"><label>Idade</label><input type="text" id="idadeDisplay" readonly placeholder="—"/></div>
     </div>
 
+    <!-- Residência/trabalho na região do imóvel — regra MCMV -->
+    <div class="sub" style="margin-top:2px">Cliente reside ou trabalha na região do imóvel? — regra MCMV</div>
+    <div class="trow">
+      <div class="ttog ton-ok" id="btnRegSim" onclick="setResidenteRegiao(true)">✅ Sim</div>
+      <div class="ttog" id="btnRegNao" onclick="setResidenteRegiao(false)">❌ Não</div>
+    </div>
+    <div id="avRegiao" class="av er" style="display:none">⚠️ Cliente fora da região do imóvel — MCMV não se aplica. Enquadramento automático em SBPE, independente da renda.</div>
+
     <!-- SIRC — Restrição de crédito (opcional) -->
     <div style="background:#FFFBEB;border:1.5px solid #D97706;border-radius:var(--radius2);padding:10px 13px;margin-bottom:9px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap">
@@ -933,6 +941,22 @@ let SEGURO_FAIXAS = null;
 
 /* ── ESTADO GLOBAL ── */
 let fx = null, sub = null, tipoTaxa = 'n', prazoMaxAnos = 35, fgtsPode = false, usaRedutor = true;
+let residenteRegiao = true;
+
+// Regra MCMV: só se enquadra quem reside ou trabalha na região do imóvel.
+// Fora da região → SBPE direto, independente da renda.
+function getFaixaCliente(renda) {
+  if (!residenteRegiao) return FAIXAS[FAIXAS.length - 1];
+  return FAIXAS.find(f => renda <= f.rMax) || FAIXAS[FAIXAS.length - 1];
+}
+
+function setResidenteRegiao(sim) {
+  residenteRegiao = sim;
+  document.getElementById('btnRegSim').className = 'ttog' + (sim ? ' ton-ok' : '');
+  document.getElementById('btnRegNao').className = 'ttog' + (!sim ? ' ton-er' : '');
+  document.getElementById('avRegiao').style.display = sim ? 'none' : 'block';
+  onRenda();
+}
 let finManual = false; // quando true, vFinanciado é editável e não é sobrescrito pelo cálculo
 
 /* ══════════════════════════════════════
@@ -1125,7 +1149,7 @@ function onRenda() {
 
   if (!r) { card.className = 'fcard'; blocoTaxa.style.display = 'none'; fx = null; sub = null; return; }
 
-  fx = FAIXAS.find(f => r <= f.rMax) || FAIXAS[4];
+  fx = getFaixaCliente(r);
   sub = fx.subs.find(s => r <= s.a) || fx.subs[fx.subs.length - 1];
   usaRedutor = true; // reset ao trocar de faixa: começa "com redutor" por padrão
 
@@ -1164,7 +1188,13 @@ function atualizarCardFaixa() {
   if (sisSacSub)   sisSacSub.textContent   = fx.sbpe ? 'Parcelas decrescentes · 90% da av.' : 'Parcelas decrescentes · 80%';
   if (sisPriceSub) sisPriceSub.textContent = fx.sbpe ? 'Parcela fixa · 80% da av.' : 'Parcela fixa · 80%';
 
-  if (fx.sbpe) {
+  if (fx.sbpe && !residenteRegiao) {
+    card.className = 'fcard show fsbpe';
+    document.getElementById('fcTit').textContent = 'SBPE — Cliente fora da região do imóvel (MCMV não se aplica)';
+    document.getElementById('fcInfo').textContent =
+      'Cliente não reside nem trabalha na região do imóvel, então não se enquadra no MCMV independente da renda. ' +
+      'Sistema SBPE: PRICE financia até 80% da avaliação · SAC financia até 90% da avaliação · Taxa: 11,49% a.a.';
+  } else if (fx.sbpe) {
     card.className = 'fcard show fsbpe';
     document.getElementById('fcTit').textContent = 'SBPE — Renda acima de R$ 13.000 (fora do MCMV)';
     document.getElementById('fcInfo').textContent =
@@ -1695,7 +1725,7 @@ function onObra() {
   // em qualquer ordem em relação ao evento de renda.
   const rendaAtual = pv(document.getElementById('renda')?.value);
   if (rendaAtual) {
-    fx = FAIXAS.find(f => rendaAtual <= f.rMax) || FAIXAS[4];
+    fx = getFaixaCliente(rendaAtual);
     sub = fx.subs.find(s => rendaAtual <= s.a) || fx.subs[fx.subs.length - 1];
   }
 
@@ -2429,6 +2459,7 @@ async function simular() {
         dtEntrega:    document.getElementById('dtEntrega').value,
         dtLancamento: document.getElementById('dtLancamento').value,
         sistemaAtivo,
+        residenteRegiao,
       })
     });
 
