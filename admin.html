@@ -1023,7 +1023,7 @@ async function loadLogs() {
   document.getElementById('logsBody').innerHTML='<tr class="empty-row"><td colspan="4">Carregando...</td></tr>'
   try {
     const { data, error } = await _sb
-      .from('auth_logs')
+      .from('events')
       .select('*')
       .order('created_at',{ ascending:false })
       .limit(500)
@@ -1051,7 +1051,7 @@ function renderLogs(rows) {
   document.getElementById('btnLogNext').disabled = start+LOG_PG >= rows.length
   if (!page.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="4">' +
-      (_allLogs.length ? 'Nenhum resultado.' : 'Nenhum log disponível. Verifique as permissões da tabela auth_logs no Supabase.') +
+      (_allLogs.length ? 'Nenhum resultado.' : 'Nenhum log disponível. Verifique as permissões da tabela events no Supabase.') +
       '</td></tr>'
     return
   }
@@ -1062,7 +1062,7 @@ function renderLogs(rows) {
       <td class="mono" style="font-size:11px;white-space:nowrap">${fmtDt(l.created_at)}</td>
       <td class="mono" style="font-size:11px">${esc(l.email||l.user_email||'—')}</td>
       <td><span class="badge ${evCls}">${esc(ev)}</span></td>
-      <td style="font-size:11px;color:var(--texto3)">${esc(String(l.details||l.detalhes||l.ip||''))}</td>
+      <td style="font-size:11px;color:var(--texto3)">${esc(l.details&&typeof l.details==='object'?JSON.stringify(l.details):String(l.details||l.detalhes||l.user_agent||''))}</td>
     </tr>`
   }).join('')
 }
@@ -1514,8 +1514,8 @@ async function verSimulacoes(email, nome) {
   document.getElementById('simsList').innerHTML = data.map(s => {
     const isCaixa = s.action === 'simulacao'
     const cls     = isCaixa ? 'sim-caixa' : 'sim-const'
-    let meta = {}
-    try { meta = JSON.parse(s.user_agent || '{}') } catch {}
+    let meta = s.details || {}
+    if (!s.details && s.user_agent) { try { meta = JSON.parse(s.user_agent) } catch {} }
     const tipo   = isCaixa ? '🏦 Caixa' : '🏗️ Construtora'
     const faixa  = meta.faixa ? `Faixa: ${meta.faixa.replace('f','').replace('sbpe','SBPE')}` : ''
     const viStr  = meta.vi ? `Imóvel: ${fbr(meta.vi)}` : ''
