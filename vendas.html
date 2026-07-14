@@ -815,7 +815,7 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
     <div class="teste-card fade-up">
       <div class="teste-card-icon">🧪</div>
       <h3>Quer testar antes de assinar?</h3>
-      <p>Solicite um acesso de teste gratuito por 15 dias. Sem cartão de crédito, sem compromisso.</p>
+      <p>Solicite um acesso de teste gratuito por 7 dias. Sem cartão de crédito, sem compromisso.</p>
       <button class="btn-teste" onclick="abrirModalTeste()">Solicitar Acesso de Teste</button>
     </div>
   </div>
@@ -826,7 +826,7 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
   <div class="modal-box">
     <div id="modalForm">
       <h3>🧪 Solicitar Acesso de Teste</h3>
-      <p>Preencha os dados abaixo. Você receberá as credenciais no seu e-mail em até 24h.</p>
+      <p>Preencha os dados abaixo. As credenciais chegam no seu e-mail em segundos.</p>
       <div class="modal-field">
         <label for="testeNome">Nome completo</label>
         <input type="text" id="testeNome" placeholder="Ex: João Silva" autocomplete="name"/>
@@ -838,6 +838,10 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
       <div class="modal-field">
         <label for="testeTel">WhatsApp / Telefone</label>
         <input type="tel" id="testeTel" placeholder="(21) 99999-9999" autocomplete="tel"/>
+      </div>
+      <div class="modal-field" style="display:flex;align-items:flex-start;gap:8px;margin-top:4px">
+        <input type="checkbox" id="testeTermos" style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer"/>
+        <label for="testeTermos" style="font-size:12px;font-weight:400;color:#475569;line-height:1.5;cursor:pointer">Li e aceito os <a href="termos.html" target="_blank" rel="noopener" style="color:#0B3D91;font-weight:600">Termos de Uso e a Política de Privacidade</a>.</label>
       </div>
       <div class="modal-btns">
         <button class="btn-modal-cancel" onclick="fecharModalTeste()">Cancelar</button>
@@ -873,6 +877,10 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
       <div class="modal-field">
         <label for="ckTel">WhatsApp / Telefone</label>
         <input type="tel" id="ckTel" placeholder="(21) 99999-9999" autocomplete="tel"/>
+      </div>
+      <div class="modal-field" style="display:flex;align-items:flex-start;gap:8px;margin-top:4px">
+        <input type="checkbox" id="ckTermos" style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer"/>
+        <label for="ckTermos" style="font-size:12px;font-weight:400;color:#475569;line-height:1.5;cursor:pointer">Li e aceito os <a href="termos.html" target="_blank" rel="noopener" style="color:#0B3D91;font-weight:600">Termos de Uso e a Política de Privacidade</a>.</label>
       </div>
       <div class="modal-btns">
         <button class="btn-modal-cancel" onclick="fecharCheckout()">Cancelar</button>
@@ -967,6 +975,7 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
       <a href="#features">Funcionalidades</a>
       <a href="#preco">Preços</a>
       <a href="#faq">FAQ</a>
+      <a href="termos.html">Termos de Uso e Privacidade</a>
       <a href="index.html">Entrar</a>
     </div>
     <div class="footer-copy">© 2026 SimulaPro · Todos os direitos reservados</div>
@@ -1037,6 +1046,7 @@ function fecharModalTeste(){
   document.getElementById('testeNome').value='';
   document.getElementById('testeEmail').value='';
   document.getElementById('testeTel').value='';
+  document.getElementById('testeTermos').checked=false;
 }
 document.getElementById('modalTeste').addEventListener('click',function(e){
   if(e.target===this)fecharModalTeste();
@@ -1058,6 +1068,7 @@ function fecharCheckout(){
   document.getElementById('ckEmail').value='';
   document.getElementById('ckCpf').value='';
   document.getElementById('ckTel').value='';
+  document.getElementById('ckTermos').checked=false;
 }
 document.getElementById('modalCheckout').addEventListener('click',function(e){
   if(e.target===this)fecharCheckout();
@@ -1068,15 +1079,17 @@ async function enviarCheckout(){
   var email=document.getElementById('ckEmail').value.trim();
   var cpf=document.getElementById('ckCpf').value.replace(/\D/g,'');
   var tel=document.getElementById('ckTel').value.trim();
+  var aceitouTermos=document.getElementById('ckTermos').checked;
   if(!nome){alert('Informe seu nome completo.');return;}
   if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
   if(cpf.length!==11){alert('Informe um CPF válido.');return;}
+  if(!aceitouTermos){alert('Para continuar, marque que você leu e aceita os Termos de Uso e a Política de Privacidade.');return;}
   var btn=document.getElementById('btnCheckout');
   btn.disabled=true;btn.textContent='Gerando pagamento...';
   try{
     var res=await _sb.functions.invoke('admin-action',{body:{
       action:'asaas_checkout',
-      payload:{ nome:nome, email:email, cpfCnpj:cpf, telefone:tel, plano:_planoSelecionado }
+      payload:{ nome:nome, email:email, cpfCnpj:cpf, telefone:tel, plano:_planoSelecionado, aceitouTermos:true, userAgent:navigator.userAgent }
     }});
     if(res.error) throw res.error;
     if(res.data && res.data.error) throw new Error(res.data.error);
@@ -1095,14 +1108,16 @@ async function enviarSolicitacaoTeste(){
   var nome=document.getElementById('testeNome').value.trim();
   var email=document.getElementById('testeEmail').value.trim();
   var tel=document.getElementById('testeTel').value.trim();
+  var aceitouTermos=document.getElementById('testeTermos').checked;
   if(!nome){alert('Informe seu nome completo.');return;}
   if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
+  if(!aceitouTermos){alert('Para continuar, marque que você leu e aceita os Termos de Uso e a Política de Privacidade.');return;}
   var btn=document.getElementById('btnEnviarTeste');
   btn.disabled=true;btn.textContent='Enviando...';
   try{
     var res=await _sb.functions.invoke('admin-action',{body:{
       action:'submit_request',
-      payload:{ nome:nome, email:email, telefone:tel }
+      payload:{ nome:nome, email:email, telefone:tel, aceitouTermos:true, userAgent:navigator.userAgent }
     }});
     if(res.error){
       var msg='Erro ao enviar solicitação. Tente novamente.';
