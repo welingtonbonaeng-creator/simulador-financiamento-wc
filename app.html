@@ -274,13 +274,13 @@ _sb.auth.getSession().then(async function(r){
     var vEl=document.getElementById('validadeSimulacao');
     if(vEl){ var d=new Date(); d.setDate(d.getDate()+7); vEl.value=d.toISOString().split('T')[0]; }
   });
-  _sb.from('auth_logs').insert({user_id:s.user.id,email:s.user.email,action:'page_view',user_agent:navigator.userAgent});
-  setInterval(function(){var ss=window._session;if(ss)_sb.from('auth_logs').insert({user_id:ss.user.id,email:ss.user.email,action:'heartbeat',user_agent:navigator.userAgent});},120000);
+  _sb.from('events').insert({user_id:s.user.id,email:s.user.email,action:'page_view',user_agent:navigator.userAgent});
+  setInterval(function(){var ss=window._session;if(ss)_sb.from('events').insert({user_id:ss.user.id,email:ss.user.email,action:'heartbeat',user_agent:navigator.userAgent});},120000);
 });
 function _logout(){
   var s=window._session;
   if(window._sb&&s){
-    _sb.from('auth_logs').insert({user_id:s.user.id,email:s.user.email,action:'logout',user_agent:navigator.userAgent});
+    _sb.from('events').insert({user_id:s.user.id,email:s.user.email,action:'logout',user_agent:navigator.userAgent});
     _sb.auth.signOut().then(function(){window.location.replace('index.html');});
   }else{window.location.replace('index.html');}
 }
