@@ -364,7 +364,7 @@ tbody tr:hover td{background:var(--cinza1);}
       <div class="table-card">
         <div class="table-hdr">
           <div class="table-title">Assinaturas</div>
-          <button class="btn-sm" onclick="renderFinanceiro()">↻ Atualizar</button>
+          <button class="btn-sm" onclick="loadAsaasAssinaturas().then(renderFinanceiro)">↻ Atualizar</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -621,6 +621,21 @@ let _session = null
 let _users   = []
 let _allLogs = []
 let _logPage = 0
+let _asaasMap = {} // { [userId]: linha real de asaas_assinaturas }
+
+// Resolve a assinatura de um corretor: dado real da Asaas tem prioridade
+// sobre o controle manual (localStorage), usado só p/ quem não paga via Asaas.
+function resolvedAssinatura(userId, fin) {
+  const a = _asaasMap[userId]
+  if (a) return { plano: a.plano, valor: a.valor, status: a.status, vencimento: a.proximo_vencimento, _asaas: true }
+  return (fin.assinaturas||{})[userId] || null
+}
+
+async function loadAsaasAssinaturas() {
+  const r = await call('get_asaas_assinaturas')
+  _asaasMap = {}
+  ;(r?.assinaturas||[]).forEach(a => { if (a.user_id) _asaasMap[a.user_id] = a })
+}
 
 // ── INIT ──────────────────────────────────────────────────────
 ;(async () => {
@@ -645,6 +660,7 @@ async function enterApp() {
   if (stats?._forbidden) { show('forbidden'); return }
   if (!stats) { show('login'); return }
   applyStats(stats)
+  await loadAsaasAssinaturas()
   await loadUsers()
   show('app')
   renderDashboard()
@@ -697,11 +713,13 @@ function renderDashboard() {
       .sort((a,b) => new Date(b.data_criacao||0)-new Date(a.data_criacao||0))
       .slice(0,6)
     el.innerHTML = list.map(u => {
-      const ativo = u.status==='ativo'
+      const badge = u.status==='atrasado'
+        ? '<span class="badge b-inadim">Atrasado</span>'
+        : `<span class="badge ${u.status==='ativo'?'b-ativo':'b-bloq'}">${u.status==='ativo'?'Ativo':'Bloq.'}</span>`
       return `<div class="dash-list-item">
         <div><div class="dli-name">${esc(u.nome||'—')}</div><div class="dli-sub">${esc(u.email)}</div></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="badge ${ativo?'b-ativo':'b-bloq'}">${ativo?'Ativo':'Bloq.'}</span>
+          ${badge}
           <span style="font-size:10px;color:var(--texto3)">${fmtDate(u.data_criacao)}</span>
         </div>
       </div>`
@@ -714,7 +732,7 @@ function renderDashboard() {
   const hoje = new Date(); hoje.setHours(0,0,0,0)
   const em7  = new Date(hoje); em7.setDate(em7.getDate()+7)
   const prox = _users.flatMap(u => {
-    const a = (fin.assinaturas||{})[u.id]
+    const a = resolvedAssinatura(u.id, fin)
     if (!a?.vencimento || a.status==='cancelado') return []
     const d = new Date(a.vencimento)
     if (d > em7) return []
@@ -753,7 +771,11 @@ function renderCorretores(q='') {
   const now = Date.now()
   tbody.innerHTML = list.map(u => {
     const ativo   = u.status==='ativo'
-    const ass     = (fin.assinaturas||{})[u.id]
+    const bloqueado = u.status==='bloqueado'
+    const statusCell = u.status==='atrasado'
+      ? '<span class="badge b-inadim">Atrasado</span>'
+      : `<span class="badge ${ativo?'b-ativo':'b-bloq'}">${ativo?'Ativo':'Bloqueado'}</span>`
+    const ass     = resolvedAssinatura(u.id, fin)
     const plBadge = ass ? badgePlano(ass.plano) : '<span style="color:var(--texto3);font-size:10px">—</span>'
     const stBadge = ass ? badgeStatus(ass.status) : '<span style="color:var(--texto3);font-size:10px">—</span>'
     const online  = u.last_seen_at && (now - new Date(u.last_seen_at).getTime()) < 5*60*1000
@@ -775,7 +797,7 @@ function renderCorretores(q='') {
     return `<tr>
       <td><strong>${esc(u.nome||'—')}</strong></td>
       <td class="mono" style="font-size:11px">${esc(u.email)}</td>
-      <td style="white-space:nowrap">${dot}<span class="badge ${ativo?'b-ativo':'b-bloq'}">${ativo?'Ativo':'Bloqueado'}</span></td>
+      <td style="white-space:nowrap">${dot}${statusCell}</td>
       <td>${plBadge}</td>
       <td>${stBadge}</td>
       <td class="mono" style="font-size:11px">${fmtDate(u.data_criacao)}</td>
@@ -787,10 +809,12 @@ function renderCorretores(q='') {
       </td>
       <td>
         <div class="actions">
-          ${ativo
-            ? `<button class="btn-act a-bloquear" onclick="toggleUser('${u.id}',true)">Bloquear</button>`
-            : `<button class="btn-act a-desbloquear" onclick="toggleUser('${u.id}',false)">Desbloquear</button>`}
-          <button class="btn-act a-editar" onclick="openModalFin('${u.id}','${esc(u.nome||'')}','${esc(u.email)}')">Plano</button>
+          ${bloqueado
+            ? `<button class="btn-act a-desbloquear" onclick="toggleUser('${u.id}',false)">Desbloquear</button>`
+            : `<button class="btn-act a-bloquear" onclick="toggleUser('${u.id}',true)">Bloquear</button>`}
+          ${ass && ass._asaas
+            ? `<span class="btn-act" style="background:var(--cinza1);color:var(--texto3);cursor:default" title="Assinatura gerenciada automaticamente pela Asaas">🔒 Via Asaas</span>`
+            : `<button class="btn-act a-editar" onclick="openModalFin('${u.id}','${esc(u.nome||'')}','${esc(u.email)}')">Plano</button>`}
           <button class="btn-act a-logs" onclick="verHistorico('${esc(u.email)}','${lastSeenEsc}')">Histórico</button>
           ${u.sim_count > 0
             ? `<button class="btn-act a-sims" onclick="verSimulacoes('${esc(u.email)}','${esc(u.nome||u.email)}')">📊 Sims</button>`
@@ -878,20 +902,20 @@ function finData() {
 function saveFin(d) { localStorage.setItem(FIN_KEY, JSON.stringify(d)) }
 
 function calcMrr(fin) {
-  return Object.values(fin.assinaturas||{})
-    .filter(a=>a.status==='ativo')
+  return _users
+    .map(u => resolvedAssinatura(u.id, fin))
+    .filter(a=>a && a.status==='ativo')
     .reduce((s,a)=>s+(parseFloat(a.valor)||0),0)
 }
 
 function finCounts(fin) {
-  const ass = fin.assinaturas||{}
   let pagos=0,trial=0,inadim=0,cancel=0
   _users.forEach(u=>{
-    const a=ass[u.id]
+    const a=resolvedAssinatura(u.id, fin)
     if (!a) return
     if (a.status==='ativo') pagos++
-    else if (a.status==='trial') trial++
-    else if (a.status==='inadimplente') inadim++
+    else if (a.status==='trial'||a.status==='pendente') trial++
+    else if (a.status==='inadimplente'||a.status==='atrasado') inadim++
     else if (a.status==='cancelado') cancel++
   })
   return {pagos,trial,inadim,cancel}
@@ -919,13 +943,16 @@ function renderFinanceiro() {
   const tbody = document.getElementById('finBody')
   if (!_users.length) { tbody.innerHTML='<tr class="empty-row"><td colspan="8">Nenhum corretor.</td></tr>'; return }
   tbody.innerHTML = _users.map(u => {
-    const ass = (fin.assinaturas||{})[u.id] || {}
+    const ass = resolvedAssinatura(u.id, fin) || {}
     const venc = ass.vencimento ? new Date(ass.vencimento) : null
     const dias = venc ? Math.ceil((venc-hoje)/86400000) : null
     const diasHtml = dias===null?'—':dias<0
       ?`<span style="color:var(--vermelho);font-weight:700">${Math.abs(dias)}d atr.</span>`
       :dias===0?`<span style="color:var(--laranja);font-weight:700">Hoje</span>`
       :`<span style="color:${dias<=7?'var(--laranja)':'var(--verde)'};">${dias}d</span>`
+    const acaoCell = ass._asaas
+      ? `<span style="color:var(--texto3);font-size:10px" title="Assinatura gerenciada automaticamente pela Asaas">🔒 Via Asaas</span>`
+      : `<button class="btn-act a-editar" onclick="openModalFin('${u.id}','${esc(u.nome||'')}','${esc(u.email)}')">Editar</button>`
     return `<tr>
       <td><strong>${esc(u.nome||'—')}</strong></td>
       <td class="mono" style="font-size:11px">${esc(u.email)}</td>
@@ -934,7 +961,7 @@ function renderFinanceiro() {
       <td>${badgeStatus(ass.status)}</td>
       <td class="mono" style="font-size:11px">${ass.vencimento?fmtDate(ass.vencimento):'—'}</td>
       <td>${diasHtml}</td>
-      <td><button class="btn-act a-editar" onclick="openModalFin('${u.id}','${esc(u.nome||'')}','${esc(u.email)}')">Editar</button></td>
+      <td>${acaoCell}</td>
     </tr>`
   }).join('')
 }
@@ -1106,12 +1133,13 @@ function salvarConfig() {
 // ── BADGES / HELPERS ──────────────────────────────────────────
 function badgePlano(p) {
   if (!p||p==='—') return '<span style="color:var(--texto3);font-size:10px">—</span>'
-  const cls = p==='pro'?'b-pro':'b-basico'
-  return `<span class="badge ${cls}">${esc(p.charAt(0).toUpperCase()+p.slice(1))}</span>`
+  const cls = (p==='pro'||p==='anual')?'b-pro':'b-basico'
+  const lab = {mensal:'Mensal',anual:'Anual'}
+  return `<span class="badge ${cls}">${esc(lab[p]||(p.charAt(0).toUpperCase()+p.slice(1)))}</span>`
 }
 function badgeStatus(s) {
-  const map = {ativo:'b-ativo',trial:'b-trial',inadimplente:'b-inadim',cancelado:'b-cancel'}
-  const lab = {ativo:'Ativo',trial:'Trial',inadimplente:'Inadim.',cancelado:'Cancelado'}
+  const map = {ativo:'b-ativo',trial:'b-trial',pendente:'b-trial',inadimplente:'b-inadim',atrasado:'b-inadim',cancelado:'b-cancel'}
+  const lab = {ativo:'Ativo',trial:'Trial',pendente:'Pendente',inadimplente:'Inadim.',atrasado:'Atrasado',cancelado:'Cancelado'}
   return s ? `<span class="badge ${map[s]||'b-cancel'}">${lab[s]||esc(s)}</span>` : ''
 }
 function fmtDate(d) { return d ? new Date(d).toLocaleDateString('pt-BR') : '—' }
