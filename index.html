@@ -164,7 +164,7 @@ async function login(){
     const msgs={'Invalid login credentials':'E-mail ou senha incorretos.','Email not confirmed':'Confirme seu e-mail antes de entrar.','Too many requests':'Muitas tentativas. Aguarde alguns minutos.'};
     setMsg(msgs[error.message]||'Erro ao entrar. Tente novamente.','er');return;
   }
-  await _sb.from('auth_logs').insert({user_id:data.user.id,email:data.user.email,action:'login',user_agent:navigator.userAgent});
+  await _sb.from('events').insert({user_id:data.user.id,email:data.user.email,action:'login',user_agent:navigator.userAgent});
   window.location.replace('app.html');
 }
 async function esqueciSenha(){
