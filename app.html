@@ -268,15 +268,20 @@ _sb.auth.getSession().then(async function(r){
     window.location.replace('index.html'); return;
   }
 
+  console.log('DEBUG_CHECKPOINT_A: antes de visibility');
   document.documentElement.style.visibility='';
+  console.log('DEBUG_CHECKPOINT_B: assinaturaCheck=', assinaturaCheck);
   if(assinaturaCheck && typeof assinaturaCheck==='object') _mostrarAvisoRenovacao(assinaturaCheck);
+  console.log('DEBUG_CHECKPOINT_C: antes do addEventListener');
   document.addEventListener('DOMContentLoaded',function(){
     var el=document.getElementById('_userEmail');
     if(el)el.textContent=s.user.email;
     var vEl=document.getElementById('validadeSimulacao');
     if(vEl){ var d=new Date(); d.setDate(d.getDate()+7); vEl.value=d.toISOString().split('T')[0]; }
   });
-  _sb.from('events').insert({user_id:s.user.id,email:s.user.email,action:'page_view',user_agent:navigator.userAgent});
+  console.log('DEBUG_CHECKPOINT_D: antes do insert page_view', s.user.id, s.user.email);
+  _sb.from('events').insert({user_id:s.user.id,email:s.user.email,action:'page_view',user_agent:navigator.userAgent}).then(function(r){console.log('DEBUG_CHECKPOINT_E: insert result', JSON.stringify(r));});
+  console.log('DEBUG_CHECKPOINT_F: depois do insert (sincrono)');
   setInterval(function(){var ss=window._session;if(ss)_sb.from('events').insert({user_id:ss.user.id,email:ss.user.email,action:'heartbeat',user_agent:navigator.userAgent});},120000);
 });
 function _logout(){
