@@ -3767,7 +3767,10 @@ function toBRL2(v) {
 function setValIf(id, v) {
   if (v === undefined || v === null) return;
   const el = document.getElementById(id);
-  if (el) el.value = v;
+  if (!el) return;
+  el.value = v;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 function preencherCaixaEntrada(e) {
@@ -3780,7 +3783,6 @@ function preencherCaixaEntrada(e) {
   setValIf('fgtsDisp', e.fgtsDisp);
   setValIf('nasc', e.dataNasc);
   setValIf('prazoSlider', e.prazoAnos);
-  setValIf('mesesObra', e.mesesObra);
   setValIf('dtEntrega', e.dtEntrega);
   setValIf('dtLancamento', e.dtLancamento);
   if (typeof e.fgtsPode !== 'undefined') fgtsPode = e.fgtsPode;
