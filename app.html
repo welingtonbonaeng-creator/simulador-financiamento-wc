@@ -3718,6 +3718,16 @@ function calcAmort() {
       '</div>' +
     '</div>' +
     '<div style="font-size:10px;color:#94A3B8;text-align:center">* Estratégia de reduzir prazo. A parcela mensal não se altera. Sujeito à política do banco no momento da amortização.</div>';
+
+  if (window._session) {
+    _sb.from('events').insert({
+      user_id: window._session.user.id,
+      email: window._session.user.email,
+      action: 'amortizacao',
+      details: { eventos: lista.length, totalAmort: Math.round(totalAmortExtra), economiaJuros: Math.round(economiaTotalJuros) },
+      user_agent: navigator.userAgent
+    });
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
