@@ -255,7 +255,7 @@ _sb.auth.getSession().then(async function(r){
       headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
       body:JSON.stringify({action:'get_faixas'})});
     var fd=await fr.json();
-    if(!fd.FAIXAS) throw new Error('sem dados');
+    if(!fd.FAIXAS) throw new Error(fd.error||'sem dados');
     /* Restaura Infinity (serializado como null pelo JSON) */
     fd.FAIXAS.forEach(function(f){
       if(f.rMax===null) f.rMax=Infinity;
@@ -265,7 +265,7 @@ _sb.auth.getSession().then(async function(r){
     FAIXAS=fd.FAIXAS;
     SEGURO_FAIXAS=fd.SEGURO_FAIXAS;
   } catch(e) {
-    alert('Erro ao carregar o simulador. Faça login novamente.');
+    alert(e.message && e.message!=='sem dados' ? e.message : 'Erro ao carregar o simulador. Faça login novamente.');
     window.location.replace('index.html'); return;
   }
 
