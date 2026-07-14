@@ -3767,24 +3767,31 @@ function toBRL2(v) {
 function setValIf(id, v) {
   if (v === undefined || v === null) return;
   const el = document.getElementById(id);
-  if (!el) return;
-  el.value = v;
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
+  if (el) el.value = v;
 }
 
+// Restaura os campos e dispara os mesmos handlers que rodariam se o
+// corretor tivesse digitado tudo na mão — sub/fx (faixa MCMV) e mesesObra
+// só existem depois que onRenda()/onImovel()/onEntrada()/onObra() rodam.
+// Não usamos M(this) aqui: o valor salvo já vem formatado ("R$ 9.000,00"),
+// e M() foi feito para digitação incremental, não para restaurar de uma vez.
 function preencherCaixaEntrada(e) {
   if (!e) return;
   setValIf('nomeCliente', e.nomeCliente);
   setValIf('renda', e.renda);
+  onRenda();
   setValIf('vImovel', e.vImovel);
   setValIf('vAval', e.vAval);
+  onImovel();
   setValIf('ato', e.ato);
+  onEntrada();
   setValIf('fgtsDisp', e.fgtsDisp);
   setValIf('nasc', e.dataNasc);
+  onIdade();
   setValIf('prazoSlider', e.prazoAnos);
   setValIf('dtEntrega', e.dtEntrega);
   setValIf('dtLancamento', e.dtLancamento);
+  onObra();
   if (typeof e.fgtsPode !== 'undefined') fgtsPode = e.fgtsPode;
   if (typeof e.tipoTaxa !== 'undefined') tipoTaxa = e.tipoTaxa;
   if (typeof e.residenteRegiao !== 'undefined') residenteRegiao = e.residenteRegiao;
