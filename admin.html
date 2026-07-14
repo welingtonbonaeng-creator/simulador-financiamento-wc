@@ -568,16 +568,26 @@ tbody tr:hover td{background:var(--cinza1);}
   </div>
 </div>
 
-<!-- MODAL HISTÓRICO DE ACESSO -->
+<!-- MODAL HISTÓRICO DE ACESSO + SIMULAÇÕES -->
 <div class="modal-overlay" id="modalHist" style="display:none" onclick="if(event.target===this)closeModalHist()">
-  <div class="modal-box" style="max-width:560px">
+  <div class="modal-box" style="max-width:620px">
     <div class="modal-hdr">
       <h3 id="histTitle">Histórico de Acesso</h3>
       <button class="modal-close" onclick="closeModalHist()">×</button>
     </div>
     <div class="modal-body">
       <div id="histOnlineStatus" style="margin-bottom:12px"></div>
-      <div style="font-size:11px;color:var(--texto3);margin-bottom:8px">Últimos 50 eventos — login, logout, heartbeat e atividade</div>
+
+      <div id="histSimsResumo" style="margin-bottom:14px"></div>
+
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap">
+        <div class="field" style="margin:0"><label class="fl">De</label><input type="date" id="histDataIni" class="fi" style="height:34px"/></div>
+        <div class="field" style="margin:0"><label class="fl">Até</label><input type="date" id="histDataFim" class="fi" style="height:34px"/></div>
+        <button class="btn-sm" onclick="aplicarFiltroHist()">Filtrar</button>
+        <button class="btn-sm" onclick="limparFiltroHist()">Limpar filtro</button>
+      </div>
+
+      <div style="font-size:11px;color:var(--texto3);margin-bottom:8px" id="histCountLabel">Carregando...</div>
       <div class="hist-list" id="histList">
         <div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Carregando...</div>
       </div>
@@ -585,26 +595,6 @@ tbody tr:hover td{background:var(--cinza1);}
     <div class="modal-foot">
       <button class="btn-cancel" onclick="closeModalHist()">Fechar</button>
       <button class="btn-sm" onclick="verLogsUser(_histEmail)">Ver todos os logs →</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL SIMULAÇÕES -->
-<div class="modal-overlay" id="modalSims" style="display:none" onclick="if(event.target===this)closeModalSims()">
-  <div class="modal-box" style="max-width:600px">
-    <div class="modal-hdr" style="background:linear-gradient(135deg,#C05A00,#E07A00)">
-      <h3 id="simsTitle" style="color:#fff">Simulações</h3>
-      <button class="modal-close" onclick="closeModalSims()" style="color:#fff;background:rgba(255,255,255,.15)">×</button>
-    </div>
-    <div class="modal-body">
-      <div id="simsResumo" style="margin-bottom:12px"></div>
-      <div style="font-size:11px;color:var(--texto3);margin-bottom:8px">Até 200 simulações mais recentes — mais novo primeiro</div>
-      <div class="sim-list" id="simsList">
-        <div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Carregando...</div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn-cancel" onclick="closeModalSims()">Fechar</button>
     </div>
   </div>
 </div>
@@ -815,10 +805,7 @@ function renderCorretores(q='') {
           ${ass && ass._asaas
             ? `<span class="btn-act" style="background:var(--cinza1);color:var(--texto3);cursor:default" title="Assinatura gerenciada automaticamente pela Asaas">🔒 Via Asaas</span>`
             : `<button class="btn-act a-editar" onclick="openModalFin('${u.id}','${esc(u.nome||'')}','${esc(u.email)}')">Plano</button>`}
-          <button class="btn-act a-logs" onclick="verHistorico('${esc(u.email)}','${lastSeenEsc}')">Histórico</button>
-          ${u.sim_count > 0
-            ? `<button class="btn-act a-sims" onclick="verSimulacoes('${esc(u.email)}','${esc(u.nome||u.email)}')">📊 Sims</button>`
-            : ''}
+          <button class="btn-act a-logs" onclick="verHistorico('${esc(u.email)}','${esc(u.nome||'')}','${lastSeenEsc}')">Histórico</button>
           <button class="btn-act a-deletar" onclick="deletarUser('${u.id}','${esc(u.email)}')">Excluir</button>
         </div>
       </td>
@@ -1427,11 +1414,14 @@ function copiarCredenciais(userId) {
 
 // ── HISTÓRICO DE ACESSO ───────────────────────────────────────
 let _histEmail = ''
+let _histNome  = ''
 
-async function verHistorico(email, lastSeenAt) {
+async function verHistorico(email, nome, lastSeenAt) {
   _histEmail = email
-  document.getElementById('histTitle').textContent = `Histórico — ${email}`
-  document.getElementById('histList').innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Carregando...</div>'
+  _histNome  = nome || email
+  document.getElementById('histTitle').textContent = `Histórico — ${_histNome}`
+  document.getElementById('histDataIni').value = ''
+  document.getElementById('histDataFim').value = ''
 
   const now     = Date.now()
   const online  = lastSeenAt && (now - new Date(lastSeenAt).getTime()) < 5*60*1000
@@ -1446,98 +1436,105 @@ async function verHistorico(email, lastSeenAt) {
 
   document.getElementById('modalHist').style.display = 'flex'
 
-  const resp = await call('get_user_history', { email })
+  carregarHistSimsResumo()
+  carregarHistLista()
+}
+
+// ── Resumo de simulações (Caixa / Construtora / Amortização) — não muda com o filtro de data ──
+async function carregarHistSimsResumo() {
+  const el = document.getElementById('histSimsResumo')
+  el.innerHTML = '<div style="text-align:center;color:var(--texto3);padding:.5rem;font-size:12px">Carregando simulações...</div>'
+
+  const resp = await call('get_user_sims', { email: _histEmail })
+  const data = resp?.sims || []
+
+  const totalCaixa = data.filter(s => s.action === 'simulacao').length
+  const totalConst = data.filter(s => s.action === 'simulacao_construtora').length
+  const totalAmort = data.filter(s => s.action === 'amortizacao').length
+
+  if (!data.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--texto3);padding:.35rem 0">Nenhuma simulação registrada ainda.</div>'
+    return
+  }
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+      <div style="background:var(--cinza1);border-radius:8px;padding:9px 10px;text-align:center">
+        <div style="font-size:9px;font-weight:700;color:var(--texto3);text-transform:uppercase;margin-bottom:2px">Total</div>
+        <div style="font-size:18px;font-weight:800;color:var(--texto)">${data.length}</div>
+      </div>
+      <div style="background:#EBF5FF;border-radius:8px;padding:9px 10px;text-align:center">
+        <div style="font-size:9px;font-weight:700;color:#1E40AF;text-transform:uppercase;margin-bottom:2px">🏦 Caixa</div>
+        <div style="font-size:18px;font-weight:800;color:#1E40AF">${totalCaixa}</div>
+      </div>
+      <div style="background:#F0FDF4;border-radius:8px;padding:9px 10px;text-align:center">
+        <div style="font-size:9px;font-weight:700;color:#1B6E3F;text-transform:uppercase;margin-bottom:2px">🏗️ Construtora</div>
+        <div style="font-size:18px;font-weight:800;color:#1B6E3F">${totalConst}</div>
+      </div>
+      <div style="background:#FEF3E8;border-radius:8px;padding:9px 10px;text-align:center">
+        <div style="font-size:9px;font-weight:700;color:#C05A00;text-transform:uppercase;margin-bottom:2px">📉 Amortiz.</div>
+        <div style="font-size:18px;font-weight:800;color:#C05A00">${totalAmort}</div>
+      </div>
+    </div>`
+}
+
+// ── Lista de eventos (login/logout/heartbeat/simulações...), respeita o filtro de data ──
+async function carregarHistLista() {
+  const listEl = document.getElementById('histList')
+  const labelEl = document.getElementById('histCountLabel')
+  listEl.innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Carregando...</div>'
+
+  const dataInicio = document.getElementById('histDataIni').value || null
+  const dataFim    = document.getElementById('histDataFim').value || null
+  const payload = { email: _histEmail }
+  if (dataInicio) payload.dataInicio = dataInicio
+  if (dataFim)    payload.dataFim    = dataFim
+
+  const resp = await call('get_user_history', payload)
   const data = resp?.logs
 
-  const listEl = document.getElementById('histList')
+  labelEl.textContent = (dataInicio || dataFim)
+    ? `${data?.length||0} evento(s) no período filtrado`
+    : `Últimos ${data?.length||0} eventos (sem filtro de data)`
+
   if (!data?.length) {
     listEl.innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Nenhum registro encontrado.</div>'
     return
   }
 
-  const evIcon  = { login:'🔑', logout:'🚪', page_view:'👁️', heartbeat:'💚', admin_create_user:'➕', admin_block:'🔒', admin_unblock:'🔓', admin_delete:'🗑️' }
+  const evIcon  = { login:'🔑', logout:'🚪', page_view:'👁️', heartbeat:'💚', change_password:'🔑', simulacao:'🏦', simulacao_construtora:'🏗️', amortizacao:'📉' }
+  const evLabel = { login:'Login', logout:'Logout', page_view:'Acesso', heartbeat:'Atividade', change_password:'Trocou senha', simulacao:'Simulação Caixa', simulacao_construtora:'Simulação Construtora', amortizacao:'Simulação Amortização' }
   const evClass = { login:'ev-login', logout:'ev-logout', heartbeat:'ev-heart', page_view:'ev-login' }
 
   listEl.innerHTML = data.map(l => {
     const ev  = l.action || l.event || l.evento || 'acesso'
     const cls = evClass[ev] || ''
     const ico = evIcon[ev] || '•'
+    const lbl = evLabel[ev] || ev
     const ua  = (l.user_agent||'').replace(/Mozilla\/[\d.]+ \(/,'').split(')')[0]
     return `<div class="hist-item ${cls}">
-      <span class="hist-ev">${ico} ${esc(ev)}</span>
+      <span class="hist-ev">${ico} ${esc(lbl)}</span>
       <span class="hist-dt">${fmtDt(l.created_at)}</span>
       ${ua ? `<span class="hist-det" title="${esc(l.user_agent||'')}">${esc(ua.trim().slice(0,40))}</span>` : ''}
     </div>`
   }).join('')
 }
 
+function aplicarFiltroHist() { carregarHistLista() }
+function limparFiltroHist() {
+  document.getElementById('histDataIni').value = ''
+  document.getElementById('histDataFim').value = ''
+  carregarHistLista()
+}
+
 function closeModalHist() {
   document.getElementById('modalHist').style.display = 'none'
   _histEmail = ''
-}
-
-// ── SIMULAÇÕES POR USUÁRIO ────────────────────────────────────
-async function verSimulacoes(email, nome) {
-  document.getElementById('simsTitle').textContent = `Simulações — ${nome}`
-  document.getElementById('simsResumo').innerHTML = ''
-  document.getElementById('simsList').innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Carregando...</div>'
-  document.getElementById('modalSims').style.display = 'flex'
-
-  const resp = await call('get_user_sims', { email })
-  const data = resp?.sims
-
-  if (!data?.length) {
-    document.getElementById('simsList').innerHTML = '<div style="text-align:center;color:var(--texto3);padding:2rem;font-size:13px">Nenhuma simulação registrada.</div>'
-    return
-  }
-
-  // Resumo
-  const totalCaixa = data.filter(s => s.action === 'simulacao').length
-  const totalConst = data.filter(s => s.action === 'simulacao_construtora').length
-  document.getElementById('simsResumo').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px">
-      <div style="background:#F0F7FF;border-radius:8px;padding:10px 12px;text-align:center">
-        <div style="font-size:10px;font-weight:700;color:#1E40AF;text-transform:uppercase;margin-bottom:3px">Total</div>
-        <div style="font-size:20px;font-weight:800;color:#1E40AF">${data.length}</div>
-      </div>
-      <div style="background:#EBF5FF;border-radius:8px;padding:10px 12px;text-align:center">
-        <div style="font-size:10px;font-weight:700;color:#1E40AF;text-transform:uppercase;margin-bottom:3px">Caixa</div>
-        <div style="font-size:20px;font-weight:800;color:#1E40AF">${totalCaixa}</div>
-      </div>
-      <div style="background:#F0FDF4;border-radius:8px;padding:10px 12px;text-align:center">
-        <div style="font-size:10px;font-weight:700;color:#1B6E3F;text-transform:uppercase;margin-bottom:3px">Construtora</div>
-        <div style="font-size:20px;font-weight:800;color:#1B6E3F">${totalConst}</div>
-      </div>
-    </div>`
-
-  // Lista
-  document.getElementById('simsList').innerHTML = data.map(s => {
-    const isCaixa = s.action === 'simulacao'
-    const cls     = isCaixa ? 'sim-caixa' : 'sim-const'
-    let meta = s.details || {}
-    if (!s.details && s.user_agent) { try { meta = JSON.parse(s.user_agent) } catch {} }
-    const tipo   = isCaixa ? '🏦 Caixa' : '🏗️ Construtora'
-    const faixa  = meta.faixa ? `Faixa: ${meta.faixa.replace('f','').replace('sbpe','SBPE')}` : ''
-    const viStr  = meta.vi ? `Imóvel: ${fbr(meta.vi)}` : ''
-    const pctStr = meta.pctPre ? `Pré ${meta.pctPre}%` : ''
-    const detalhe = [faixa, viStr, pctStr].filter(Boolean).join(' · ')
-    return `<div class="sim-item ${cls}">
-      <div>
-        <div class="sim-tipo">${tipo}</div>
-        ${detalhe ? `<div class="sim-meta">${detalhe}</div>` : ''}
-      </div>
-      <div></div>
-      <div class="sim-dt">${fmtDt(s.created_at)}</div>
-    </div>`
-  }).join('')
+  _histNome  = ''
 }
 
 function fbr(v) {
   return 'R$' + Math.round(v/1000) + 'k'
-}
-
-function closeModalSims() {
-  document.getElementById('modalSims').style.display = 'none'
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
