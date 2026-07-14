@@ -878,10 +878,10 @@ async function criarCorretor() {
       const dias = fin.trial_dias || 14
       const venc = new Date(); venc.setDate(venc.getDate()+dias)
       fin.assinaturas = fin.assinaturas || {}
-      const planos = fin.planos || [{id:'basico',preco:49.90}]
+      const planos = fin.planos || [{id:'mensal',nome:'Mensal',preco:70},{id:'anual',nome:'Anual',preco:600}]
       fin.assinaturas[r.userId] = {
-        plano: planos[0]?.id || 'basico',
-        valor: planos[0]?.preco || 49.90,
+        plano: planos[0]?.id || 'mensal',
+        valor: planos[0]?.preco || 70,
         status: 'trial',
         inicio: today(),
         vencimento: venc.toISOString().slice(0,10),
@@ -970,13 +970,13 @@ function renderFinanceiro() {
 function openModalFin(userId, nome, email) {
   const fin  = finData()
   const ass  = (fin.assinaturas||{})[userId] || {}
-  const pl   = fin.planos || [{id:'basico',nome:'Básico',preco:49.90},{id:'pro',nome:'Pro',preco:97.90}]
+  const pl   = fin.planos || [{id:'mensal',nome:'Mensal',preco:70},{id:'anual',nome:'Anual',preco:600}]
   document.getElementById('modalFinTitle').textContent = `Assinatura — ${nome}`
   document.getElementById('finUserId').value = userId
   const sel = document.getElementById('finPlano')
   sel.innerHTML = pl.map(p=>`<option value="${esc(p.id)}">${esc(p.nome)} — R$ ${fmt(p.preco)}/mês</option>`).join('')
     + '<option value="personalizado">Personalizado</option>'
-  sel.value = ass.plano || pl[0]?.id || 'basico'
+  sel.value = ass.plano || pl[0]?.id || 'mensal'
   document.getElementById('finValor').value     = ass.valor || pl[0]?.preco || ''
   document.getElementById('finStatus').value    = ass.status || 'trial'
   document.getElementById('finNotas').value     = ass.notas || ''
@@ -992,7 +992,7 @@ function closeModalFin() { document.getElementById('modalFin').style.display = '
 
 function onPlanoChange() {
   const fin = finData()
-  const pl  = fin.planos || [{id:'basico',preco:49.90},{id:'pro',preco:97.90}]
+  const pl  = fin.planos || [{id:'mensal',nome:'Mensal',preco:70},{id:'anual',nome:'Anual',preco:600}]
   const sel = document.getElementById('finPlano').value
   const p   = pl.find(x=>x.id===sel)
   if (p) document.getElementById('finValor').value = p.preco
@@ -1088,7 +1088,7 @@ function renderConfig() {
   const fin = finData()
   document.getElementById('cfgTrialDias').value     = fin.trial_dias || 14
   document.getElementById('cfgEmailSuporte').value  = fin.email_suporte || 'simulador.wc@gmail.com'
-  renderPlanoList(fin.planos || [{id:'basico',nome:'Básico',preco:49.90},{id:'pro',nome:'Pro',preco:97.90}])
+  renderPlanoList(fin.planos || [{id:'mensal',nome:'Mensal',preco:70},{id:'anual',nome:'Anual',preco:600}])
 }
 
 function renderPlanoList(pl) {
