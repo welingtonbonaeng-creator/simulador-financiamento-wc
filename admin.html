@@ -603,7 +603,6 @@ tbody tr:hover td{background:var(--cinza1);}
 const SURL   = 'https://uefnirdmhtsbpdxnonnd.supabase.co'
 const SKEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s'
 const FN_URL = `${SURL}/functions/v1/admin-action`
-const FIN_KEY = 'simuadmin_fin'
 const LOG_PG  = 50
 
 const _sb = supabase.createClient(SURL, SKEY)
@@ -612,6 +611,7 @@ let _users   = []
 let _allLogs = []
 let _logPage = 0
 let _asaasMap = {} // { [userId]: linha real de asaas_assinaturas }
+let _finCache = { assinaturas:{}, planos:[{id:'mensal',nome:'Mensal',preco:70},{id:'anual',nome:'Anual',preco:600}], trial_dias:14, email_suporte:'simulador.wc@gmail.com' }
 
 // Resolve a assinatura de um corretor: dado real da Asaas tem prioridade
 // sobre o controle manual (localStorage), usado só p/ quem não paga via Asaas.
@@ -625,6 +625,14 @@ async function loadAsaasAssinaturas() {
   const r = await call('get_asaas_assinaturas')
   _asaasMap = {}
   ;(r?.assinaturas||[]).forEach(a => { if (a.user_id) _asaasMap[a.user_id] = a })
+}
+
+// Controle manual de plano/status (corretores fora da Asaas) — vive no
+// Postgres via admin-action, atrás do gate de admin. Nada disso fica no
+// navegador: se limpar o cache ou trocar de computador, o dado continua lá.
+async function loadFinData() {
+  const r = await call('get_fin_data')
+  if (r && !r.error) _finCache = r
 }
 
 // ── INIT ──────────────────────────────────────────────────────
@@ -649,8 +657,9 @@ async function enterApp() {
   const stats = await call('get_stats')
   if (stats?._forbidden) { show('forbidden'); return }
   if (!stats) { show('login'); return }
-  applyStats(stats)
+  await loadFinData()
   await loadAsaasAssinaturas()
+  applyStats(stats)
   await loadUsers()
   show('app')
   renderDashboard()
@@ -827,7 +836,8 @@ async function deletarUser(userId, email) {
   const r = await call('delete_user', { userId })
   if (r?.success) {
     toast('Corretor excluído.','ok')
-    const fin = finData(); delete (fin.assinaturas||{})[userId]; saveFin(fin)
+    await call('delete_fin_assinatura', { userId })
+    delete (_finCache.assinaturas||{})[userId]
     await loadUsers(); await refreshStats()
   } else toast('Erro ao excluir.','er')
 }
@@ -866,7 +876,7 @@ async function criarCorretor() {
       const venc = new Date(); venc.setDate(venc.getDate()+dias)
       fin.assinaturas = fin.assinaturas || {}
       const planos = fin.planos || [{id:'mensal',nome:'Mensal',preco:70},{id:'anual',nome:'Anual',preco:600}]
-      fin.assinaturas[r.userId] = {
+      const nova = {
         plano: planos[0]?.id || 'mensal',
         valor: planos[0]?.preco || 70,
         status: 'trial',
@@ -874,7 +884,8 @@ async function criarCorretor() {
         vencimento: venc.toISOString().slice(0,10),
         notas: ''
       }
-      saveFin(fin)
+      fin.assinaturas[r.userId] = nova
+      await call('save_fin_assinatura', { userId: r.userId, ...nova })
     }
     await loadUsers(); await refreshStats()
   } else {
@@ -883,10 +894,7 @@ async function criarCorretor() {
 }
 
 // ── FINANCEIRO ────────────────────────────────────────────────
-function finData() {
-  try { return JSON.parse(localStorage.getItem(FIN_KEY)||'{}') } catch { return {} }
-}
-function saveFin(d) { localStorage.setItem(FIN_KEY, JSON.stringify(d)) }
+function finData() { return _finCache }
 
 function calcMrr(fin) {
   return _users
@@ -985,12 +993,12 @@ function onPlanoChange() {
   if (p) document.getElementById('finValor').value = p.preco
 }
 
-function salvarAssinatura() {
+async function salvarAssinatura() {
   const userId = document.getElementById('finUserId').value
   const fin    = finData()
   fin.assinaturas = fin.assinaturas || {}
   const prev = fin.assinaturas[userId] || {}
-  fin.assinaturas[userId] = {
+  const nova = {
     plano:      document.getElementById('finPlano').value,
     valor:      parseFloat(document.getElementById('finValor').value)||0,
     status:     document.getElementById('finStatus').value,
@@ -998,7 +1006,9 @@ function salvarAssinatura() {
     notas:      document.getElementById('finNotas').value,
     inicio:     prev.inicio || today()
   }
-  saveFin(fin)
+  const r = await call('save_fin_assinatura', { userId, ...nova })
+  if (!r?.success) { toast(r?.error || 'Erro ao salvar assinatura.','er'); return }
+  fin.assinaturas[userId] = nova
   closeModalFin()
   toast('Assinatura salva.','ok')
   renderFinanceiro()
@@ -1098,22 +1108,26 @@ function addPlano() {
   document.getElementById('planoList').appendChild(div)
 }
 
-function salvarPlanos() {
+async function salvarPlanos() {
   const items = document.querySelectorAll('#planoList .plano-item')
   const planos = [...items].map(it=>({
     id: it.querySelector('.pi-nome').value.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')||'plano',
     nome: it.querySelector('.pi-nome').value.trim(),
     preco: parseFloat(it.querySelector('.pi-preco').value)||0
   })).filter(p=>p.nome)
-  const fin = finData(); fin.planos = planos; saveFin(fin)
+  const r = await call('save_fin_planos', { planos })
+  if (!r?.success) { toast(r?.error || 'Erro ao salvar planos.','er'); return }
+  _finCache.planos = planos
   toast('Planos salvos.','ok')
 }
 
-function salvarConfig() {
-  const fin = finData()
-  fin.trial_dias    = parseInt(document.getElementById('cfgTrialDias').value)||14
-  fin.email_suporte = document.getElementById('cfgEmailSuporte').value.trim()
-  saveFin(fin)
+async function salvarConfig() {
+  const trial_dias    = parseInt(document.getElementById('cfgTrialDias').value)||14
+  const email_suporte = document.getElementById('cfgEmailSuporte').value.trim()
+  const r = await call('save_fin_config', { trial_dias, email_suporte })
+  if (!r?.success) { toast(r?.error || 'Erro ao salvar configurações.','er'); return }
+  _finCache.trial_dias    = trial_dias
+  _finCache.email_suporte = email_suporte
   toast('Configurações salvas.','ok')
 }
 
