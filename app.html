@@ -201,6 +201,8 @@ footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--texto3);}
 const _sb=supabase.createClient('https://uefnirdmhtsbpdxnonnd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s');
 const _EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/simulapro';
 const _ADMIN_EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/admin-action';
+window.addEventListener('unhandledrejection', function(e){ console.error('DEBUG_UNHANDLED:', e.reason && e.reason.message, e.reason); });
+window.addEventListener('error', function(e){ console.error('DEBUG_ERROR:', e.message, e.error); });
 
 /* Verifica se a assinatura está atrasada/bloqueada e avisa o corretor
    dentro do próprio app — em vez de simplesmente banir o login. */
