@@ -185,9 +185,6 @@ footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--texto3);}
 .main-tab{flex:1;padding:14px 16px;text-align:center;font-size:14px;font-weight:700;cursor:pointer;color:var(--texto2);transition:background .2s,color .2s;display:flex;align-items:center;justify-content:center;gap:7px;background:#fff;}
 .main-tab.ton{background:var(--azul);color:#fff;}
 .main-tab:not(.ton):hover{background:var(--cinza1);}
-.main-tab.mt-locked{opacity:.55;}
-.main-tab.mt-locked:not(.ton):hover{background:#fff;cursor:not-allowed;}
-.lock-badge{font-size:11px;background:rgba(0,0,0,.1);border-radius:5px;padding:1px 6px;}
 
 /* CONSTRUTORA CARDS */
 .ctr-pre .card-header{background:linear-gradient(135deg,#EBF5FF,#F0F4FF)!important;}
@@ -277,7 +274,6 @@ _sb.auth.getSession().then(async function(r){
     var vEl=document.getElementById('validadeSimulacao');
     if(vEl){ var d=new Date(); d.setDate(d.getDate()+7); vEl.value=d.toISOString().split('T')[0]; }
   });
-  checkAdmin();
   _sb.from('auth_logs').insert({user_id:s.user.id,email:s.user.email,action:'page_view',user_agent:navigator.userAgent});
   setInterval(function(){var ss=window._session;if(ss)_sb.from('auth_logs').insert({user_id:ss.user.id,email:ss.user.email,action:'heartbeat',user_agent:navigator.userAgent});},120000);
 });
@@ -387,7 +383,7 @@ async function _confirmarTroca(){
 <!-- SELETOR PRINCIPAL -->
 <div class="main-tabs" id="mainTabs">
   <div class="main-tab ton" id="mtCaixa" onclick="switchMainTab('caixa')">🏦 Financiamento Caixa</div>
-  <div class="main-tab mt-locked" id="mtConstrutora" onclick="switchMainTab('construtora')">🏗️ Financiamento Construtora <span class="lock-badge" id="lockBadge">🔒</span></div>
+  <div class="main-tab" id="mtConstrutora" onclick="switchMainTab('construtora')">🏗️ Financiamento Construtora</div>
 </div>
 
 <div id="tabCaixa">
@@ -3725,33 +3721,10 @@ function calcAmort() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// CONSTRUTORA — lógica da aba admin
+// CONSTRUTORA — módulo incluso no plano
 // ══════════════════════════════════════════════════════════════
 
-window._isAdmin = false;
-
-async function checkAdmin() {
-  const s = window._session;
-  if (!s) return;
-  try {
-    const r = await fetch('https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/admin-action', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'check_admin' })
-    });
-    const d = await r.json();
-    window._isAdmin = !!d.isAdmin;
-    if (window._isAdmin) {
-      const lb = document.getElementById('lockBadge');
-      const mt = document.getElementById('mtConstrutora');
-      if (lb) lb.textContent = '✓ Admin';
-      if (mt) mt.classList.remove('mt-locked');
-    }
-  } catch(e) {}
-}
-
 function switchMainTab(tab) {
-  if (tab === 'construtora' && !window._isAdmin) return;
   document.getElementById('tabCaixa').style.display        = tab === 'caixa' ? '' : 'none';
   document.getElementById('tabConstrutora').style.display  = tab === 'construtora' ? '' : 'none';
   document.getElementById('mtCaixa').classList.toggle('ton', tab === 'caixa');
