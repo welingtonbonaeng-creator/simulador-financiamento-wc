@@ -203,10 +203,51 @@ footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--texto3);}
 (function(){document.documentElement.style.visibility='hidden';})();
 const _sb=supabase.createClient('https://uefnirdmhtsbpdxnonnd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s');
 const _EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/simulapro';
+const _ADMIN_EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/admin-action';
+
+/* Verifica se a assinatura está atrasada/bloqueada e avisa o corretor
+   dentro do próprio app — em vez de simplesmente banir o login. */
+async function _checkAssinatura(s){
+  try{
+    var r=await fetch(_ADMIN_EDGE,{method:'POST',
+      headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({action:'get_my_status'})});
+    var d=await r.json();
+    if(d.status==='bloqueado') return 'bloqueado';
+    if(d.status==='atrasado') return d.assinatura||{};
+    return null;
+  }catch(e){ return null; }
+}
+function _mostrarBloqueioTotal(){
+  document.documentElement.style.visibility='';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0B3D91;padding:20px;font-family:\'Sora\',sans-serif">'+
+    '<div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:36px 28px;text-align:center">'+
+      '<div style="font-size:40px;margin-bottom:12px">🔒</div>'+
+      '<div style="font-size:18px;font-weight:800;color:#0F172A;margin-bottom:8px">Acesso bloqueado</div>'+
+      '<div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:22px">Sua assinatura foi cancelada ou seu acesso foi bloqueado. Fale com o suporte para regularizar.</div>'+
+      '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'index.html\')})" style="background:#0B3D91;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">Sair</button>'+
+    '</div></div>';
+}
+function _mostrarAvisoRenovacao(assinatura){
+  var url=assinatura&&assinatura.invoice_url;
+  var html='<div id="_avisoRenovacao" style="position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:\'Sora\',sans-serif">'+
+    '<div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:32px 28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">'+
+      '<div style="font-size:40px;margin-bottom:12px">⚠️</div>'+
+      '<div style="font-size:18px;font-weight:800;color:#0F172A;margin-bottom:8px">Sua assinatura está atrasada</div>'+
+      '<div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:22px">O pagamento do SimulaPro não foi identificado. Renove agora para continuar usando o simulador sem interrupção.</div>'+
+      (url?'<a href="'+url+'" target="_blank" rel="noopener" style="display:block;background:#0B3D91;color:#fff;padding:14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px">Pagar agora →</a>':'')+
+      '<button onclick="document.getElementById(\'_avisoRenovacao\').remove()" style="background:none;border:none;color:#94A3B8;font-size:12px;cursor:pointer;padding:8px;font-family:inherit">Continuar mesmo assim</button>'+
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
 _sb.auth.getSession().then(async function(r){
   var s=r.data.session;
   if(!s){window.location.replace('index.html');return;}
   window._sb=_sb;window._session=s;
+
+  var assinaturaCheck=await _checkAssinatura(s);
+  if(assinaturaCheck==='bloqueado'){ _mostrarBloqueioTotal(); return; }
 
   /* Carregar FAIXAS do servidor (protege dados do app contra cópia) */
   try {
@@ -229,6 +270,7 @@ _sb.auth.getSession().then(async function(r){
   }
 
   document.documentElement.style.visibility='';
+  if(assinaturaCheck && typeof assinaturaCheck==='object') _mostrarAvisoRenovacao(assinaturaCheck);
   document.addEventListener('DOMContentLoaded',function(){
     var el=document.getElementById('_userEmail');
     if(el)el.textContent=s.user.email;
