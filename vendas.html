@@ -846,8 +846,8 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
     </div>
     <div class="modal-success" id="modalSucesso">
       <div class="success-icon">✅</div>
-      <h4>Solicitação enviada!</h4>
-      <p>Você receberá um e-mail com seu acesso em até 24 horas. Fique de olho na caixa de entrada.</p>
+      <h4>Acesso liberado!</h4>
+      <p>Seu login e senha já foram enviados por e-mail — chega em segundos. Fique de olho na caixa de entrada (e no spam, por garantia).</p>
     </div>
   </div>
 </div>
@@ -1104,12 +1104,16 @@ async function enviarSolicitacaoTeste(){
       action:'submit_request',
       payload:{ nome:nome, email:email, telefone:tel }
     }});
-    if(res.error) throw res.error;
+    if(res.error){
+      var msg='Erro ao enviar solicitação. Tente novamente.';
+      try{ var body=await res.error.context.json(); if(body&&body.error) msg=body.error; }catch(_){}
+      throw new Error(msg);
+    }
     if(res.data && res.data.error) throw new Error(res.data.error);
     document.getElementById('modalForm').style.display='none';
     document.getElementById('modalSucesso').style.display='block';
   }catch(e){
-    alert('Erro ao enviar solicitação. Tente novamente.');
+    alert(e.message||'Erro ao enviar solicitação. Tente novamente.');
     btn.disabled=false;btn.textContent='Enviar Solicitação';
   }
 }
