@@ -350,6 +350,18 @@ async function _confirmarTroca(){
 </div>
 </head>
 <body>
+<!-- MODAL MINHAS SIMULAÇÕES -->
+<div id="_modalSims" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:100%;max-width:560px;margin:1rem;max-height:82vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="background:#0B3D91;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <h3 style="color:#fff;margin:0;font-size:16px;font-family:'Sora',sans-serif;font-weight:700">📁 Minhas Simulações</h3>
+      <button onclick="fecharMinhasSimulacoes()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0">×</button>
+    </div>
+    <div style="padding:20px 24px;overflow-y:auto" id="_simsListaWrap">
+      <div style="text-align:center;color:#94A3B8;padding:2rem;font-size:13px">Carregando...</div>
+    </div>
+  </div>
+</div>
 <header>
   <div class="header-inner">
     <div class="logo">
@@ -358,6 +370,7 @@ async function _confirmarTroca(){
     <div style="display:flex;align-items:center;gap:8px">
       <div class="badge-header">SimulaPro</div>
       <span id="_userEmail" style="color:var(--texto3);font-size:11px;font-family:'DM Mono',monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="abrirMinhasSimulacoes()" style="background:var(--azulclaro);border:1px solid var(--cinza2);color:var(--azul);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600">📁 Minhas Simulações</button>
       <button onclick="_abrirModal()" style="background:var(--azulclaro);border:1px solid var(--cinza2);color:var(--azul);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600">Trocar Senha</button>
       <button onclick="_logout()" style="background:var(--azul);border:1px solid var(--azul);color:#fff;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600">Sair</button>
     </div>
@@ -735,6 +748,9 @@ async function _confirmarTroca(){
   <button class="btn-sim" onclick="gerarPDF()" style="background:linear-gradient(135deg,#1B6E3F,#2D9D5C);margin-top:.5rem">
     📄 Exportar Proposta em PDF
   </button>
+  <button class="btn-sim" onclick="salvarSimulacao('caixa')" style="background:#fff;border:1.5px solid #0B3D91;color:#0B3D91;margin-top:.5rem">
+    💾 Salvar Simulação
+  </button>
 
   <div class="notice">⚠️ Simulação estimada com base nas taxas oficiais. Consulte uma agência bancária para proposta oficial.</div>
 </div>
@@ -964,6 +980,7 @@ async function _confirmarTroca(){
 
 <button class="btn-sim" onclick="ctrSimular()" style="background:linear-gradient(135deg,#1B6E3F,#2D9D5C)">📊 Calcular Fluxo</button>
 <button class="btn-sim" id="ctr_btnPDF" onclick="ctrGerarPDF()" style="background:linear-gradient(135deg,#1E40AF,#2563EB);display:none;margin-top:.5rem">📄 Exportar Proposta em PDF</button>
+<button class="btn-sim" id="ctr_btnSalvar" onclick="salvarSimulacao('construtora')" style="background:#fff;border:1.5px solid #1B6E3F;color:#1B6E3F;display:none;margin-top:.5rem">💾 Salvar Simulação</button>
 <div class="notice">⚠️ Simulação estimada. Condições sujeitas à política comercial da construtora. Valores reajustados pelo índice indicado.</div>
 
 </div><!-- /tabConstrutora -->
@@ -2520,6 +2537,8 @@ async function simular() {
       return;
     }
 
+    window._lastCaixaResult = d;
+
     /* Atualiza estado global com dados do servidor */
     fx        = d.faixa;
     sub       = d.sub;
@@ -3717,7 +3736,10 @@ function calcAmort() {
         '<div><span style="font-size:9px;color:#6B7280">Juros totais</span><br><span style="font-size:15px;font-weight:800;color:#14532D">' + fi(Math.round(jurosComAmort)) + '</span></div>' +
       '</div>' +
     '</div>' +
-    '<div style="font-size:10px;color:#94A3B8;text-align:center">* Estratégia de reduzir prazo. A parcela mensal não se altera. Sujeito à política do banco no momento da amortização.</div>';
+    '<div style="font-size:10px;color:#94A3B8;text-align:center">* Estratégia de reduzir prazo. A parcela mensal não se altera. Sujeito à política do banco no momento da amortização.</div>' +
+    '<button class="btn-sim" onclick="salvarSimulacao(\'amortizacao\')" style="background:#fff;border:1.5px solid #C05A00;color:#C05A00;margin-top:.7rem">💾 Salvar Simulação</button>';
+
+  window._lastAmortResumo = { eventos: lista.length, totalAmort: Math.round(totalAmortExtra), economiaJuros: Math.round(economiaTotalJuros) };
 
   if (window._session) {
     _sb.from('events').insert({
@@ -3727,6 +3749,199 @@ function calcAmort() {
       details: { eventos: lista.length, totalAmort: Math.round(totalAmortExtra), economiaJuros: Math.round(economiaTotalJuros) },
       user_agent: navigator.userAgent
     });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PERSISTÊNCIA DE SIMULAÇÕES — salvar, listar, reabrir, apagar
+// ══════════════════════════════════════════════════════════════
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function toBRL2(v) {
+  return (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function setValIf(id, v) {
+  if (v === undefined || v === null) return;
+  const el = document.getElementById(id);
+  if (el) el.value = v;
+}
+
+function preencherCaixaEntrada(e) {
+  if (!e) return;
+  setValIf('nomeCliente', e.nomeCliente);
+  setValIf('renda', e.renda);
+  setValIf('vImovel', e.vImovel);
+  setValIf('vAval', e.vAval);
+  setValIf('ato', e.ato);
+  setValIf('fgtsDisp', e.fgtsDisp);
+  setValIf('nasc', e.dataNasc);
+  setValIf('prazoSlider', e.prazoAnos);
+  setValIf('mesesObra', e.mesesObra);
+  setValIf('dtEntrega', e.dtEntrega);
+  setValIf('dtLancamento', e.dtLancamento);
+  if (typeof e.fgtsPode !== 'undefined') fgtsPode = e.fgtsPode;
+  if (typeof e.tipoTaxa !== 'undefined') tipoTaxa = e.tipoTaxa;
+  if (typeof e.residenteRegiao !== 'undefined') residenteRegiao = e.residenteRegiao;
+}
+
+async function salvarSimulacao(tipo) {
+  const s = window._session;
+  if (!s) return;
+
+  let nomeCliente = 'Sem nome', entrada = {}, resumo = {};
+
+  if (tipo === 'caixa') {
+    const r = window._lastCaixaResult;
+    if (!r) { alert('Calcule uma simulação antes de salvar.'); return; }
+    nomeCliente = document.getElementById('nomeCliente').value.trim() || 'Sem nome';
+    entrada = {
+      nomeCliente,
+      renda:        document.getElementById('renda').value,
+      vImovel:      document.getElementById('vImovel').value,
+      vAval:        document.getElementById('vAval').value,
+      ato:          document.getElementById('ato').value,
+      fgtsDisp:     document.getElementById('fgtsDisp').value,
+      dataNasc:     document.getElementById('nasc').value,
+      prazoAnos:    document.getElementById('prazoSlider').value,
+      mesesObra:    document.getElementById('mesesObra').value,
+      dtEntrega:    document.getElementById('dtEntrega').value,
+      dtLancamento: document.getElementById('dtLancamento').value,
+      fgtsPode, tipoTaxa, residenteRegiao,
+      sistemaAtivo: (document.querySelector('.res-tab.ton')?.textContent.includes('SAC')) ? 'sac' : 'price',
+    };
+    resumo = { faixa: r.faixa?.tag || null, financiado: fi(Math.round(r.finSAC || r.finPRICE || 0)) };
+  } else if (tipo === 'construtora') {
+    const r = window._ctrResult;
+    if (!r) { alert('Calcule uma simulação antes de salvar.'); return; }
+    nomeCliente = document.getElementById('ctr_nome')?.value.trim() || 'Sem nome';
+    document.querySelectorAll('#tabConstrutora [id^="ctr_"]').forEach(el => {
+      if (el.id === 'ctr_btnSalvar') return;
+      if (el.type === 'checkbox') entrada[el.id] = el.checked;
+      else if ('value' in el) entrada[el.id] = el.value;
+    });
+    resumo = { total: fi(Math.round(r.grandTotal || 0)) };
+  } else if (tipo === 'amortizacao') {
+    const base = window._lastCaixaResult;
+    if (!base) { alert('Rode a simulação de amortização antes de salvar.'); return; }
+    nomeCliente = document.getElementById('nomeCliente').value.trim() || 'Sem nome';
+    entrada = {
+      caixaEntrada: {
+        nomeCliente,
+        renda:        document.getElementById('renda').value,
+        vImovel:      document.getElementById('vImovel').value,
+        vAval:        document.getElementById('vAval').value,
+        ato:          document.getElementById('ato').value,
+        fgtsDisp:     document.getElementById('fgtsDisp').value,
+        dataNasc:     document.getElementById('nasc').value,
+        prazoAnos:    document.getElementById('prazoSlider').value,
+        mesesObra:    document.getElementById('mesesObra').value,
+        dtEntrega:    document.getElementById('dtEntrega').value,
+        dtLancamento: document.getElementById('dtLancamento').value,
+        fgtsPode, tipoTaxa, residenteRegiao,
+        sistemaAtivo: (document.querySelector('.res-tab.ton')?.textContent.includes('SAC')) ? 'sac' : 'price',
+      },
+      amortLista: amGetLista(),
+    };
+    resumo = window._lastAmortResumo || {};
+  } else {
+    return;
+  }
+
+  const { error } = await _sb.from('simulacoes').insert({
+    user_id: s.user.id, email: s.user.email, tipo, nome_cliente: nomeCliente, entrada, resumo,
+  });
+  if (error) { alert('Erro ao salvar: ' + error.message); return; }
+  alert('Simulação salva! Acesse em "📁 Minhas Simulações".');
+}
+
+async function abrirMinhasSimulacoes() {
+  document.getElementById('_modalSims').style.display = 'flex';
+  await carregarMinhasSimulacoes();
+}
+function fecharMinhasSimulacoes() {
+  document.getElementById('_modalSims').style.display = 'none';
+}
+
+async function carregarMinhasSimulacoes() {
+  const wrap = document.getElementById('_simsListaWrap');
+  wrap.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:2rem;font-size:13px">Carregando...</div>';
+  const s = window._session;
+  if (!s) return;
+  const { data, error } = await _sb.from('simulacoes')
+    .select('*').eq('user_id', s.user.id)
+    .order('created_at', { ascending: false }).limit(100);
+  if (error) { wrap.innerHTML = '<div style="text-align:center;color:#EF4444;padding:2rem;font-size:13px">Erro ao carregar: ' + esc(error.message) + '</div>'; return; }
+  if (!data?.length) { wrap.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:2rem;font-size:13px">Nenhuma simulação salva ainda.</div>'; return; }
+
+  window._simsCache = data;
+  const tipoInfo = {
+    caixa:       { ico:'🏦', label:'Caixa',        cor:'#1565C0', bg:'#EBF5FF' },
+    construtora: { ico:'🏗️', label:'Construtora',  cor:'#1B6E3F', bg:'#F0FDF4' },
+    amortizacao: { ico:'📉', label:'Amortização',  cor:'#C05A00', bg:'#FEF3E8' },
+  };
+  wrap.innerHTML = data.map(sim => {
+    const t = tipoInfo[sim.tipo] || tipoInfo.caixa;
+    const dt = new Date(sim.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const resumoStr = sim.resumo && typeof sim.resumo === 'object'
+      ? Object.values(sim.resumo).filter(v => v !== null && v !== undefined && v !== '').join(' · ')
+      : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:' + t.bg + ';border-radius:10px;margin-bottom:8px;border-left:3px solid ' + t.cor + '">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:13px;font-weight:700;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + t.ico + ' ' + esc(sim.nome_cliente || 'Sem nome') + '</div>' +
+        '<div style="font-size:11px;color:#64748B;margin-top:2px">' + t.label + ' · ' + dt + (resumoStr ? ' · ' + esc(resumoStr) : '') + '</div>' +
+      '</div>' +
+      '<button onclick="reabrirSimulacao(' + sim.id + ')" style="background:' + t.cor + ';color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Reabrir</button>' +
+      '<button onclick="excluirSimulacaoSalva(' + sim.id + ')" style="background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;border-radius:6px;padding:6px 9px;font-size:11px;cursor:pointer">✕</button>' +
+    '</div>';
+  }).join('');
+}
+
+async function excluirSimulacaoSalva(id) {
+  if (!confirm('Apagar esta simulação salva?')) return;
+  const { error } = await _sb.from('simulacoes').delete().eq('id', id);
+  if (error) { alert('Erro ao apagar: ' + error.message); return; }
+  await carregarMinhasSimulacoes();
+}
+
+async function reabrirSimulacao(id) {
+  const sim = (window._simsCache || []).find(x => x.id === id);
+  if (!sim) return;
+  fecharMinhasSimulacoes();
+
+  if (sim.tipo === 'caixa') {
+    switchMainTab('caixa');
+    preencherCaixaEntrada(sim.entrada);
+    await simular();
+  } else if (sim.tipo === 'construtora') {
+    switchMainTab('construtora');
+    Object.entries(sim.entrada).forEach(([fid, val]) => {
+      const el = document.getElementById(fid);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = !!val; else el.value = val;
+    });
+    ['ctr_ckG2','ctr_ckAP','ctr_ckCH','ctr_ckAO','ctr_ckG2POS'].forEach(ckId => {
+      const ck = document.getElementById(ckId);
+      if (ck) ck.dispatchEvent(new Event('change'));
+    });
+    ctrRecalc();
+    await ctrSimular();
+  } else if (sim.tipo === 'amortizacao') {
+    switchMainTab('caixa');
+    preencherCaixaEntrada(sim.entrada.caixaEntrada);
+    await simular();
+    document.getElementById('am-lista').innerHTML = '';
+    (sim.entrada.amortLista || []).forEach(item => {
+      amAddRow(item.parcela, toBRL2(item.valor));
+      const row = document.querySelector('#am-lista > div:last-child');
+      const sel = row?.querySelector('select');
+      if (sel) sel.value = item.tipo;
+    });
+    calcAmort();
+    document.getElementById('secAmort')?.scrollIntoView({ behavior:'smooth', block:'start' });
   }
 }
 
@@ -3905,6 +4120,7 @@ async function ctrSimular() {
   `;
   document.getElementById('ctr_resCard').style.display = '';
   document.getElementById('ctr_btnPDF').style.display = '';
+  document.getElementById('ctr_btnSalvar').style.display = '';
   document.getElementById('ctr_resCard').scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
