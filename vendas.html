@@ -1105,6 +1105,7 @@ async function atualizarPrecoCupom(){
       var msg = 'cupom inválido';
       try{ if(res.error){ var body=await res.error.context.json(); if(body&&body.error) msg=body.error.toLowerCase(); } }catch(_){}
       if(d && d.error) msg = d.error.toLowerCase();
+      msg = msg.replace(/\.+$/,'');
       subEl.innerHTML = base + ' — <span style="color:#DC2626;font-weight:600">' + msg + '</span>.';
       return;
     }
