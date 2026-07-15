@@ -880,7 +880,7 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
       </div>
       <div class="modal-field">
         <label for="ckCupom">Cupom de desconto (opcional)</label>
-        <input type="text" id="ckCupom" placeholder="Ex: TESTE30" autocomplete="off" style="text-transform:uppercase"/>
+        <input type="text" id="ckCupom" placeholder="Ex: TESTE30" autocomplete="off" style="text-transform:uppercase" oninput="agendarCheckCupom()"/>
       </div>
       <div class="modal-field" style="display:flex;align-items:flex-start;gap:8px;margin-top:4px">
         <input type="checkbox" id="ckTermos" style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer"/>
@@ -1067,17 +1067,52 @@ var _planoSelecionado = null;
   if(planoUrl === 'mensal' || planoUrl === 'anual'){
     window.addEventListener('DOMContentLoaded', function(){
       abrirCheckout(planoUrl);
-      if(cupomUrl) document.getElementById('ckCupom').value = cupomUrl;
+      if(cupomUrl){
+        document.getElementById('ckCupom').value = cupomUrl;
+        atualizarPrecoCupom();
+      }
     });
   }
 })();
+var _precoBase = { mensal:'Plano Mensal — R$70/mês', anual:'Plano Anual — R$600/ano (R$50/mês)' };
 function abrirCheckout(plano){
   _planoSelecionado = plano;
-  var nomes = { mensal:'Plano Mensal — R$70/mês', anual:'Plano Anual — R$600/ano (R$50/mês)' };
   document.getElementById('checkoutTitulo').textContent = '💳 Assinar ' + (plano==='anual'?'Plano Anual':'Plano Mensal');
-  document.getElementById('checkoutSub').textContent = nomes[plano] + ' — preencha seus dados para gerar o pagamento.';
+  document.getElementById('checkoutSub').textContent = _precoBase[plano] + ' — preencha seus dados para gerar o pagamento.';
   document.getElementById('modalCheckout').classList.add('open');
   document.body.style.overflow='hidden';
+}
+var _cupomCheckTimer = null;
+function agendarCheckCupom(){
+  clearTimeout(_cupomCheckTimer);
+  _cupomCheckTimer = setTimeout(atualizarPrecoCupom, 400);
+}
+async function atualizarPrecoCupom(){
+  var cupom = document.getElementById('ckCupom').value.trim();
+  var subEl = document.getElementById('checkoutSub');
+  var base = _precoBase[_planoSelecionado] || '';
+  if(!cupom){
+    subEl.textContent = base + ' — preencha seus dados para gerar o pagamento.';
+    return;
+  }
+  subEl.textContent = 'Verificando cupom...';
+  try{
+    var res = await _sb.functions.invoke('admin-action',{body:{
+      action:'validar_cupom', payload:{ codigo:cupom, plano:_planoSelecionado }
+    }});
+    var d = res.data;
+    if(res.error || !d || !d.valido){
+      var msg = 'cupom inválido';
+      try{ if(res.error){ var body=await res.error.context.json(); if(body&&body.error) msg=body.error.toLowerCase(); } }catch(_){}
+      if(d && d.error) msg = d.error.toLowerCase();
+      subEl.innerHTML = base + ' — <span style="color:#DC2626;font-weight:600">' + msg + '</span>.';
+      return;
+    }
+    subEl.innerHTML = '<span style="text-decoration:line-through;color:#94A3B8">' + base.split('—')[1] + '</span> ' +
+      '<strong style="color:#15803D">R$' + d.valor + ',00/mês com o cupom ' + d.codigo + '</strong> — preencha seus dados para gerar o pagamento.';
+  }catch(e){
+    subEl.textContent = base + ' — preencha seus dados para gerar o pagamento.';
+  }
 }
 function fecharCheckout(){
   document.getElementById('modalCheckout').classList.remove('open');
