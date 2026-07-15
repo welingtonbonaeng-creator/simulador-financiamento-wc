@@ -878,6 +878,10 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
         <label for="ckTel">WhatsApp / Telefone</label>
         <input type="tel" id="ckTel" placeholder="(21) 99999-9999" autocomplete="tel"/>
       </div>
+      <div class="modal-field">
+        <label for="ckCupom">Cupom de desconto (opcional)</label>
+        <input type="text" id="ckCupom" placeholder="Ex: TESTE30" autocomplete="off" style="text-transform:uppercase"/>
+      </div>
       <div class="modal-field" style="display:flex;align-items:flex-start;gap:8px;margin-top:4px">
         <input type="checkbox" id="ckTermos" style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer"/>
         <label for="ckTermos" style="font-size:12px;font-weight:400;color:#475569;line-height:1.5;cursor:pointer">Li e aceito os <a href="termos.html" target="_blank" rel="noopener" style="color:#0B3D91;font-weight:600">Termos de Uso e a Política de Privacidade</a>.</label>
@@ -1068,6 +1072,7 @@ function fecharCheckout(){
   document.getElementById('ckEmail').value='';
   document.getElementById('ckCpf').value='';
   document.getElementById('ckTel').value='';
+  document.getElementById('ckCupom').value='';
   document.getElementById('ckTermos').checked=false;
 }
 document.getElementById('modalCheckout').addEventListener('click',function(e){
@@ -1079,6 +1084,7 @@ async function enviarCheckout(){
   var email=document.getElementById('ckEmail').value.trim();
   var cpf=document.getElementById('ckCpf').value.replace(/\D/g,'');
   var tel=document.getElementById('ckTel').value.trim();
+  var cupom=document.getElementById('ckCupom').value.trim();
   var aceitouTermos=document.getElementById('ckTermos').checked;
   if(!nome){alert('Informe seu nome completo.');return;}
   if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
@@ -1089,9 +1095,13 @@ async function enviarCheckout(){
   try{
     var res=await _sb.functions.invoke('admin-action',{body:{
       action:'asaas_checkout',
-      payload:{ nome:nome, email:email, cpfCnpj:cpf, telefone:tel, plano:_planoSelecionado, aceitouTermos:true, userAgent:navigator.userAgent }
+      payload:{ nome:nome, email:email, cpfCnpj:cpf, telefone:tel, plano:_planoSelecionado, cupom:cupom||undefined, aceitouTermos:true, userAgent:navigator.userAgent }
     }});
-    if(res.error) throw res.error;
+    if(res.error){
+      var msg='Erro ao gerar pagamento. Tente novamente.';
+      try{ var body=await res.error.context.json(); if(body&&body.error) msg=body.error; }catch(_){}
+      throw new Error(msg);
+    }
     if(res.data && res.data.error) throw new Error(res.data.error);
     if(res.data && res.data.checkoutUrl){
       window.location.href = res.data.checkoutUrl;
