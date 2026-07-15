@@ -1057,6 +1057,20 @@ document.getElementById('modalTeste').addEventListener('click',function(e){
 });
 
 var _planoSelecionado = null;
+// Permite abrir o checkout direto num plano específico via link, ex:
+// vendas.html?plano=mensal&cupom=TESTE30 — evita depender de qual botão
+// a pessoa clica na seção de preços.
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var planoUrl = params.get('plano');
+  var cupomUrl = params.get('cupom');
+  if(planoUrl === 'mensal' || planoUrl === 'anual'){
+    window.addEventListener('DOMContentLoaded', function(){
+      abrirCheckout(planoUrl);
+      if(cupomUrl) document.getElementById('ckCupom').value = cupomUrl;
+    });
+  }
+})();
 function abrirCheckout(plano){
   _planoSelecionado = plano;
   var nomes = { mensal:'Plano Mensal — R$70/mês', anual:'Plano Anual — R$600/ano (R$50/mês)' };
