@@ -836,6 +836,10 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
         <input type="email" id="testeEmail" placeholder="seu@email.com" autocomplete="email"/>
       </div>
       <div class="modal-field">
+        <label for="testeEmailConfirm">Confirme seu e-mail</label>
+        <input type="email" id="testeEmailConfirm" placeholder="digite novamente" autocomplete="off" onpaste="return false" oncopy="return false" oncut="return false"/>
+      </div>
+      <div class="modal-field">
         <label for="testeTel">WhatsApp / Telefone</label>
         <input type="tel" id="testeTel" placeholder="(21) 99999-9999" autocomplete="tel"/>
       </div>
@@ -869,6 +873,10 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
       <div class="modal-field">
         <label for="ckEmail">E-mail</label>
         <input type="email" id="ckEmail" placeholder="seu@email.com" autocomplete="email"/>
+      </div>
+      <div class="modal-field">
+        <label for="ckEmailConfirm">Confirme seu e-mail</label>
+        <input type="email" id="ckEmailConfirm" placeholder="digite novamente" autocomplete="off" onpaste="return false" oncopy="return false" oncut="return false"/>
       </div>
       <div class="modal-field">
         <label for="ckCpf">CPF</label>
@@ -1049,6 +1057,7 @@ function fecharModalTeste(){
   document.getElementById('modalSucesso').style.display='none';
   document.getElementById('testeNome').value='';
   document.getElementById('testeEmail').value='';
+  document.getElementById('testeEmailConfirm').value='';
   document.getElementById('testeTel').value='';
   document.getElementById('testeTermos').checked=false;
 }
@@ -1120,6 +1129,7 @@ function fecharCheckout(){
   document.body.style.overflow='';
   document.getElementById('ckNome').value='';
   document.getElementById('ckEmail').value='';
+  document.getElementById('ckEmailConfirm').value='';
   document.getElementById('ckCpf').value='';
   document.getElementById('ckTel').value='';
   document.getElementById('ckCupom').value='';
@@ -1132,12 +1142,14 @@ document.getElementById('modalCheckout').addEventListener('click',function(e){
 async function enviarCheckout(){
   var nome=document.getElementById('ckNome').value.trim();
   var email=document.getElementById('ckEmail').value.trim();
+  var emailConfirm=document.getElementById('ckEmailConfirm').value.trim();
   var cpf=document.getElementById('ckCpf').value.replace(/\D/g,'');
   var tel=document.getElementById('ckTel').value.trim();
   var cupom=document.getElementById('ckCupom').value.trim();
   var aceitouTermos=document.getElementById('ckTermos').checked;
   if(!nome){alert('Informe seu nome completo.');return;}
   if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
+  if(email.toLowerCase()!==emailConfirm.toLowerCase()){alert('Os e-mails digitados não são iguais. Confira e digite novamente — é nele que chega seu login e senha.');return;}
   if(cpf.length!==11){alert('Informe um CPF válido.');return;}
   if(!aceitouTermos){alert('Para continuar, marque que você leu e aceita os Termos de Uso e a Política de Privacidade.');return;}
   var btn=document.getElementById('btnCheckout');
@@ -1167,10 +1179,12 @@ async function enviarCheckout(){
 async function enviarSolicitacaoTeste(){
   var nome=document.getElementById('testeNome').value.trim();
   var email=document.getElementById('testeEmail').value.trim();
+  var emailConfirm=document.getElementById('testeEmailConfirm').value.trim();
   var tel=document.getElementById('testeTel').value.trim();
   var aceitouTermos=document.getElementById('testeTermos').checked;
   if(!nome){alert('Informe seu nome completo.');return;}
   if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
+  if(email.toLowerCase()!==emailConfirm.toLowerCase()){alert('Os e-mails digitados não são iguais. Confira e digite novamente — é nele que chega seu login e senha.');return;}
   if(!aceitouTermos){alert('Para continuar, marque que você leu e aceita os Termos de Uso e a Política de Privacidade.');return;}
   var btn=document.getElementById('btnEnviarTeste');
   btn.disabled=true;btn.textContent='Enviando...';
