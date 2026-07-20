@@ -4,175 +4,1207 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="referrer" content="strict-origin-when-cross-origin"/>
-<title>Acesso — SimulaPro</title>
+<title>SimulaPro — Simulador de Financiamento Imobiliário para Corretores</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+:root{
+  --azul:#0B3D91;--azul2:#1565C0;--azul3:#1976D2;--azulclaro:#E3F0FF;
+  --laranja:#F57C00;--laranja2:#FF9800;--laranja3:#FFF3E0;
+  --cinza1:#F8FAFC;--cinza2:#E8ECF4;--cinza3:#94A3B8;
+  --texto:#0F172A;--texto2:#334155;--texto3:#64748B;
+  --branco:#FFFFFF;
+  --sombra:0 4px 24px rgba(11,61,145,.10);
+  --sombra2:0 20px 60px rgba(11,61,145,.15);
+  --radius:16px;--radius2:10px;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;font-family:'Sora',sans-serif;}
-body{display:flex;min-height:100vh;background:#0B3D91;}
+html{scroll-behavior:smooth;}
+body{font-family:'Sora',sans-serif;color:var(--texto);background:#fff;overflow-x:hidden;}
 
-/* LADO ESQUERDO */
-.left{flex:1;background:linear-gradient(145deg,#05235A 0%,#0B3D91 50%,#1565C0 100%);display:flex;flex-direction:column;justify-content:space-between;padding:3rem;position:relative;overflow:hidden;}
-.left::before{content:'';position:absolute;top:-80px;right:-80px;width:400px;height:400px;border-radius:50%;background:rgba(245,124,0,.08);pointer-events:none;}
-.left::after{content:'';position:absolute;bottom:-120px;left:-60px;width:350px;height:350px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none;}
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 1.5rem;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(11,61,145,.08);transition:box-shadow .3s;}
+nav.scrolled{box-shadow:0 4px 24px rgba(11,61,145,.1);}
+.nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:76px;}
+.nav-logo img{height:64px;width:auto;display:block;}
+.nav-links{display:flex;align-items:center;gap:2rem;}
+.nav-links a{font-size:14px;font-weight:500;color:var(--texto2);text-decoration:none;transition:color .2s;}
+.nav-links a:hover{color:var(--azul);}
+.btn-nav-login{font-size:13px;font-weight:600;color:var(--azul);background:var(--azulclaro);border:none;padding:8px 18px;border-radius:8px;cursor:pointer;text-decoration:none;transition:all .2s;}
+.btn-nav-login:hover{background:var(--azul);color:#fff;}
+.btn-nav-cta{font-size:13px;font-weight:700;color:#fff;background:var(--laranja);border:none;padding:9px 20px;border-radius:8px;cursor:pointer;text-decoration:none;transition:all .2s;box-shadow:0 4px 16px rgba(245,124,0,.3);}
+.btn-nav-cta:hover{background:var(--laranja2);transform:translateY(-1px);}
 
-.left-logo img{height:110px;width:auto;display:block;}
+/* HERO */
+.hero{min-height:100vh;background:linear-gradient(145deg,#05235A 0%,#0B3D91 45%,#1565C0 100%);display:flex;align-items:center;padding:100px 1.5rem 60px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");}
+.hero-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;position:relative;z-index:1;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(245,124,0,.2);border:1px solid rgba(245,124,0,.4);color:#FFB74D;font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;margin-bottom:1.5rem;letter-spacing:.05em;}
+.hero-badge span{width:8px;height:8px;background:#F57C00;border-radius:50%;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.6;transform:scale(1.4);}}
+.hero h1{font-size:clamp(2rem,4vw,3rem);font-weight:800;color:#fff;line-height:1.15;margin-bottom:1.25rem;}
+.hero h1 span{color:#FFB74D;}
+.hero-sub{font-size:16px;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:2rem;max-width:480px;}
+.hero-ctas{display:flex;gap:1rem;flex-wrap:wrap;}
+.btn-hero-primary{display:inline-flex;align-items:center;gap:8px;background:var(--laranja);color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;padding:14px 28px;border-radius:10px;text-decoration:none;border:none;cursor:pointer;transition:all .25s;box-shadow:0 8px 32px rgba(245,124,0,.4);}
+.btn-hero-primary:hover{background:#E65100;transform:translateY(-2px);box-shadow:0 12px 40px rgba(245,124,0,.5);}
+.btn-hero-secondary{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:600;padding:14px 28px;border-radius:10px;text-decoration:none;border:1px solid rgba(255,255,255,.25);cursor:pointer;transition:all .25s;}
+.btn-hero-secondary:hover{background:rgba(255,255,255,.18);}
+.hero-trust{margin-top:2rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;}
+.hero-trust-item{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,.6);font-size:12px;}
+.hero-trust-item svg{opacity:.7;}
 
-.left-content{position:relative;z-index:1;}
-.left-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(245,124,0,.2);border:1px solid rgba(245,124,0,.35);color:#FFB74D;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;margin-bottom:1.5rem;letter-spacing:.05em;}
-.left-tag span{width:7px;height:7px;background:#F57C00;border-radius:50%;animation:blink 1.5s infinite;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
-.left-h1{font-size:2.2rem;font-weight:800;color:#fff;line-height:1.2;margin-bottom:.75rem;}
-.left-h1 em{color:#FFB74D;font-style:normal;}
-.left-sub{font-size:14px;color:rgba(255,255,255,.65);line-height:1.7;margin-bottom:2rem;max-width:380px;}
+/* MOCKUP */
+.hero-mockup{position:relative;display:flex;align-items:center;justify-content:center;}
+.mockup-wrap{transform:perspective(1200px) rotateY(-6deg) rotateX(2deg);transition:transform .4s;filter:drop-shadow(0 32px 64px rgba(0,0,0,.4));}
+.mockup-wrap:hover{transform:perspective(1200px) rotateY(-2deg) rotateX(1deg);}
+.mockup-card{background:#fff;border-radius:12px;overflow:hidden;width:380px;font-family:'Sora',sans-serif;}
+.mockup-header{background:linear-gradient(135deg,#0B3D91,#1565C0);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+.mockup-header-title{color:#fff;font-size:11px;font-weight:700;}
+.mockup-header-sub{color:rgba(255,255,255,.6);font-size:9px;margin-top:2px;}
+.mockup-badge{background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);font-size:8px;font-weight:600;padding:3px 8px;border-radius:10px;font-family:'DM Mono',monospace;}
+.mockup-info-row{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid #E8ECF4;}
+.mockup-info-cell{padding:8px 12px;border-right:1px solid #E8ECF4;}
+.mockup-info-cell:last-child{border-right:none;}
+.mockup-info-label{font-size:7px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.mockup-info-value{font-size:10px;font-weight:700;color:#0F172A;}
+.mockup-parcela{background:linear-gradient(135deg,#0B3D91,#1565C0);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+.mockup-parcela-label{font-size:8px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.mockup-parcela-value{font-size:20px;font-weight:800;color:#fff;font-family:'DM Mono',monospace;line-height:1;}
+.mockup-parcela-sub{font-size:8px;color:rgba(255,255,255,.5);margin-top:2px;}
+.mockup-parcela-badge{background:rgba(255,255,255,.15);color:#fff;font-size:8px;font-weight:600;padding:4px 8px;border-radius:6px;}
+.mockup-body{padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mockup-box{border-radius:8px;padding:10px 12px;}
+.mockup-box.cinza{background:#F8FAFC;border:1px solid #E8ECF4;}
+.mockup-box.verde{background:#EAF4EE;border:1px solid #B5D9C3;}
+.mockup-box.azul-claro{background:#E3F0FF;border:1px solid #B3D1F5;}
+.mockup-box-label{font-size:7px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.mockup-box-label.verde{color:#14522F;}
+.mockup-box-label.azul{color:#0B3D91;}
+.mockup-box-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.mockup-box-row:last-child{margin-bottom:0;}
+.mockup-box-item{font-size:9px;color:#64748B;}
+.mockup-box-val{font-size:9px;font-weight:700;color:#0F172A;font-family:'DM Mono',monospace;}
+.mockup-box-val.verde{color:#14522F;}
+.mockup-total{padding:10px 16px;background:#F8FAFC;border-top:1px solid #E8ECF4;display:flex;align-items:center;justify-content:space-between;}
+.mockup-total-label{font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;}
+.mockup-total-value{font-size:13px;font-weight:800;color:#14522F;font-family:'DM Mono',monospace;}
+.mockup-glow{position:absolute;inset:-40px;background:radial-gradient(ellipse at 60% 50%,rgba(245,124,0,.12),transparent 65%);pointer-events:none;z-index:-1;}
 
-.features{display:flex;flex-direction:column;gap:.75rem;}
-.feature{display:flex;align-items:center;gap:.75rem;}
-.feature-dot{width:28px;height:28px;background:rgba(245,124,0,.2);border:1px solid rgba(245,124,0,.4);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
-.feature-txt{font-size:13px;color:rgba(255,255,255,.8);line-height:1.4;}
-.feature-txt strong{color:#fff;}
+/* STATS */
+.stats{background:#fff;padding:4rem 1.5rem;border-bottom:1px solid var(--cinza2);}
+.stats-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:2rem;}
+.stat-item{text-align:center;}
+.stat-num{font-size:2.5rem;font-weight:800;color:var(--azul);font-family:'DM Mono',monospace;line-height:1;}
+.stat-num span{color:var(--laranja);}
+.stat-label{font-size:13px;color:var(--texto3);margin-top:6px;line-height:1.4;}
 
-.left-footer{font-size:11px;color:rgba(255,255,255,.3);position:relative;z-index:1;}
+/* SEÇÃO GENÉRICA */
+section{padding:5rem 1.5rem;}
+.section-inner{max-width:1100px;margin:0 auto;}
+.section-tag{display:inline-block;background:var(--laranja3);color:var(--laranja);font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem;}
+.section-title{font-size:clamp(1.75rem,3vw,2.5rem);font-weight:800;color:var(--texto);line-height:1.2;margin-bottom:1rem;}
+.section-title span{color:var(--azul);}
+.section-sub{font-size:16px;color:var(--texto3);line-height:1.7;max-width:560px;}
+.text-center{text-align:center;}
+.text-center .section-sub{margin:0 auto;}
 
-/* LADO DIREITO */
-.right{width:440px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:3rem 2.5rem;position:relative;}
-.form-title{font-size:22px;font-weight:800;color:#0F172A;margin-bottom:.4rem;text-align:center;}
-.form-sub{font-size:13px;color:#64748B;margin-bottom:2rem;text-align:center;}
+/* PROBLEMA */
+.problema{background:var(--cinza1);}
+.problema-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem;}
+.problema-card{background:#fff;border-radius:var(--radius);padding:2rem;border:1px solid var(--cinza2);position:relative;overflow:hidden;transition:transform .25s,box-shadow .25s;}
+.problema-card:hover{transform:translateY(-4px);box-shadow:var(--sombra2);}
+.problema-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#EF4444,#F97316);}
+.problema-icon{font-size:2rem;margin-bottom:1rem;}
+.problema-card h3{font-size:17px;font-weight:700;color:var(--texto);margin-bottom:.75rem;}
+.problema-card p{font-size:14px;color:var(--texto3);line-height:1.65;}
 
-.form{width:100%;}
-.field{display:flex;flex-direction:column;gap:5px;margin-bottom:1rem;}
-.field label{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;}
-.field input{height:46px;border:1.5px solid #E2E8F0;border-radius:10px;padding:0 14px;font-size:14px;font-family:'Sora',sans-serif;background:#F8FAFC;color:#0F172A;width:100%;transition:all .2s;outline:none;}
-.field input:focus{border-color:#1976D2;background:#fff;box-shadow:0 0 0 3px rgba(25,118,210,.1);}
-.field input::placeholder{color:#94A3B8;}
+/* FEATURES */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem;}
+.feature-card{background:#fff;border-radius:var(--radius);padding:2rem;border:1px solid var(--cinza2);transition:transform .25s,box-shadow .25s;}
+.feature-card:hover{transform:translateY(-4px);box-shadow:var(--sombra2);}
+.feature-icon{width:48px;height:48px;background:var(--azulclaro);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:1.25rem;}
+.feature-card h3{font-size:16px;font-weight:700;color:var(--texto);margin-bottom:.6rem;}
+.feature-card p{font-size:13px;color:var(--texto3);line-height:1.6;}
 
-.btn-login{width:100%;height:50px;background:linear-gradient(135deg,#0B3D91,#1976D2);color:#fff;border:none;border-radius:10px;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .25s;box-shadow:0 4px 20px rgba(11,61,145,.3);margin-top:.5rem;}
-.btn-login:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(11,61,145,.4);}
-.btn-login:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none;}
+/* AMORTIZAÇÃO */
+.amort-section{background:linear-gradient(145deg,#05235A,#0B3D91);padding:5rem 1.5rem;overflow:hidden;}
+.amort-inner{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;max-width:1100px;margin:0 auto;}
+.amort-tag{display:inline-block;background:rgba(255,183,77,.2);color:#FFB74D;font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem;}
+.amort-title{font-size:clamp(1.5rem,3vw,2.25rem);font-weight:800;color:#fff;line-height:1.2;margin-bottom:1rem;}
+.amort-title span{color:#FFB74D;}
+.amort-sub{font-size:15px;color:rgba(255,255,255,.7);line-height:1.7;margin-bottom:2rem;}
+.amort-list{list-style:none;display:flex;flex-direction:column;gap:1rem;}
+.amort-list li{display:flex;gap:1rem;align-items:flex-start;}
+.amort-list .al-icon{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-top:2px;}
+.amort-list .al-text strong{display:block;color:#fff;font-size:14px;font-weight:700;margin-bottom:2px;}
+.amort-list .al-text span{font-size:13px;color:rgba(255,255,255,.6);line-height:1.5;}
+/* mockup amortização */
+.amort-mock{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:1.5rem;backdrop-filter:blur(12px);}
+.amort-mock-hd{font-size:12px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem;}
+.amort-evento{background:rgba(255,255,255,.08);border-radius:10px;padding:1rem;margin-bottom:.75rem;border-left:3px solid #FFB74D;}
+.amort-evento-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;}
+.amort-evento-nome{font-size:13px;font-weight:700;color:#fff;}
+.amort-evento-val{font-size:14px;font-weight:800;color:#FFB74D;font-family:'DM Mono',monospace;}
+.amort-cols{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+.amort-col{background:rgba(255,255,255,.06);border-radius:8px;padding:.6rem .75rem;}
+.amort-col-label{font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.amort-col-val{font-size:13px;font-weight:700;font-family:'DM Mono',monospace;}
+.amort-col-val.verde{color:#4ADE80;}
+.amort-col-val.verm{color:#F87171;}
+.amort-col-val.branco{color:#fff;}
+.amort-resumo{margin-top:1rem;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:10px;padding:.875rem 1rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;text-align:center;}
+.amort-resumo-item .label{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:3px;}
+.amort-resumo-item .val{font-size:13px;font-weight:800;color:#4ADE80;font-family:'DM Mono',monospace;}
+.amort-opts{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.75rem;}
+.amort-opt{border-radius:8px;padding:.6rem .75rem;border:1px solid rgba(255,255,255,.15);cursor:pointer;}
+.amort-opt.a{background:rgba(11,61,145,.5);}
+.amort-opt.b{background:rgba(91,33,182,.3);}
+.amort-opt .opt-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.5);margin-bottom:3px;}
+.amort-opt .opt-val{font-size:12px;color:#fff;font-family:'DM Mono',monospace;}
+@media(max-width:900px){.amort-inner{grid-template-columns:1fr;gap:2.5rem;}}
 
-.msg{font-size:12px;padding:10px 14px;border-radius:8px;margin-bottom:1rem;line-height:1.5;display:none;}
-.msg.er{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;display:block;}
-.msg.ok{background:#F0FDF4;color:#14532D;border:1px solid #BBF7D0;display:block;}
+/* COMO FUNCIONA */
+.como{background:linear-gradient(135deg,#0B3D91,#1565C0);padding:5rem 1.5rem;}
+.como .section-title{color:#fff;}
+.como .section-sub{color:rgba(255,255,255,.7);}
+.como .section-tag{background:rgba(245,124,0,.2);color:#FFB74D;}
+.passos{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;margin-top:3rem;position:relative;}
+.passos::before{content:'';position:absolute;top:28px;left:calc(16.66% + 1rem);right:calc(16.66% + 1rem);height:2px;background:rgba(255,255,255,.2);}
+.passo{text-align:center;position:relative;}
+.passo-num{width:56px;height:56px;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 1.25rem;position:relative;z-index:1;backdrop-filter:blur(8px);}
+.passo h3{font-size:16px;font-weight:700;color:#fff;margin-bottom:.6rem;}
+.passo p{font-size:13px;color:rgba(255,255,255,.65);line-height:1.6;}
 
-.divider{display:flex;align-items:center;gap:.75rem;margin:1.25rem 0;}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:#E2E8F0;}
-.divider span{font-size:11px;color:#94A3B8;white-space:nowrap;}
+/* PREÇO */
+.preco-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:3rem;max-width:760px;margin-left:auto;margin-right:auto;}
+.preco-card{border-radius:var(--radius);padding:2.5rem;border:2px solid var(--cinza2);position:relative;transition:transform .25s,box-shadow .25s;background:#fff;}
+.preco-card:hover{transform:translateY(-4px);}
+.preco-card.destaque{border-color:var(--laranja);box-shadow:0 16px 48px rgba(245,124,0,.2);}
+.preco-card.blurred{filter:blur(8px);pointer-events:none;user-select:none;}
+.preco-card.blurred::after{content:'';position:absolute;inset:0;border-radius:var(--radius);background:rgba(255,255,255,.15);}
+.teste-card{border-radius:var(--radius);padding:2.5rem;border:2px dashed #CBD5E1;background:linear-gradient(135deg,#F0F4FF,#F8F9FF);text-align:center;margin-top:1.5rem;max-width:480px;margin-left:auto;margin-right:auto;}
+.teste-card-icon{font-size:2.5rem;margin-bottom:.75rem;}
+.teste-card h3{font-size:1.25rem;font-weight:800;color:var(--texto);margin:0 0 .5rem;}
+.teste-card p{font-size:14px;color:var(--texto2);margin:0 0 1.5rem;line-height:1.6;}
+.btn-teste{display:inline-block;background:var(--azul);color:#fff;padding:.875rem 2rem;border-radius:var(--radius);font-weight:700;font-size:15px;text-decoration:none;cursor:pointer;border:none;transition:opacity .2s;}
+.btn-teste:hover{opacity:.85;}
+/* Modal solicitação */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:16px;padding:2.5rem 2rem;max-width:440px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.25);}
+.modal-box h3{font-size:1.25rem;font-weight:800;color:var(--texto);margin:0 0 .5rem;}
+.modal-box p{font-size:14px;color:var(--texto2);margin:0 0 1.5rem;line-height:1.6;}
+.modal-field{margin-bottom:1rem;}
+.modal-field label{display:block;font-size:13px;font-weight:600;color:var(--texto2);margin-bottom:.4rem;}
+.modal-field input{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:.75rem 1rem;font-size:15px;color:var(--texto);outline:none;box-sizing:border-box;transition:border-color .2s;}
+.modal-field input:focus{border-color:var(--azul);}
+.modal-btns{display:flex;gap:.75rem;margin-top:1.5rem;}
+.modal-btns button{flex:1;padding:.875rem;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;border:none;}
+.btn-modal-cancel{background:#F1F5F9;color:var(--texto2);}
+.btn-modal-submit{background:var(--azul);color:#fff;}
+.btn-modal-submit:hover{opacity:.85;}
+.modal-success{display:none;text-align:center;padding:1rem 0;}
+.modal-success .success-icon{font-size:3rem;margin-bottom:.75rem;}
+.modal-success h4{font-size:1.1rem;font-weight:800;color:var(--texto);margin:0 0 .5rem;}
+.modal-success p{font-size:14px;color:var(--texto2);margin:0;}
+.preco-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--laranja);color:#fff;font-size:11px;font-weight:700;padding:5px 16px;border-radius:20px;white-space:nowrap;letter-spacing:.05em;}
+.preco-nome{font-size:13px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;}
+.preco-valor{font-size:3rem;font-weight:800;color:var(--texto);line-height:1;margin-bottom:.25rem;}
+.preco-valor small{font-size:1rem;font-weight:500;color:var(--texto3);}
+.preco-periodo{font-size:13px;color:var(--texto3);margin-bottom:1.5rem;}
+.preco-features{list-style:none;display:flex;flex-direction:column;gap:.75rem;margin-bottom:2rem;}
+.preco-features li{display:flex;align-items:flex-start;gap:.6rem;font-size:14px;color:var(--texto2);}
+.preco-features li::before{content:'✓';color:var(--azul);font-weight:700;flex-shrink:0;margin-top:1px;}
+.preco-features li.laranja::before{color:var(--laranja);}
+.btn-preco{width:100%;padding:14px;border:none;border-radius:10px;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .25s;text-decoration:none;display:block;text-align:center;}
+.btn-preco.azul{background:var(--azulclaro);color:var(--azul);}
+.btn-preco.azul:hover{background:var(--azul);color:#fff;}
+.btn-preco.laranja{background:var(--laranja);color:#fff;box-shadow:0 8px 24px rgba(245,124,0,.35);}
+.btn-preco.laranja:hover{background:#E65100;transform:translateY(-2px);}
+.vagas{text-align:center;margin-top:1rem;font-size:12px;color:var(--laranja);font-weight:600;}
+.vagas-bar{height:6px;background:var(--cinza2);border-radius:3px;margin:8px auto;max-width:200px;overflow:hidden;}
+.vagas-fill{height:100%;background:linear-gradient(90deg,var(--laranja),var(--laranja2));border-radius:3px;width:70%;transition:width 1s;}
 
-.btn-esqueci{width:100%;height:42px;background:transparent;color:#1565C0;border:1.5px solid #E2E8F0;border-radius:10px;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
-.btn-esqueci:hover{background:#F0F7FF;border-color:#1565C0;}
+/* GARANTIA */
+.garantia{background:var(--cinza1);}
+.garantia-box{background:#fff;border-radius:var(--radius);border:2px solid var(--azulclaro);padding:3rem;display:flex;align-items:center;gap:2.5rem;max-width:820px;margin:3rem auto 0;}
+.garantia-icon{font-size:4rem;flex-shrink:0;}
+.garantia-box h3{font-size:22px;font-weight:800;color:var(--texto);margin-bottom:.6rem;}
+.garantia-box p{font-size:15px;color:var(--texto3);line-height:1.65;}
 
-.right-footer{position:absolute;bottom:1.5rem;font-size:11px;color:#94A3B8;text-align:center;}
+/* FAQ */
+.faq-list{max-width:720px;margin:3rem auto 0;display:flex;flex-direction:column;gap:1rem;}
+.faq-item{border:1px solid var(--cinza2);border-radius:var(--radius2);overflow:hidden;transition:box-shadow .2s;}
+.faq-item.open{box-shadow:var(--sombra);}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;cursor:pointer;font-size:15px;font-weight:600;color:var(--texto);background:#fff;user-select:none;gap:1rem;}
+.faq-q:hover{background:var(--cinza1);}
+.faq-arrow{font-size:18px;color:var(--azul);transition:transform .25s;flex-shrink:0;}
+.faq-item.open .faq-arrow{transform:rotate(180deg);}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s;}
+.faq-item.open .faq-a{max-height:300px;}
+.faq-a-inner{padding:0 1.5rem 1.25rem;font-size:14px;color:var(--texto3);line-height:1.7;background:#fff;}
 
-/* Decoração laranja no canto */
-.accent-bar{position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#F57C00,#FF9800,#F57C00);}
+/* CTA FINAL */
+.cta-final{background:linear-gradient(145deg,#05235A,#0B3D91);padding:6rem 1.5rem;text-align:center;}
+.cta-final h2{font-size:clamp(1.75rem,3.5vw,2.75rem);font-weight:800;color:#fff;margin-bottom:1rem;line-height:1.2;}
+.cta-final h2 span{color:#FFB74D;}
+.cta-final p{font-size:16px;color:rgba(255,255,255,.7);margin-bottom:2.5rem;}
+.cta-final-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;}
+
+/* FOOTER */
+footer{background:#0F172A;padding:3rem 1.5rem;}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.5rem;}
+.footer-logo{background:rgba(255,255,255,.12);border-radius:10px;padding:5px 12px;display:inline-flex;}
+.footer-logo img{height:42px;width:auto;display:block;}
+.footer-links{display:flex;gap:1.5rem;}
+.footer-links a{font-size:13px;color:rgba(255,255,255,.45);text-decoration:none;}
+.footer-links a:hover{color:rgba(255,255,255,.8);}
+.footer-copy{font-size:12px;color:rgba(255,255,255,.3);}
+
+/* ANIMAÇÕES SCROLL */
+.fade-up{opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease;}
+.fade-up.visible{opacity:1;transform:translateY(0);}
 
 /* RESPONSIVE */
 @media(max-width:768px){
-  body{flex-direction:column;}
-  .left{padding:2rem 1.5rem;min-height:auto;}
-  .left-h1{font-size:1.6rem;}
-  .left-logo img{height:60px;}
-  .right{width:100%;padding:2rem 1.5rem;}
-  .features{display:none;}
+  .hero-inner{grid-template-columns:1fr;}
+  .hero-mockup{display:none;}
+  .stats-inner{grid-template-columns:repeat(2,1fr);}
+  .problema-grid,.features-grid,.passos{grid-template-columns:1fr;}
+  .passos::before{display:none;}
+  .preco-grid{grid-template-columns:1fr;}
+  .garantia-box{flex-direction:column;text-align:center;}
+  .nav-links{display:none;}
 }
 </style>
 </head>
 <body>
 
-<!-- ESQUERDA -->
-<div class="left">
-  <div class="left-logo"></div>
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-inner">
+    <div class="nav-logo"><a href="#"><img src="logo-vendas.png" alt="SimulaPro"/></a></div>
+    <div class="nav-links">
+      <a href="#features">Funcionalidades</a>
+      <a href="#preco">Preços</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div style="display:flex;gap:.75rem;align-items:center">
+      <a href="login.html" class="btn-nav-login">Entrar</a>
+      <a href="#preco" class="btn-nav-cta">Assinar Agora</a>
+    </div>
+  </div>
+</nav>
 
-  <div class="left-content">
-    <div class="left-tag"><span></span> Plataforma exclusiva para corretores</div>
-    <h1 class="left-h1">Simule em <em>minutos</em>.<br/>Feche mais vendas.</h1>
-    <p class="left-sub">O SimulaPro calcula financiamento imobiliário com as regras oficiais — faixas, taxas, FGTS e renda mínima — tudo em uma única tela.</p>
-    <div class="features">
-      <div class="feature">
-        <div class="feature-dot">⚡</div>
-        <div class="feature-txt"><strong>Uma tela só</strong> — sem navegar por múltiplas páginas da Caixa</div>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-badge"><span></span> 🔥 Plano anual sai por R$50/mês</div>
+      <h1>Feche mais propostas.<br/>Perca menos <span>tempo</span>.</h1>
+      <p class="hero-sub">O SimulaPro calcula financiamento imobiliário em minutos — taxas oficiais, regras da Caixa, FGTS, seguro e renda mínima. Tudo pronto para apresentar ao cliente.</p>
+      <div class="hero-ctas">
+        <a href="#preco" class="btn-hero-primary">🚀 Quero Assinar o SimulaPro</a>
+        <a href="#features" class="btn-hero-secondary">Ver como funciona →</a>
       </div>
-      <div class="feature">
-        <div class="feature-dot">🏆</div>
-        <div class="feature-txt"><strong>Economia de R$247k</strong> apresentada automaticamente ao cliente</div>
+      <div class="hero-trust">
+        <div class="hero-trust-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#4CAF50"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          Sem contrato de fidelidade
+        </div>
+        <div class="hero-trust-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#4CAF50"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          Acesso imediato após pagamento
+        </div>
+        <div class="hero-trust-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#4CAF50"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          7 dias de garantia
+        </div>
       </div>
-      <div class="feature">
-        <div class="feature-dot">📄</div>
-        <div class="feature-txt"><strong>Proposta em PDF</strong> pronta para enviar pelo WhatsApp</div>
-      </div>
-      <div class="feature">
-        <div class="feature-dot">📈</div>
-        <div class="feature-txt"><strong>Projeção de valorização</strong> editável por região</div>
+    </div>
+    <div class="hero-mockup">
+      <div class="mockup-glow"></div>
+      <div class="mockup-wrap">
+        <div class="mockup-card">
+          <!-- Header -->
+          <div class="mockup-header">
+            <div>
+              <div class="mockup-header-title">📊 Simulação de Proposta</div>
+              <div class="mockup-header-sub">SimulaPro · Simulador de Financiamento Imobiliário</div>
+            </div>
+            <div class="mockup-badge">MCMV 2026</div>
+          </div>
+          <!-- Info do cliente -->
+          <div class="mockup-info-row">
+            <div class="mockup-info-cell"><div class="mockup-info-label">Cliente</div><div class="mockup-info-value">Joyce Cristina</div></div>
+            <div class="mockup-info-cell"><div class="mockup-info-label">Empreendimento</div><div class="mockup-info-value">Heitor-Pierrot</div></div>
+            <div class="mockup-info-cell"><div class="mockup-info-label">Tipologia</div><div class="mockup-info-value">2 qts suite + vaga</div></div>
+          </div>
+          <!-- Parcela destaque -->
+          <div class="mockup-parcela">
+            <div>
+              <div class="mockup-parcela-label">Parcela após entrega das chaves</div>
+              <div class="mockup-parcela-value">R$ 5.164,97<span style="font-size:11px;font-weight:500;opacity:.7"> /mês</span></div>
+              <div class="mockup-parcela-sub">420 parcelas · iniciando em R$ 5.164,97 · encerrando em R$ 1.038,42</div>
+            </div>
+            <div class="mockup-parcela-badge">Sistema SAC</div>
+          </div>
+          <!-- Corpo -->
+          <div class="mockup-body">
+            <div class="mockup-box cinza">
+              <div class="mockup-box-label">Valores da Proposta</div>
+              <div class="mockup-box-row"><span class="mockup-box-item">Valor da unidade</span><span class="mockup-box-val">R$ 520.000</span></div>
+              <div class="mockup-box-row"><span class="mockup-box-item">Financiamento</span><span class="mockup-box-val">R$ 432.000</span></div>
+              <div class="mockup-box-row"><span class="mockup-box-item">Entrada total</span><span class="mockup-box-val">R$ 35.000</span></div>
+              <div class="mockup-box-row"><span class="mockup-box-item">Seguro de obra</span><span class="mockup-box-val">R$ 32.091</span></div>
+            </div>
+            <div class="mockup-box verde">
+              <div class="mockup-box-label verde">🏆 Economia com o Programa</div>
+              <div class="mockup-box-row"><span class="mockup-box-item">INCC (30% da obra)</span><span class="mockup-box-val verde">R$ 156.000</span></div>
+              <div class="mockup-box-row"><span class="mockup-box-item">RGI / ITBI</span><span class="mockup-box-val verde">R$ 29.900</span></div>
+              <div class="mockup-box-row"><span class="mockup-box-item">Laudêmio</span><span class="mockup-box-val verde">R$ 29.900</span></div>
+              <div class="mockup-box-row"><span class="mockup-box-item">Decoração</span><span class="mockup-box-val verde">R$ 0</span></div>
+            </div>
+          </div>
+          <!-- Total economia -->
+          <div class="mockup-total">
+            <div class="mockup-total-label">🏆 Total de Economia com o Programa</div>
+            <div class="mockup-total-value">R$ 247.891</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+</section>
 
-  <div class="left-footer">© 2026 SimulaPro · Simulador de Financiamento Imobiliário</div>
-</div>
-
-<!-- DIREITA -->
-<div class="right">
-  <div class="accent-bar"></div>
-
-  <div style="text-align:center;margin-bottom:1.75rem;">
-    <img src="logo.png" alt="SimulaPro" style="height:160px;width:auto;display:block;margin:0 auto;"/>
+<!-- STATS -->
+<div class="stats">
+  <div class="stats-inner">
+    <div class="stat-item fade-up">
+      <div class="stat-num"><span id="c1">0</span>seg</div>
+      <div class="stat-label">Para gerar uma<br/>proposta completa</div>
+    </div>
+    <div class="stat-item fade-up">
+      <div class="stat-num">R$<span id="c2">0</span>k</div>
+      <div class="stat-label">Valor médio dos<br/>imóveis simulados</div>
+    </div>
+    <div class="stat-item fade-up">
+      <div class="stat-num"><span id="c3">0</span>%</div>
+      <div class="stat-label">Das regras da Caixa<br/>implementadas</div>
+    </div>
+    <div class="stat-item fade-up">
+      <div class="stat-num"><span id="c4">0</span>h</div>
+      <div class="stat-label">Disponível por dia,<br/>de qualquer lugar</div>
+    </div>
   </div>
-  <div class="form-title">Bem-vindo de volta</div>
-  <div class="form-sub">Entre com suas credenciais para acessar o simulador</div>
-
-  <form class="form" id="loginForm" onsubmit="login();return false;">
-    <div id="msg" class="msg"></div>
-    <div class="field">
-      <label>E-mail</label>
-      <input type="email" id="email" placeholder="seu@email.com" autocomplete="username"/>
-    </div>
-    <div class="field">
-      <label>Senha</label>
-      <input type="password" id="senha" placeholder="••••••••" autocomplete="current-password"/>
-    </div>
-    <button type="submit" class="btn-login" id="btnLogin">Entrar no SimulaPro</button>
-    <div class="divider"><span>ou</span></div>
-    <button type="button" class="btn-esqueci" onclick="esqueciSenha()">Esqueci minha senha</button>
-  </form>
-
-  <div class="right-footer">Acesso exclusivo para corretores credenciados</div>
 </div>
+
+<!-- COMPARAÇÃO -->
+<section style="background:#fff;padding:5rem 1.5rem;">
+  <div class="section-inner">
+    <div class="text-center fade-up">
+      <div class="section-tag" style="background:#FEE2E2;color:#991B1B;">O Problema</div>
+      <h2 class="section-title">O site da Caixa tem <span style="color:#DC2626;">várias telas</span><br/>e códigos para decorar</h2>
+      <p class="section-sub">Cada faixa de renda tem um código diferente. O corretor precisa navegar por múltiplas telas, lembrar qual código usar e ainda correr o risco de calcular errado.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:1.5rem;align-items:center;margin-top:3rem;">
+
+      <!-- LADO CAIXA -->
+      <div class="fade-up" style="border:2px solid #FECACA;border-radius:var(--radius);overflow:hidden;">
+        <div style="background:#DC2626;padding:14px 20px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">🏦</span>
+          <div>
+            <div style="color:#fff;font-size:13px;font-weight:700;">Site da Caixa Econômica</div>
+            <div style="color:rgba(255,255,255,.65);font-size:11px;">Processo atual do corretor</div>
+          </div>
+          <div style="margin-left:auto;background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;">😰 Difícil</div>
+        </div>
+        <div style="padding:16px;background:#FFF5F5;">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:#fff;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;background:#DC2626;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">1</div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:#0F172A;">Acessar o portal habitacional</div>
+                <div style="font-size:10px;color:#94A3B8;">Encontrar a página certa entre dezenas</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;background:#DC2626;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">2</div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:#0F172A;">Descobrir a faixa de renda</div>
+                <div style="font-size:10px;color:#94A3B8;">Faixa 1, 2, 3 ou 4 — cada uma tem regra diferente</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;background:#DC2626;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">3</div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:#0F172A;">Digitar o código da modalidade</div>
+                <div style="font-size:10px;color:#94A3B8;font-family:'DM Mono',monospace;">Ex: MCMV-F2-SAC-IPCA-08 🤯</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;background:#DC2626;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">4</div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:#0F172A;">Navegar por mais 4 telas</div>
+                <div style="font-size:10px;color:#94A3B8;">Preenchendo campos espalhados e repetidos</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;background:#DC2626;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">5</div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:#0F172A;">Torcer para não errar a faixa</div>
+                <div style="font-size:10px;color:#94A3B8;">Erro no código = resultado errado = venda perdida</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px;background:#FEE2E2;border-radius:8px;padding:10px 14px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;color:#991B1B;">⏱️ Tempo médio: 15 a 25 minutos por simulação</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VS -->
+      <div class="fade-up" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#DC2626,#0B3D91);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800;box-shadow:0 4px 20px rgba(11,61,145,.3);">VS</div>
+      </div>
+
+      <!-- LADO SIMULAPRO -->
+      <div class="fade-up" style="border:2px solid #BBF7D0;border-radius:var(--radius);overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#0B3D91,#1565C0);padding:14px 20px;display:flex;align-items:center;gap:10px;">
+          <div style="background:#fff;border-radius:6px;padding:3px 8px;display:inline-flex;"><img src="logo-vendas.png" style="height:30px;width:auto;display:block;"/></div>
+          <div style="margin-left:auto;background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;">😊 Simples</div>
+        </div>
+        <div style="padding:16px;background:#F0FDF4;">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:#fff;border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;background:#059669;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">1</div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:#0F172A;">Fazer login</div>
+                <div style="font-size:10px;color:#94A3B8;">Email + senha. Acessa de qualquer lugar</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;background:#059669;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">2</div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:#0F172A;">Preencher 4 campos na mesma tela</div>
+                <div style="font-size:10px;color:#94A3B8;">Valor, renda, FGTS e prazo — só isso</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;background:#059669;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">3</div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:#0F172A;">Resultado instantâneo</div>
+                <div style="font-size:10px;color:#94A3B8;">Faixa detectada automaticamente, sem código</div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#fff;border:2px solid #6EE7B7;border-radius:8px;padding:12px 14px;margin-top:8px;">
+            <div style="font-size:10px;font-weight:700;color:#065F46;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Proposta gerada automaticamente</div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:10px;color:#64748B;">Parcela após entrega</span>
+              <span style="font-size:10px;font-weight:700;color:#0F172A;font-family:'DM Mono',monospace;">R$ 5.164,97</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:10px;color:#64748B;">Economia com o programa</span>
+              <span style="font-size:10px;font-weight:700;color:#059669;font-family:'DM Mono',monospace;">R$ 247.891</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="font-size:10px;color:#64748B;">Projeção de valorização</span>
+              <span style="font-size:10px;font-weight:700;color:#0B3D91;font-family:'DM Mono',monospace;">+ R$ 78.000</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;background:#D1FAE5;border-radius:8px;padding:10px 14px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;color:#065F46;">⚡ Tempo médio: menos de 5 minutos</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEMA -->
+<section class="problema">
+  <div class="section-inner">
+    <div class="text-center fade-up">
+      <div class="section-tag">O Problema</div>
+      <h2 class="section-title">Todo corretor já perdeu venda<br/>por <span>conta errada</span></h2>
+      <p class="section-sub">Calcular financiamento na mão é lento, impreciso e afasta o cliente. O SimulaPro resolve isso em segundos.</p>
+    </div>
+    <div class="problema-grid">
+      <div class="problema-card fade-up">
+        <div class="problema-icon">⏱️</div>
+        <h3>Tempo perdido calculando</h3>
+        <p>Você usa Excel, calculadora e chuta valores. O cliente espera. A proposta demora. Muitas vezes ele vai embora antes.</p>
+      </div>
+      <div class="problema-card fade-up">
+        <div class="problema-icon">❌</div>
+        <h3>Conta errada, venda perdida</h3>
+        <p>Uma taxa errada ou regra de renda calculada no modo antigo pode reprovar o cliente na Caixa e destruir a negociação.</p>
+      </div>
+      <div class="problema-card fade-up">
+        <div class="problema-icon">😰</div>
+        <h3>Insegurança na apresentação</h3>
+        <p>Chegar numa reunião sem saber o valor exato da parcela passa insegurança. O cliente percebe e a venda esfria.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-inner">
+    <div class="text-center fade-up">
+      <div class="section-tag">Funcionalidades</div>
+      <h2 class="section-title">Tudo que você precisa<br/>em <span>um lugar só</span></h2>
+      <p class="section-sub">Construído com as regras reais do programa habitacional — sem chutes, sem simplificações.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card fade-up">
+        <div class="feature-icon">🏦</div>
+        <h3>Taxas Oficiais Atualizadas</h3>
+        <p>Todas as faixas de renda com as taxas reais. De 1,5% a 8,16% ao ano, calculadas corretamente por faixa.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">💰</div>
+        <h3>FGTS com Teto Correto</h3>
+        <p>O sistema aplica o limite de uso do FGTS conforme as regras vigentes, sem estourar o teto permitido.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">📊</div>
+        <h3>Análise de Renda Mínima</h3>
+        <p>Calcula automaticamente se a renda do cliente aprova o financiamento com a regra dos 30% da parcela.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">🛡️</div>
+        <h3>Seguro Habitacional Incluso</h3>
+        <p>O seguro gradual já entra no cálculo da parcela — sem surpresas para o cliente na hora de assinar.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">📄</div>
+        <h3>Exportação em PDF</h3>
+        <p>Gere uma proposta profissional em PDF para enviar ao cliente pelo WhatsApp ou apresentar pessoalmente.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">📈</div>
+        <h3>Projeção de Valorização Editável</h3>
+        <p>Informe o percentual de valorização esperado da região e o simulador calcula o lucro estimado na entrega — você ajusta o número de acordo com o histórico local.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">🔒</div>
+        <h3>Acesso Seguro e Individual</h3>
+        <p>Login e senha exclusivos para cada corretor. Seus dados são seus — nenhum outro corretor vê suas simulações.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AMORTIZAÇÃO -->
+<section class="amort-section">
+  <div class="amort-inner">
+    <div class="fade-up">
+      <div class="amort-tag">Simulador de Amortização</div>
+      <h2 class="amort-title">Mostre ao cliente quanto ele<br/>economiza com <span>amortizações</span></h2>
+      <p class="amort-sub">O SimulaPro tem um simulador completo de amortizações — o corretor lança FGTS, PLR, 13º ou qualquer aporte extra e o sistema recalcula o financiamento na hora, com todas as opções do banco.</p>
+      <ul class="amort-list">
+        <li>
+          <div class="al-icon">➕</div>
+          <div class="al-text">
+            <strong>Múltiplas amortizações em sequência</strong>
+            <span>Lance quantos aportes quiser — FGTS aniversário, PLR, recurso próprio ou outros — e veja o impacto acumulado de todas.</span>
+          </div>
+        </li>
+        <li>
+          <div class="al-icon">🔀</div>
+          <div class="al-text">
+            <strong>SAC e PRICE com cenários diferentes</strong>
+            <span>No SAC mostra nova parcela e prazo cortado. No PRICE dá as duas opções: reduzir o prazo ou reduzir a parcela — o cliente escolhe.</span>
+          </div>
+        </li>
+        <li>
+          <div class="al-icon">💰</div>
+          <div class="al-text">
+            <strong>Economia real em juros calculada</strong>
+            <span>O sistema soma a economia total de juros e o prazo reduzido com todas as amortizações aplicadas — número que convence qualquer cliente.</span>
+          </div>
+        </li>
+        <li>
+          <div class="al-icon">⚠️</div>
+          <div class="al-text">
+            <strong>Alerta de excesso automático</strong>
+            <span>Se o cliente digitar um valor maior que o saldo disponível, o simulador avisa o valor efetivo e o excedente que não entra — sem confusão.</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- MOCKUP VISUAL -->
+    <div class="amort-mock fade-up">
+      <div class="amort-mock-hd">Simulação de amortização</div>
+
+      <div class="amort-evento">
+        <div class="amort-evento-hd">
+          <span class="amort-evento-nome">📅 Parcela 24 — FGTS Aniversário</span>
+          <span class="amort-evento-val">R$ 18.400</span>
+        </div>
+        <div class="amort-cols">
+          <div class="amort-col">
+            <div class="amort-col-label">Saldo antes</div>
+            <div class="amort-col-val branco">R$ 312.540</div>
+          </div>
+          <div class="amort-col">
+            <div class="amort-col-label">Saldo após</div>
+            <div class="amort-col-val verde">R$ 294.140</div>
+          </div>
+        </div>
+        <div class="amort-opts" style="margin-top:.6rem">
+          <div class="amort-opt a">
+            <div class="opt-label">Opção A — Reduzir prazo</div>
+            <div class="opt-val">420 → 387 meses · parcela mantida</div>
+          </div>
+          <div class="amort-opt b">
+            <div class="opt-label">Opção B — Reduzir parcela</div>
+            <div class="opt-val">R$ 2.841 → R$ 2.630 / mês</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="amort-evento" style="border-left-color:#818CF8">
+        <div class="amort-evento-hd">
+          <span class="amort-evento-nome">📅 Parcela 48 — PLR</span>
+          <span class="amort-evento-val" style="color:#818CF8">R$ 12.000</span>
+        </div>
+        <div class="amort-cols">
+          <div class="amort-col">
+            <div class="amort-col-label">Saldo antes</div>
+            <div class="amort-col-val branco">R$ 281.390</div>
+          </div>
+          <div class="amort-col">
+            <div class="amort-col-label">Saldo após</div>
+            <div class="amort-col-val verde">R$ 269.390</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="amort-resumo">
+        <div class="amort-resumo-item">
+          <div class="label">Total amortizado</div>
+          <div class="val">R$ 30.400</div>
+        </div>
+        <div class="amort-resumo-item">
+          <div class="label">Juros economizados</div>
+          <div class="val">R$ 87.320</div>
+        </div>
+        <div class="amort-resumo-item">
+          <div class="label">Prazo reduzido</div>
+          <div class="val">64 meses</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ECONOMIA -->
+<section style="background:linear-gradient(135deg,#F0FDF4,#ECFDF5);padding:5rem 1.5rem;">
+  <div class="section-inner">
+    <div class="text-center fade-up">
+      <div class="section-tag" style="background:#D1FAE5;color:#065F46;">Economia Real</div>
+      <h2 class="section-title">Seu cliente economiza em média<br/><span style="color:#059669;">R$ 247.891</span> por compra</h2>
+      <p class="section-sub">Comprando pela Caixa com o programa habitacional, o cliente tem benefícios que a maioria dos corretores não explica. Com o SimulaPro, você apresenta tudo isso com números reais.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;margin-top:3rem;">
+      <div class="fade-up" style="background:#fff;border-radius:var(--radius);padding:1.75rem;border:1px solid #A7F3D0;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:800;color:#059669;font-family:'DM Mono',monospace;line-height:1;">R$156k</div>
+        <div style="font-size:13px;font-weight:700;color:#065F46;margin:.5rem 0 .35rem;">Sem INCC</div>
+        <div style="font-size:12px;color:#6B7280;line-height:1.5;">Saldo congelado após assinatura CEF. Nenhum reajuste durante a obra.</div>
+      </div>
+      <div class="fade-up" style="background:#fff;border-radius:var(--radius);padding:1.75rem;border:1px solid #A7F3D0;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:800;color:#059669;font-family:'DM Mono',monospace;line-height:1;">R$29,9k</div>
+        <div style="font-size:13px;font-weight:700;color:#065F46;margin:.5rem 0 .35rem;">Sem RGI e ITBI</div>
+        <div style="font-size:12px;color:#6B7280;line-height:1.5;">Documentação de registro isenta — paga pelo programa.</div>
+      </div>
+      <div class="fade-up" style="background:#fff;border-radius:var(--radius);padding:1.75rem;border:1px solid #A7F3D0;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:800;color:#059669;font-family:'DM Mono',monospace;line-height:1;">R$29,9k</div>
+        <div style="font-size:13px;font-weight:700;color:#065F46;margin:.5rem 0 .35rem;">Sem Laudêmio</div>
+        <div style="font-size:12px;color:#6B7280;line-height:1.5;">Taxa de transferência de terreno isenta nas regiões do programa.</div>
+      </div>
+      <div class="fade-up" style="background:#fff;border-radius:var(--radius);padding:1.75rem;border:1px solid #A7F3D0;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:800;color:#059669;font-family:'DM Mono',monospace;line-height:1;">R$0</div>
+        <div style="font-size:13px;font-weight:700;color:#065F46;margin:.5rem 0 .35rem;">Decoração Inclusa</div>
+        <div style="font-size:12px;color:#6B7280;line-height:1.5;">Taxa de ligação e decoração entregue pela construtora sem custo extra.</div>
+      </div>
+    </div>
+    <div class="fade-up" style="background:#065F46;border-radius:var(--radius);padding:1.5rem 2rem;margin-top:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div style="color:rgba(255,255,255,.8);font-size:14px;max-width:500px;line-height:1.6;">🔒 <strong style="color:#fff;">Saldo congelado sem INCC após assinatura CEF.</strong> Por pagar o seguro de obra, o cliente não paga reajuste de índice nem documentações — e o SimulaPro calcula e apresenta tudo isso automaticamente na proposta.</div>
+      <div style="text-align:center;flex-shrink:0;">
+        <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Economia total média</div>
+        <div style="font-size:2.5rem;font-weight:800;color:#6EE7B7;font-family:'DM Mono',monospace;line-height:1;">R$ 247.891</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section class="como">
+  <div class="section-inner">
+    <div class="text-center fade-up">
+      <div class="section-tag">Como Funciona</div>
+      <h2 class="section-title">Da reunião à proposta<br/>em menos de 5 minutos</h2>
+      <p class="section-sub" style="color:rgba(255,255,255,.65)">Sem instalação, sem treinamento complicado. Abre no celular ou computador e já usa.</p>
+    </div>
+    <div class="passos">
+      <div class="passo fade-up">
+        <div class="passo-num">1</div>
+        <h3>Insira os dados</h3>
+        <p>Valor do imóvel, renda do cliente, FGTS disponível e prazo desejado. Leva apenas alguns minutos.</p>
+      </div>
+      <div class="passo fade-up">
+        <div class="passo-num">2</div>
+        <h3>Simulação automática</h3>
+        <p>O SimulaPro aplica todas as regras oficiais e calcula parcela, taxa, enquadramento e aprovação de renda.</p>
+      </div>
+      <div class="passo fade-up">
+        <div class="passo-num">3</div>
+        <h3>Apresente ou exporte</h3>
+        <p>Mostre na tela para o cliente ou exporte em PDF para enviar pelo WhatsApp na hora. Proposta pronta.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PREÇO -->
+<section id="preco">
+  <div class="section-inner">
+    <div class="text-center fade-up">
+      <div class="section-tag">Planos</div>
+      <h2 class="section-title">Invista menos que um<br/><span>café por dia</span></h2>
+      <p class="section-sub">Uma venda a mais por mês já paga o plano por anos. Sem contratos, cancela quando quiser.</p>
+    </div>
+    <div class="preco-grid">
+      <div class="preco-card fade-up">
+        <div class="preco-nome">Plano Mensal</div>
+        <div class="preco-valor">R$70<small>/mês</small></div>
+        <div class="preco-periodo">Cobrado mensalmente · Cancela quando quiser</div>
+        <ul class="preco-features">
+          <li>Simulações ilimitadas</li>
+          <li>Exportação em PDF</li>
+          <li>Acesso completo a todas as faixas</li>
+          <li>Login e senha exclusivos</li>
+          <li>Atualizações automáticas de taxas</li>
+        </ul>
+        <a href="#" class="btn-preco azul" onclick="abrirCheckout('mensal');return false;">Assinar Mensal</a>
+      </div>
+      <div class="preco-card destaque fade-up">
+        <div class="preco-badge">🔥 MELHOR PREÇO</div>
+        <div class="preco-nome">Plano Anual</div>
+        <div class="preco-valor">R$50<small>/mês</small></div>
+        <div class="preco-periodo">R$600 cobrado à vista uma vez por ano</div>
+        <ul class="preco-features">
+          <li class="laranja">Tudo do plano mensal</li>
+          <li class="laranja">Economia de R$240 por ano</li>
+          <li class="laranja">Preço travado pelos 12 meses</li>
+          <li class="laranja">Acesso prioritário a novos recursos</li>
+          <li class="laranja">Suporte direto com o desenvolvedor</li>
+        </ul>
+        <a href="#" class="btn-preco laranja" onclick="abrirCheckout('anual');return false;">Assinar Plano Anual →</a>
+      </div>
+    </div>
+
+    <!-- Card solicitar teste -->
+    <div class="teste-card fade-up">
+      <div class="teste-card-icon">🧪</div>
+      <h3>Quer testar antes de assinar?</h3>
+      <p>Solicite um acesso de teste gratuito por 7 dias. Sem cartão de crédito, sem compromisso.</p>
+      <button class="btn-teste" onclick="abrirModalTeste()">Solicitar Acesso de Teste</button>
+    </div>
+  </div>
+</section>
+
+<!-- Modal solicitar teste -->
+<div class="modal-overlay" id="modalTeste">
+  <div class="modal-box">
+    <div id="modalForm">
+      <h3>🧪 Solicitar Acesso de Teste</h3>
+      <p>Preencha os dados abaixo. As credenciais chegam no seu e-mail em segundos.</p>
+      <div class="modal-field">
+        <label for="testeNome">Nome completo</label>
+        <input type="text" id="testeNome" placeholder="Ex: João Silva" autocomplete="name"/>
+      </div>
+      <div class="modal-field">
+        <label for="testeEmail">E-mail</label>
+        <input type="email" id="testeEmail" placeholder="seu@email.com" autocomplete="email"/>
+      </div>
+      <div class="modal-field">
+        <label for="testeEmailConfirm">Confirme seu e-mail</label>
+        <input type="email" id="testeEmailConfirm" placeholder="digite novamente" autocomplete="off" onpaste="return false" oncopy="return false" oncut="return false"/>
+      </div>
+      <div class="modal-field">
+        <label for="testeTel">WhatsApp / Telefone</label>
+        <input type="tel" id="testeTel" placeholder="(21) 99999-9999" autocomplete="tel"/>
+      </div>
+      <div class="modal-field" style="display:flex;align-items:flex-start;gap:8px;margin-top:4px">
+        <input type="checkbox" id="testeTermos" style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer"/>
+        <label for="testeTermos" style="font-size:12px;font-weight:400;color:#475569;line-height:1.5;cursor:pointer">Li e aceito os <a href="termos.html" target="_blank" rel="noopener" style="color:#0B3D91;font-weight:600">Termos de Uso e a Política de Privacidade</a>.</label>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-modal-cancel" onclick="fecharModalTeste()">Cancelar</button>
+        <button class="btn-modal-submit" id="btnEnviarTeste" onclick="enviarSolicitacaoTeste()">Enviar Solicitação</button>
+      </div>
+    </div>
+    <div class="modal-success" id="modalSucesso">
+      <div class="success-icon">✅</div>
+      <h4>Acesso liberado!</h4>
+      <p>Seu login e senha já foram enviados por e-mail — chega em segundos. Fique de olho na caixa de entrada (e no spam, por garantia).</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal checkout (assinatura Asaas) -->
+<div class="modal-overlay" id="modalCheckout">
+  <div class="modal-box">
+    <div id="checkoutForm">
+      <h3 id="checkoutTitulo">💳 Assinar SimulaPro</h3>
+      <p id="checkoutSub">Preencha seus dados para gerar o pagamento — cartão, Pix ou boleto.</p>
+      <div class="modal-field">
+        <label for="ckNome">Nome completo</label>
+        <input type="text" id="ckNome" placeholder="Ex: João Silva" autocomplete="name"/>
+      </div>
+      <div class="modal-field">
+        <label for="ckEmail">E-mail</label>
+        <input type="email" id="ckEmail" placeholder="seu@email.com" autocomplete="email"/>
+      </div>
+      <div class="modal-field">
+        <label for="ckEmailConfirm">Confirme seu e-mail</label>
+        <input type="email" id="ckEmailConfirm" placeholder="digite novamente" autocomplete="off" onpaste="return false" oncopy="return false" oncut="return false"/>
+      </div>
+      <div class="modal-field">
+        <label for="ckCpf">CPF</label>
+        <input type="text" id="ckCpf" placeholder="000.000.000-00" autocomplete="off"/>
+      </div>
+      <div class="modal-field">
+        <label for="ckTel">WhatsApp / Telefone</label>
+        <input type="tel" id="ckTel" placeholder="(21) 99999-9999" autocomplete="tel"/>
+      </div>
+      <div class="modal-field">
+        <label for="ckCupom">Cupom de desconto (opcional)</label>
+        <input type="text" id="ckCupom" placeholder="Ex: TESTE30" autocomplete="off" style="text-transform:uppercase" oninput="agendarCheckCupom()"/>
+      </div>
+      <div class="modal-field" style="display:flex;align-items:flex-start;gap:8px;margin-top:4px">
+        <input type="checkbox" id="ckTermos" style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer"/>
+        <label for="ckTermos" style="font-size:12px;font-weight:400;color:#475569;line-height:1.5;cursor:pointer">Li e aceito os <a href="termos.html" target="_blank" rel="noopener" style="color:#0B3D91;font-weight:600">Termos de Uso e a Política de Privacidade</a>.</label>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-modal-cancel" onclick="fecharCheckout()">Cancelar</button>
+        <button class="btn-modal-submit" id="btnCheckout" onclick="enviarCheckout()">Ir para pagamento →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GARANTIA -->
+<section class="garantia">
+  <div class="section-inner">
+    <div class="text-center fade-up">
+      <div class="section-tag">Garantia</div>
+      <h2 class="section-title">Risco <span>zero</span> para você</h2>
+    </div>
+    <div class="garantia-box fade-up">
+      <div class="garantia-icon">🛡️</div>
+      <div>
+        <h3>7 dias de garantia incondicional</h3>
+        <p>Assine, use o SimulaPro por 7 dias e veja a diferença nas suas apresentações. Se não ficar satisfeito por qualquer motivo, devolvemos 100% do valor pago — sem perguntas, sem burocracia. Basta enviar uma mensagem.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="section-inner">
+    <div class="text-center fade-up">
+      <div class="section-tag">Dúvidas</div>
+      <h2 class="section-title">Perguntas <span>frequentes</span></h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Precisa instalar algum programa? <span class="faq-arrow">⌄</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">Não. O SimulaPro roda direto no navegador — Chrome, Safari, Edge ou qualquer um. Funciona no celular, tablet e computador. Basta ter internet e fazer login.</div></div>
+      </div>
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          As taxas são atualizadas automaticamente? <span class="faq-arrow">⌄</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">Sim. Quando as taxas oficiais mudam, atualizamos o sistema e você já usa a versão correta na próxima vez que acessar — sem precisar fazer nada.</div></div>
+      </div>
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Posso usar para qualquer imóvel ou só MCMV? <span class="faq-arrow">⌄</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">O simulador cobre tanto o programa habitacional quanto o SBPE (Sistema Brasileiro de Poupança e Empréstimo), que é usado para imóveis acima do limite de enquadramento. O sistema detecta automaticamente qual modalidade se aplica com base na renda e no valor do imóvel.</div></div>
+      </div>
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Como funciona o cancelamento? <span class="faq-arrow">⌄</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">Sem burocracia. Basta enviar uma mensagem e cancelamos na hora. Você mantém o acesso até o fim do período pago. Sem multa, sem justificativa necessária.</div></div>
+      </div>
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Qual a diferença entre o plano mensal e o anual? <span class="faq-arrow">⌄</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">O plano mensal custa R$70 e é cobrado todo mês. O plano anual sai por R$50/mês — cobrado uma única vez por ano (R$600) — uma economia de R$240 no período. Os dois dão acesso completo ao SimulaPro.</div></div>
+      </div>
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Posso trocar minha senha? <span class="faq-arrow">⌄</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">Sim. Dentro do próprio simulador tem a opção de trocar a senha. Ao trocar, a senha antiga para de funcionar imediatamente e você recebe uma confirmação por e-mail.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-final">
+  <div class="section-inner">
+    <h2 class="fade-up">Chega de perder venda<br/>por <span>conta errada</span>.</h2>
+    <p class="fade-up">Junte-se aos corretores que já apresentam propostas com confiança — em segundos, de qualquer lugar.</p>
+    <div class="cta-final-btns fade-up">
+      <a href="#preco" class="btn-hero-primary">🚀 Ver Planos e Assinar</a>
+      <a href="login.html" class="btn-hero-secondary">Já tenho conta → Entrar</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo"><img src="logo-vendas.png" alt="SimulaPro"/></div>
+    <div class="footer-links">
+      <a href="#features">Funcionalidades</a>
+      <a href="#preco">Preços</a>
+      <a href="#faq">FAQ</a>
+      <a href="termos.html">Termos de Uso e Privacidade</a>
+      <a href="login.html">Entrar</a>
+    </div>
+    <div class="footer-copy">© 2026 SimulaPro · Todos os direitos reservados</div>
+  </div>
+</footer>
 
 <script>
-const _sb=supabase.createClient(
+// NAV scroll
+window.addEventListener('scroll',function(){
+  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>20);
+});
+
+// Scroll animations
+var observer=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');}});
+},{threshold:.15});
+document.querySelectorAll('.fade-up').forEach(function(el){observer.observe(el);});
+
+// Contadores animados
+function animCount(id,target,prefix,suffix,duration){
+  var el=document.getElementById(id);
+  var start=0;var step=target/60;var current=0;
+  var interval=setInterval(function(){
+    current+=step;
+    if(current>=target){current=target;clearInterval(interval);}
+    el.textContent=Math.round(current)+(suffix||'');
+  },duration/60);
+}
+var countersStarted=false;
+var statsObserver=new IntersectionObserver(function(entries){
+  if(entries[0].isIntersecting&&!countersStarted){
+    countersStarted=true;
+    animCount('c1',10,'','',1000);
+    animCount('c2',320,'','',1200);
+    animCount('c3',100,'','',1000);
+    animCount('c4',24,'','',800);
+  }
+},{threshold:.5});
+statsObserver.observe(document.querySelector('.stats'));
+
+// FAQ toggle
+function toggleFaq(el){
+  var item=el.parentElement;
+  var isOpen=item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(function(i){i.classList.remove('open');});
+  if(!isOpen)item.classList.add('open');
+}
+
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+var _sb = supabase.createClient(
   'https://uefnirdmhtsbpdxnonnd.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s'
 );
-(async function(){
-  const {data:{session}}=await _sb.auth.getSession();
-  if(session) window.location.replace('app.html');
-})();
-function setMsg(txt,tipo){
-  const el=document.getElementById('msg');
-  el.textContent=txt;el.className='msg '+tipo;
+
+function abrirModalTeste(){
+  document.getElementById('modalTeste').classList.add('open');
+  document.body.style.overflow='hidden';
 }
-async function login(){
-  const email=document.getElementById('email').value.trim();
-  const senha=document.getElementById('senha').value;
-  const btn=document.getElementById('btnLogin');
-  if(!email||!senha){setMsg('Preencha e-mail e senha.','er');return;}
-  btn.disabled=true;btn.textContent='Entrando...';setMsg('','');
-  const {data,error}=await _sb.auth.signInWithPassword({email,password:senha});
-  if(error){
-    btn.disabled=false;btn.textContent='Entrar no SimulaPro';
-    const msgs={'Invalid login credentials':'E-mail ou senha incorretos.','Email not confirmed':'Confirme seu e-mail antes de entrar.','Too many requests':'Muitas tentativas. Aguarde alguns minutos.'};
-    setMsg(msgs[error.message]||'Erro ao entrar. Tente novamente.','er');return;
+function fecharModalTeste(){
+  document.getElementById('modalTeste').classList.remove('open');
+  document.body.style.overflow='';
+  // reset form
+  document.getElementById('modalForm').style.display='block';
+  document.getElementById('modalSucesso').style.display='none';
+  document.getElementById('testeNome').value='';
+  document.getElementById('testeEmail').value='';
+  document.getElementById('testeEmailConfirm').value='';
+  document.getElementById('testeTel').value='';
+  document.getElementById('testeTermos').checked=false;
+}
+document.getElementById('modalTeste').addEventListener('click',function(e){
+  if(e.target===this)fecharModalTeste();
+});
+
+var _planoSelecionado = null;
+// Permite abrir o checkout direto num plano específico via link, ex:
+// vendas.html?plano=mensal&cupom=TESTE30 — evita depender de qual botão
+// a pessoa clica na seção de preços.
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var planoUrl = params.get('plano');
+  var cupomUrl = params.get('cupom');
+  if(planoUrl === 'mensal' || planoUrl === 'anual'){
+    window.addEventListener('DOMContentLoaded', function(){
+      abrirCheckout(planoUrl);
+      if(cupomUrl){
+        document.getElementById('ckCupom').value = cupomUrl;
+        atualizarPrecoCupom();
+      }
+    });
   }
-  await _sb.from('events').insert({user_id:data.user.id,email:data.user.email,action:'login',user_agent:navigator.userAgent});
-  window.location.replace('app.html');
+})();
+var _precoBase = { mensal:'Plano Mensal — R$70/mês', anual:'Plano Anual — R$600/ano (R$50/mês)' };
+function abrirCheckout(plano){
+  _planoSelecionado = plano;
+  document.getElementById('checkoutTitulo').textContent = '💳 Assinar ' + (plano==='anual'?'Plano Anual':'Plano Mensal');
+  document.getElementById('checkoutSub').textContent = _precoBase[plano] + ' — preencha seus dados para gerar o pagamento.';
+  document.getElementById('modalCheckout').classList.add('open');
+  document.body.style.overflow='hidden';
 }
-async function esqueciSenha(){
-  const email=document.getElementById('email').value.trim();
-  if(!email){setMsg('Digite seu e-mail acima primeiro.','er');return;}
-  const base=window.location.href.replace('index.html','').replace(/\/$/,'')+'/';
-  await _sb.auth.resetPasswordForEmail(email,{redirectTo:base+'app.html'});
-  setMsg('Se este e-mail estiver cadastrado, você receberá o link em breve.','ok');
+var _cupomCheckTimer = null;
+function agendarCheckCupom(){
+  clearTimeout(_cupomCheckTimer);
+  _cupomCheckTimer = setTimeout(atualizarPrecoCupom, 400);
+}
+async function atualizarPrecoCupom(){
+  var cupom = document.getElementById('ckCupom').value.trim();
+  var subEl = document.getElementById('checkoutSub');
+  var base = _precoBase[_planoSelecionado] || '';
+  if(!cupom){
+    subEl.textContent = base + ' — preencha seus dados para gerar o pagamento.';
+    return;
+  }
+  subEl.textContent = 'Verificando cupom...';
+  try{
+    var res = await _sb.functions.invoke('admin-action',{body:{
+      action:'validar_cupom', payload:{ codigo:cupom, plano:_planoSelecionado }
+    }});
+    var d = res.data;
+    if(res.error || !d || !d.valido){
+      var msg = 'cupom inválido';
+      try{ if(res.error){ var body=await res.error.context.json(); if(body&&body.error) msg=body.error.toLowerCase(); } }catch(_){}
+      if(d && d.error) msg = d.error.toLowerCase();
+      msg = msg.replace(/\.+$/,'');
+      subEl.innerHTML = base + ' — <span style="color:#DC2626;font-weight:600">' + msg + '</span>.';
+      return;
+    }
+    subEl.innerHTML = '<span style="text-decoration:line-through;color:#94A3B8">' + base.split('—')[1] + '</span> ' +
+      '<strong style="color:#15803D">R$' + d.valor + ',00/mês com o cupom ' + d.codigo + '</strong> — preencha seus dados para gerar o pagamento.';
+  }catch(e){
+    subEl.textContent = base + ' — preencha seus dados para gerar o pagamento.';
+  }
+}
+function fecharCheckout(){
+  document.getElementById('modalCheckout').classList.remove('open');
+  document.body.style.overflow='';
+  document.getElementById('ckNome').value='';
+  document.getElementById('ckEmail').value='';
+  document.getElementById('ckEmailConfirm').value='';
+  document.getElementById('ckCpf').value='';
+  document.getElementById('ckTel').value='';
+  document.getElementById('ckCupom').value='';
+  document.getElementById('ckTermos').checked=false;
+}
+document.getElementById('modalCheckout').addEventListener('click',function(e){
+  if(e.target===this)fecharCheckout();
+});
+
+async function enviarCheckout(){
+  var nome=document.getElementById('ckNome').value.trim();
+  var email=document.getElementById('ckEmail').value.trim();
+  var emailConfirm=document.getElementById('ckEmailConfirm').value.trim();
+  var cpf=document.getElementById('ckCpf').value.replace(/\D/g,'');
+  var tel=document.getElementById('ckTel').value.trim();
+  var cupom=document.getElementById('ckCupom').value.trim();
+  var aceitouTermos=document.getElementById('ckTermos').checked;
+  if(!nome){alert('Informe seu nome completo.');return;}
+  if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
+  if(email.toLowerCase()!==emailConfirm.toLowerCase()){alert('Os e-mails digitados não são iguais. Confira e digite novamente — é nele que chega seu login e senha.');return;}
+  if(cpf.length!==11){alert('Informe um CPF válido.');return;}
+  if(!aceitouTermos){alert('Para continuar, marque que você leu e aceita os Termos de Uso e a Política de Privacidade.');return;}
+  var btn=document.getElementById('btnCheckout');
+  btn.disabled=true;btn.textContent='Gerando pagamento...';
+  try{
+    var res=await _sb.functions.invoke('admin-action',{body:{
+      action:'asaas_checkout',
+      payload:{ nome:nome, email:email, cpfCnpj:cpf, telefone:tel, plano:_planoSelecionado, cupom:cupom||undefined, aceitouTermos:true, userAgent:navigator.userAgent }
+    }});
+    if(res.error){
+      var msg='Erro ao gerar pagamento. Tente novamente.';
+      try{ var body=await res.error.context.json(); if(body&&body.error) msg=body.error; }catch(_){}
+      throw new Error(msg);
+    }
+    if(res.data && res.data.error) throw new Error(res.data.error);
+    if(res.data && res.data.checkoutUrl){
+      window.location.href = res.data.checkoutUrl;
+    } else {
+      throw new Error('Não recebemos o link de pagamento.');
+    }
+  }catch(e){
+    alert('Erro ao gerar pagamento: ' + (e.message||'tente novamente') );
+    btn.disabled=false;btn.textContent='Ir para pagamento →';
+  }
+}
+
+async function enviarSolicitacaoTeste(){
+  var nome=document.getElementById('testeNome').value.trim();
+  var email=document.getElementById('testeEmail').value.trim();
+  var emailConfirm=document.getElementById('testeEmailConfirm').value.trim();
+  var tel=document.getElementById('testeTel').value.trim();
+  var aceitouTermos=document.getElementById('testeTermos').checked;
+  if(!nome){alert('Informe seu nome completo.');return;}
+  if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
+  if(email.toLowerCase()!==emailConfirm.toLowerCase()){alert('Os e-mails digitados não são iguais. Confira e digite novamente — é nele que chega seu login e senha.');return;}
+  if(!aceitouTermos){alert('Para continuar, marque que você leu e aceita os Termos de Uso e a Política de Privacidade.');return;}
+  var btn=document.getElementById('btnEnviarTeste');
+  btn.disabled=true;btn.textContent='Enviando...';
+  try{
+    var res=await _sb.functions.invoke('admin-action',{body:{
+      action:'submit_request',
+      payload:{ nome:nome, email:email, telefone:tel, aceitouTermos:true, userAgent:navigator.userAgent }
+    }});
+    if(res.error){
+      var msg='Erro ao enviar solicitação. Tente novamente.';
+      try{ var body=await res.error.context.json(); if(body&&body.error) msg=body.error; }catch(_){}
+      throw new Error(msg);
+    }
+    if(res.data && res.data.error) throw new Error(res.data.error);
+    document.getElementById('modalForm').style.display='none';
+    document.getElementById('modalSucesso').style.display='block';
+  }catch(e){
+    alert(e.message||'Erro ao enviar solicitação. Tente novamente.');
+    btn.disabled=false;btn.textContent='Enviar Solicitação';
+  }
 }
 </script>
 </body>

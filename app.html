@@ -196,6 +196,8 @@ footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--texto3);}
 </style>
 <!-- AUTH GUARD — não toca na lógica do simulador -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function(){document.documentElement.style.visibility='hidden';})();
 const _sb=supabase.createClient('https://uefnirdmhtsbpdxnonnd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s');
@@ -236,7 +238,7 @@ function _mostrarTermosBloqueio(s){
         '<label for="_ckTermosApp" style="font-size:12.5px;color:#334155;line-height:1.5;cursor:pointer">Li e aceito os <a href="termos.html" target="_blank" rel="noopener" style="color:#0B3D91;font-weight:700">Termos de Uso e a Política de Privacidade</a>.</label>'+
       '</div>'+
       '<button id="_btnAceitarTermos" disabled onclick="_confirmarAceiteTermos()" style="width:100%;background:#0B3D91;color:#fff;border:none;padding:13px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px">Aceitar e continuar</button>'+
-      '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'index.html\')})" style="width:100%;background:none;border:none;color:#94A3B8;padding:12px;font-size:12px;cursor:pointer;font-family:inherit;margin-top:4px">Sair sem aceitar</button>'+
+      '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'login.html\')})" style="width:100%;background:none;border:none;color:#94A3B8;padding:12px;font-size:12px;cursor:pointer;font-family:inherit;margin-top:4px">Sair sem aceitar</button>'+
     '</div></div>';
 }
 async function _confirmarAceiteTermos(){
@@ -262,7 +264,7 @@ function _mostrarBloqueioTotal(){
       '<div style="font-size:40px;margin-bottom:12px">🔒</div>'+
       '<div style="font-size:18px;font-weight:800;color:#0F172A;margin-bottom:8px">Acesso bloqueado</div>'+
       '<div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:22px">Sua assinatura foi cancelada ou seu acesso foi bloqueado. Fale com o suporte para regularizar.</div>'+
-      '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'index.html\')})" style="background:#0B3D91;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">Sair</button>'+
+      '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'login.html\')})" style="background:#0B3D91;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">Sair</button>'+
     '</div></div>';
 }
 function _mostrarAvisoRenovacao(assinatura){
@@ -280,7 +282,7 @@ function _mostrarAvisoRenovacao(assinatura){
 
 _sb.auth.getSession().then(async function(r){
   var s=r.data.session;
-  if(!s){window.location.replace('index.html');return;}
+  if(!s){window.location.replace('login.html');return;}
   window._sb=_sb;window._session=s;
 
   var assinaturaCheck=await _checkAssinatura(s);
@@ -306,7 +308,7 @@ _sb.auth.getSession().then(async function(r){
     SEGURO_FAIXAS=fd.SEGURO_FAIXAS;
   } catch(e) {
     alert(e.message && e.message!=='sem dados' ? e.message : 'Erro ao carregar o simulador. Faça login novamente.');
-    window.location.replace('index.html'); return;
+    window.location.replace('login.html'); return;
   }
 
   document.documentElement.style.visibility='';
@@ -324,8 +326,8 @@ function _logout(){
   var s=window._session;
   if(window._sb&&s){
     _sb.from('events').insert({user_id:s.user.id,email:s.user.email,action:'logout',user_agent:navigator.userAgent});
-    _sb.auth.signOut().then(function(){window.location.replace('index.html');});
-  }else{window.location.replace('index.html');}
+    _sb.auth.signOut().then(function(){window.location.replace('login.html');});
+  }else{window.location.replace('login.html');}
 }
 function _abrirModal(){
   document.getElementById('_modalSenha').style.display='flex';
@@ -360,7 +362,7 @@ async function _confirmarTroca(){
   var d=await r2.json();
   if(!d.success){btn.disabled=false;btn.textContent='Trocar Senha';showMsg(d.error||'Erro ao trocar senha.',false);return;}
   showMsg('Senha trocada! Você receberá um e-mail de confirmação. Desconectando...',true);
-  setTimeout(function(){_sb.auth.signOut().then(function(){window.location.replace('index.html');});},2500);
+  setTimeout(function(){_sb.auth.signOut().then(function(){window.location.replace('login.html');});},2500);
 }
 </script>
 <!-- MODAL TROCAR SENHA -->
@@ -2819,6 +2821,90 @@ function atualizarEconomia() {
 /* ══════════════════════════════════════
    GERAR PDF
    ══════════════════════════════════════ */
+// ── Exportação de PDF em alta resolução ─────────────────────────────
+// Substitui window.print(): no celular, o "salvar como PDF" do navegador
+// rasteriza a página inteira numa DPI mais baixa que o desktop, deixando
+// o arquivo levemente borrado. Aqui renderizamos o HTML num iframe oculto,
+// capturamos em alta resolução (html2canvas, scale 3) e montamos o PDF
+// manualmente (jsPDF), com o mesmo resultado nítido em qualquer aparelho.
+async function _htmlDocToPdf(htmlString, filename) {
+  const A4_W_MM = 210, A4_H_MM = 297, MARGIN_MM = 13;
+  const CONTENT_W_MM = A4_W_MM - MARGIN_MM * 2;
+  const CONTENT_H_MM = A4_H_MM - MARGIN_MM * 2;
+  const PX_PER_MM = 96 / 25.4;
+  const contentWidthPx = Math.round(CONTENT_W_MM * PX_PER_MM);
+  const pageHeightPx = Math.round(CONTENT_H_MM * PX_PER_MM);
+
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = `position:fixed;left:-99999px;top:0;width:${contentWidthPx}px;height:0;border:0;`;
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(htmlString);
+  iframe.contentDocument.close();
+
+  await new Promise(resolve => {
+    if (iframe.contentDocument.readyState === 'complete') return resolve();
+    iframe.addEventListener('load', resolve, { once: true });
+  });
+  const imgs = Array.from(iframe.contentDocument.images);
+  await Promise.all(imgs.map(img => img.complete
+    ? Promise.resolve()
+    : new Promise(res => { img.onload = img.onerror = res; })));
+  await new Promise(r => setTimeout(r, 150)); // deixa o layout assentar
+
+  const body = iframe.contentDocument.body;
+  iframe.style.height = body.scrollHeight + 'px';
+
+  const SCALE = 3;
+  const canvas = await html2canvas(body, {
+    scale: SCALE,
+    width: contentWidthPx,
+    useCORS: true,
+    backgroundColor: '#ffffff'
+  });
+
+  // pontos onde não se pode cortar página (cards, banners etc.)
+  const forbidden = Array.from(body.querySelectorAll('.no-break, .sec, .parcela-banner, .val-banner'))
+    .map(el => {
+      const r = el.getBoundingClientRect();
+      const br = body.getBoundingClientRect();
+      return { top: r.top - br.top, bottom: r.bottom - br.top };
+    });
+
+  const fullHeightPx = canvas.height / SCALE;
+  const pdf = new jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+  let cursor = 0, first = true;
+
+  while (cursor < fullHeightPx - 1) {
+    let sliceEnd = Math.min(cursor + pageHeightPx, fullHeightPx);
+    for (const f of forbidden) {
+      if (f.top < sliceEnd && f.bottom > sliceEnd && f.top > cursor) sliceEnd = f.top;
+    }
+    if (sliceEnd <= cursor) sliceEnd = cursor + pageHeightPx;
+
+    const sliceHeightPx = sliceEnd - cursor;
+    const sliceCanvas = document.createElement('canvas');
+    sliceCanvas.width = canvas.width;
+    sliceCanvas.height = Math.round(sliceHeightPx * SCALE);
+    const ctx = sliceCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+    ctx.drawImage(canvas,
+      0, Math.round(cursor * SCALE), canvas.width, Math.round(sliceHeightPx * SCALE),
+      0, 0, sliceCanvas.width, sliceCanvas.height);
+
+    if (!first) pdf.addPage();
+    first = false;
+    pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.95), 'JPEG',
+      MARGIN_MM, MARGIN_MM, CONTENT_W_MM, sliceHeightPx / PX_PER_MM);
+
+    cursor = sliceEnd;
+  }
+
+  pdf.save(filename);
+  document.body.removeChild(iframe);
+}
+
 async function gerarPDF() {
   const d = window._simDadosVal;
   if (!d) { alert('Realize a simulação antes de exportar.'); return; }
@@ -3469,11 +3555,9 @@ ${(nomeCorretor || validadeStr) ? `
 </body>
 </html>`;
 
-  // Abre janela e imprime como PDF
-  const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
-  win.onload = () => { win.focus(); win.print(); };
+  // Gera o PDF em alta resolução (nítido em qualquer dispositivo)
+  const _nomeArqPdf = 'Proposta-' + (nome || 'SimulaPro').replace(/[^\w\-]+/g, '_') + '.pdf';
+  await _htmlDocToPdf(html, _nomeArqPdf);
 }
 
 function rMets(id, vi, ato, fg, totalEnt, fin, juros, prim, ult, taxa, prazo, tipo) {
@@ -4303,12 +4387,11 @@ async function ctrGerarPDF() {
     </div>
     <div class="ftr">SimulaPro · Uso exclusivo do corretor · Valores estimados · Condições sujeitas à aprovação da construtora</div>
   </div>
-  <div style="text-align:center;margin-top:16px"><button onclick="window.print()" style="padding:12px 28px;background:#1B6E3F;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Imprimir / Salvar PDF</button></div>
   </body></html>`;
 
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
+  // Gera o PDF em alta resolução (nítido em qualquer dispositivo)
+  const _nomeArqPdfCtr = 'Proposta-Construtora-' + (nome || 'SimulaPro').replace(/[^\w\-]+/g, '_') + '.pdf';
+  await _htmlDocToPdf(html, _nomeArqPdfCtr);
 }
 </script>
 </body>
