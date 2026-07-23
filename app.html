@@ -770,6 +770,16 @@ async function _confirmarTroca(){
     <div class="cb">
       <div class="av in show" style="display:block;margin-bottom:12px">💡 <strong>Por pagar o seguro de obra, o cliente não paga INCC nem documentações.</strong> Configure os itens abaixo e veja o total economizado.</div>
 
+      <!-- RGI/ITBI toggle -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:600;color:var(--texto2)">Isenção de RGI/ITBI?</span>
+        <div class="trow" style="margin:0;gap:6px">
+          <div id="btnRgiN" class="ttog" onclick="setRgiItbi(false)" style="padding:5px 14px;font-size:12px">❌ Não</div>
+          <div id="btnRgiS" class="ttog ton-ok" onclick="setRgiItbi(true)" style="padding:5px 14px;font-size:12px">✅ Sim</div>
+        </div>
+        <span style="font-size:11px;color:var(--texto3)">(nem todo estado isenta — confirme a regra local antes de marcar)</span>
+      </div>
+
       <!-- Laudêmio toggle -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <span style="font-size:12px;font-weight:600;color:var(--texto2)">Imóvel possui Laudêmio?</span>
@@ -2833,7 +2843,14 @@ async function simular() {
    ══════════════════════════════════════ */
 let temLaudemio = false;
 let temTaxaLig = false;
+let temRgiItbi = true; // padrão isento — mantém o comportamento de sempre pra quem não mexer no switch
 
+function setRgiItbi(val) {
+  temRgiItbi = val;
+  document.getElementById('btnRgiN').className = 'ttog' + (!val ? ' ton-er' : '');
+  document.getElementById('btnRgiS').className = 'ttog' + (val ? ' ton-ok' : '');
+  atualizarEconomia();
+}
 function setLaudemio(val) {
   temLaudemio = val;
   document.getElementById('btnLdN').className = 'ttog' + (!val ? ' ton-er' : '');
@@ -2863,7 +2880,7 @@ function atualizarEconomia() {
   // Usando valor pronto (valorizado) se disponível
   const pct = Math.max(1, parseFloat(document.getElementById('pctValorizacao')?.value) || 60) / 100;
   const vEntrega = vf * (1 + pct);
-  const rgiItbi = vEntrega * 0.05;
+  const rgiItbi = temRgiItbi ? vEntrega * 0.05 : 0;
   // Laudêmio: 5% do imóvel pronto
   const laudemio = temLaudemio ? vEntrega * 0.05 : 0;
   // Taxa ligação + decoração: 6% do imóvel (só se construtora não entregar)
@@ -2879,7 +2896,7 @@ function atualizarEconomia() {
 
   econGrid.innerHTML = `
     <div class="met"><div class="ml">INCC (10%/ano × ${mesesRestantesINCC}m restantes)</div><div class="mv gr">${fi(incc)}</div></div>
-    <div class="met"><div class="ml">RGI / ITBI (5% entrega)</div><div class="mv gr">${fi(rgiItbi)}</div></div>
+    ${temRgiItbi ? `<div class="met"><div class="ml">RGI / ITBI (5% entrega)</div><div class="mv gr">${fi(rgiItbi)}</div></div>` : ''}
     ${temLaudemio ? `<div class="met"><div class="ml">Laudêmio (5% entrega)</div><div class="mv gr">${fi(laudemio)}</div></div>` : ''}
     ${temTaxaLig ? `<div class="met"><div class="ml">Taxa ligação + decoração (6%)</div><div class="mv am">${fi(taxaLig)}</div></div>`
       : `<div class="met"><div class="ml">Taxa ligação + decoração</div><div class="mv gr">Entregue pela construtora</div></div>`}
@@ -2895,7 +2912,7 @@ function atualizarEconomia() {
     </div>
   `;
   // Salva para o PDF
-  window._econDados = { incc, rgiItbi, laudemio, taxaLig, seguro, grossEconom, total, temLaudemio, temTaxaLig };
+  window._econDados = { incc, rgiItbi, laudemio, taxaLig, seguro, grossEconom, total, temLaudemio, temTaxaLig, temRgiItbi };
 }
 
 /* ══════════════════════════════════════
@@ -3315,10 +3332,10 @@ async function gerarPDF() {
         <span class="lbl">INCC — 10%/ano de obra restante</span>
         <span class="val" style="color:#1B6E3F">${fi(eco.incc || 0)}</span>
       </div>
-      <div class="eco-line">
+      ${eco.temRgiItbi ? `<div class="eco-line">
         <span class="lbl">RGI / ITBI — Média 5% do valor pronto</span>
         <span class="val" style="color:#1B6E3F">${fi(eco.rgiItbi || 0)}</span>
-      </div>
+      </div>` : ''}
       <div class="eco-line">
         <span class="lbl">Laudêmio — ${eco.temLaudemio ? 'Média 5% do valor pronto' : 'Não se aplica'}</span>
         <span class="val" style="color:${eco.temLaudemio ? '#1B6E3F' : '#9CA3AF'}">${eco.temLaudemio ? fi(eco.laudemio || 0) : '—'}</span>
