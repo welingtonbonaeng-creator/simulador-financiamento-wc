@@ -431,7 +431,7 @@ tbody tr:hover td{background:var(--cinza1);}
 
       <div class="cfg-section">
         <div class="cfg-section-title">Informações do sistema</div>
-        <div class="cfg-row"><div class="cfg-label">URL do app</div><div class="cfg-val">welingtonbonaeng-creator.github.io/simulador-financiamento-wc</div></div>
+        <div class="cfg-row"><div class="cfg-label">URL do app</div><div class="cfg-val">simulapro.app.br</div></div>
         <div class="cfg-row"><div class="cfg-label">Supabase Project</div><div class="cfg-val">uefnirdmhtsbpdxnonnd</div></div>
         <div class="cfg-row"><div class="cfg-label">Email transacional</div><div class="cfg-val">Brevo · 300 emails/dia</div></div>
         <div class="cfg-row"><div class="cfg-label">Versão do painel</div><div class="cfg-val">2.0.0</div></div>
@@ -1400,7 +1400,7 @@ async function confirmarRenovar() {
 function copiarCredenciaisTeste(testeId) {
   const t = _testesCache.find(x => x.id === testeId)
   if (!t) return
-  const txt = `*SimulaPro — Acesso de Teste*\n\nOlá, ${t.nome}!\n\nSeu acesso de teste está pronto:\n\n• *E-mail:* ${t.email}\n• *Senha:* ${t.senha_inicial||'—'}\n• *Link:* https://welingtonbonaeng-creator.github.io/simulador-financiamento-wc/\n• *Válido até:* ${t.validade ? new Date(t.validade).toLocaleDateString('pt-BR') : '—'}\n\nQualquer dúvida, é só me chamar!`
+  const txt = `*SimulaPro — Acesso de Teste*\n\nOlá, ${t.nome}!\n\nSeu acesso de teste está pronto:\n\n• *E-mail:* ${t.email}\n• *Senha:* ${t.senha_inicial||'—'}\n• *Link:* https://simulapro.app.br/login.html\n• *Válido até:* ${t.validade ? new Date(t.validade).toLocaleDateString('pt-BR') : '—'}\n\nQualquer dúvida, é só me chamar!`
   navigator.clipboard.writeText(txt).then(() => toast('Credenciais copiadas!','ok')).catch(() => toast('Erro ao copiar.','er'))
 }
 
@@ -1420,7 +1420,7 @@ function copiarCredenciais(userId) {
   const txt = `SimulaPro — Acesso de Teste\n` +
     `E-mail: ${t.email}\n` +
     `Senha: ${t.senha}\n` +
-    `Link: https://welingtonbonaeng-creator.github.io/simulador-financiamento-wc/\n` +
+    `Link: https://simulapro.app.br/login.html\n` +
     (valStr ? valStr+'\n' : '') +
     `\nEm caso de dúvidas: simulador.wc@gmail.com`
   navigator.clipboard.writeText(txt).then(()=>toast('Credenciais copiadas!','ok'))
