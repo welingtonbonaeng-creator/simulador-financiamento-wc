@@ -1048,6 +1048,13 @@ async function _confirmarTroca(){
 </div>
 
 <button class="btn-sim" onclick="ctrSimular()" style="background:linear-gradient(135deg,#1B6E3F,#2D9D5C)">📊 Calcular Fluxo</button>
+
+<!-- O QUE ENTRA NO PDF (Construtora) -->
+<div class="pdf-opts" id="ctr_pdfOpts" style="display:none">
+  <div class="pdf-opts-title">📄 O que entra no PDF <span>(desative o que não quiser apresentar ao cliente)</span></div>
+  <label class="mini-switch"><input type="checkbox" id="ctr_optPdfValorizacao" checked><span class="mini-slider"></span>Projeção de valorização</label>
+</div>
+
 <button class="btn-sim" id="ctr_btnPDF" onclick="ctrGerarPDF()" style="background:linear-gradient(135deg,#1E40AF,#2563EB);display:none;margin-top:.5rem">📄 Exportar Proposta em PDF</button>
 <button class="btn-sim" id="ctr_btnSalvar" onclick="salvarSimulacao('construtora')" style="background:#fff;border:1.5px solid #1B6E3F;color:#1B6E3F;display:none;margin-top:.5rem">💾 Salvar Simulação</button>
 <div class="notice">⚠️ Simulação estimada. Condições sujeitas à política comercial da construtora. Valores reajustados pelo índice indicado.</div>
@@ -4402,11 +4409,53 @@ async function ctrSimular() {
       </div>
     </div>
     ${r.warnings?.length ? `<div style="background:#FEF3E8;border:1px solid #FED7AA;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:12px;color:#92400E">⚠️ ${r.warnings.join(' | ')}</div>` : ''}
+    <div style="margin-top:16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:700;color:#4A2C8A">📈 Projeção de Valorização</span>
+        <label style="font-size:12px;font-weight:600;color:var(--texto2);white-space:nowrap;margin-left:auto">% estimado:</label>
+        <input type="number" id="ctr_pctValorizacao" value="60" min="1" max="300" step="1"
+          style="width:70px;padding:5px 8px;border:1.5px solid var(--cinza3);border-radius:6px;font-size:13px;font-weight:700;color:var(--azul);text-align:center"
+          oninput="ctrAtualizarValorizacao()">
+        <span style="font-size:13px;font-weight:700;color:var(--azul)">%</span>
+      </div>
+      <div class="val-grid" id="ctr_valGrid"></div>
+      <p style="font-size:11px;color:var(--texto3);margin-top:8px">* Estimativa. Não é garantia de retorno.</p>
+    </div>
   `;
   document.getElementById('ctr_resCard').style.display = '';
   document.getElementById('ctr_btnPDF').style.display = '';
   document.getElementById('ctr_btnSalvar').style.display = '';
+  document.getElementById('ctr_pdfOpts').style.display = '';
+  ctrAtualizarValorizacao();
   document.getElementById('ctr_resCard').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ── Projeção de Valorização (Construtora) ──────────────────────────
+let _ctrValorizTimer = null;
+function ctrAtualizarValorizacao() {
+  const r = window._ctrResult;
+  if (!r) return;
+  const pct = Math.max(1, parseFloat(document.getElementById('ctr_pctValorizacao')?.value) || 60);
+  clearTimeout(_ctrValorizTimer);
+  _ctrValorizTimer = setTimeout(async function() {
+    const s = window._session;
+    if (!s) return;
+    const resp = await fetch(_EDGE, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'calc_valorizacao', vi: r.vProposta, fin: 0, pctValorizacao: pct, seguroTotal: 0 })
+    }).then(function(x){ return x.json(); }).catch(function(){ return null; });
+    if (!resp) return;
+    window._ctrValorizacao = { pct, valorFuturo: resp.valorFuturo, ganho: resp.lucro };
+    const grid = document.getElementById('ctr_valGrid');
+    if (!grid) return;
+    grid.innerHTML = `
+      <div class="val-item azul"><div class="vi-lbl">Valor da proposta hoje</div><div class="vi-val azul">${fi(r.vProposta)}</div></div>
+      <div class="val-item azul"><div class="vi-lbl">Valorização est. (${pct}%)</div><div class="vi-val azul">${fi(r.vProposta * pct / 100)}</div></div>
+      <div class="val-item"><div class="vi-lbl">Valor na entrega</div><div class="vi-val">${fi(resp.valorFuturo)}</div></div>
+      <div class="val-item"><div class="vi-lbl">Ganho estimado</div><div class="vi-val" style="color:${resp.lucro>=0?'var(--verde)':'var(--vermelho)'}">${fi(resp.lucro)}</div></div>
+    `;
+  }, 280);
 }
 
 // ── PDF CONSTRUTORA ───────────────────────────────────────────────
@@ -4418,6 +4467,8 @@ async function ctrGerarPDF() {
   const tipo     = document.getElementById('ctr_tipologia')?.value || '—';
   const corretor = document.getElementById('ctr_corretor')?.value || 'Welington Silva';
   const hoje     = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const optValorizacao = document.getElementById('ctr_optPdfValorizacao')?.checked ?? true;
+  const valoriz  = window._ctrValorizacao || null;
 
   const corFase = f => f === 'pré' ? '#EBF5FF' : '#F0FDF4';
   const corBord = f => f === 'pré' ? '#BFDBFE' : '#86EFAC';
@@ -4503,6 +4554,24 @@ async function ctrGerarPDF() {
       </div>
       ${r.warnings?.length?`<div style="background:#FEF3E8;border-radius:8px;padding:10px;margin-top:12px;font-size:11px;color:#92400E">⚠️ ${r.warnings.join(' | ')}</div>`:''}
     </div>
+    ${(optValorizacao && valoriz) ? `<div class="sec">
+      <div class="sec-title">Projeção de valorização (${valoriz.pct}%)</div>
+      <div class="split">
+        <div class="split-box" style="background:#EBF5FF">
+          <div class="split-lbl" style="color:#1E40AF">Valor hoje</div>
+          <div class="split-val" style="color:#1E40AF">${fi(r.vProposta)}</div>
+        </div>
+        <div class="split-box" style="background:#F5F3FF">
+          <div class="split-lbl" style="color:#6D28D9">Valor na entrega</div>
+          <div class="split-val" style="color:#6D28D9">${fi(valoriz.valorFuturo)}</div>
+        </div>
+        <div class="split-box" style="background:${valoriz.ganho>=0?'#F0FDF4':'#FEF2F2'};border:1.5px solid ${valoriz.ganho>=0?'#86EFAC':'#FECACA'}">
+          <div class="split-lbl" style="color:${valoriz.ganho>=0?'#14532D':'#991B1B'}">Ganho estimado</div>
+          <div class="split-val" style="color:${valoriz.ganho>=0?'#14532D':'#991B1B'}">${fi(valoriz.ganho)}</div>
+        </div>
+      </div>
+      <p style="font-size:9px;color:#9CA3AF;margin-top:10px">* Estimativa. Não é garantia de retorno.</p>
+    </div>` : ''}
     <div class="ftr">SimulaPro · Uso exclusivo do corretor · Valores estimados · Condições sujeitas à aprovação da construtora</div>
   </div>
   </body></html>`;
