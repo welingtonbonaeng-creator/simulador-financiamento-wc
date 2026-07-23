@@ -99,6 +99,16 @@ main{max-width:960px;margin:0 auto;padding:1.1rem 1.1rem 3rem;}
 .ttabs{display:flex;gap:7px;margin-bottom:9px;}
 .ttab{flex:1;padding:6px;text-align:center;font-size:12px;font-weight:500;border:1.5px solid var(--cinza2);border-radius:var(--radius2);cursor:pointer;background:#fff;color:var(--texto2);transition:all .15s;}
 .ttab.ton{background:var(--azulclaro);border-color:var(--azul3);color:var(--azul);}
+/* Opções do que entra no PDF — switches sutis */
+.pdf-opts{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:var(--radius2);padding:9px 12px;margin-bottom:8px;}
+.pdf-opts-title{font-size:10.5px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+.pdf-opts-title span{font-weight:400;text-transform:none;letter-spacing:0;color:#94A3B8;}
+.mini-switch{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:11.5px;color:var(--texto2);user-select:none;}
+.mini-switch input{display:none;}
+.mini-slider{width:28px;height:16px;border-radius:20px;background:#CBD5E1;position:relative;transition:background .15s;flex-shrink:0;}
+.mini-slider::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+.mini-switch input:checked + .mini-slider{background:#1B6E3F;}
+.mini-switch input:checked + .mini-slider::after{left:14px;}
 /* Btn auto */
 .btn-auto{padding:7px 14px;background:var(--roxo);color:#fff;border:none;border-radius:var(--radius2);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .btn-auto:hover{background:#3C1A80;}
@@ -782,6 +792,15 @@ async function _confirmarTroca(){
       <div id="econGrid" class="mets"></div>
       <div id="econTotal" style="margin-top:8px"></div>
     </div>
+  </div>
+
+  <!-- O QUE ENTRA NO PDF -->
+  <div class="pdf-opts">
+    <div class="pdf-opts-title">📄 O que entra no PDF <span>(desative o que não quiser apresentar ao cliente)</span></div>
+    <label class="mini-switch"><input type="checkbox" id="optPdfSeguroObra" checked><span class="mini-slider"></span>Seguro de obra — evolução gradual</label>
+    <label class="mini-switch"><input type="checkbox" id="optPdfEconomia" checked><span class="mini-slider"></span>Economia com o programa</label>
+    <label class="mini-switch"><input type="checkbox" id="optPdfValorizacao" checked><span class="mini-slider"></span>Projeção de valorização</label>
+    <label class="mini-switch"><input type="checkbox" id="optPdfCapacidadeObra" checked><span class="mini-slider"></span>Capacidade de pagamento — período de obra</label>
   </div>
 
   <!-- BOTÃO PDF -->
@@ -2966,9 +2985,27 @@ async function _htmlDocToPdf(htmlString, filename) {
   document.body.removeChild(iframe);
 }
 
+// Junta até 2 blocos de seção (já prontos em HTML) lado a lado quando os dois
+// estão ativos; se só um estiver ativo, ele ocupa a largura toda sozinho (em
+// vez de ficar "preso" numa coluna de duas com um vazio do lado); se nenhum
+// estiver ativo, não sobra div vazia no PDF.
+function _wrapTwoCol(itens) {
+  const ativos = itens.filter(Boolean);
+  if (ativos.length === 0) return '';
+  if (ativos.length === 1) return ativos[0];
+  return `<div class="two-col">${ativos.join('')}</div>`;
+}
+
 async function gerarPDF() {
   const d = window._simDadosVal;
   if (!d) { alert('Realize a simulação antes de exportar.'); return; }
+
+  // O que entra no PDF — switches sutis acima do botão de exportar (todos
+  // ligados por padrão, comportamento igual ao de antes se ninguém mexer).
+  const optSeguroObra     = document.getElementById('optPdfSeguroObra')?.checked ?? true;
+  const optEconomia       = document.getElementById('optPdfEconomia')?.checked ?? true;
+  const optValorizacao    = document.getElementById('optPdfValorizacao')?.checked ?? true;
+  const optCapacidadeObra = document.getElementById('optPdfCapacidadeObra')?.checked ?? true;
 
   const nome = document.getElementById('nomeCliente').value || '—';
   const produto = document.getElementById('nomeProduto').value || '—';
@@ -3227,6 +3264,119 @@ async function gerarPDF() {
     fluxoStatusLabel = '✅ SAUDÁVEL — mesmo no pico, abaixo de ' + fluxoPctRendaLimiteNum.toFixed(0) + '% da renda'; fluxoStatusCor = '#14522F'; fluxoStatusFundo = '#EAF4EE'; fluxoStatusBorda = '#1B6E3F';
   }
 
+  // ── Blocos opcionais (ligados/desligados pelos switches acima do botão) ──
+  const secValores = `
+  <div class="sec no-break">
+    <div class="sec-head">💰 Valores da Proposta</div>
+    <div class="sec-body">
+      <div class="metrics cols2" style="margin-bottom:6px">
+        <div class="metric"><div class="m-lbl">Valor da unidade</div><div class="m-val az">${fi(d.vi)}</div></div>
+        <div class="metric"><div class="m-lbl">Financiamento liberado</div><div class="m-val az">${fi(finPDF)}</div></div>
+        <div class="metric"><div class="m-lbl">Entrada total</div><div class="m-val">${fi(totalEntradaPDF)}</div></div>
+        <div class="metric"><div class="m-lbl">Seguro de obra</div><div class="m-val am">${fi(seguro)}</div></div>
+      </div>
+      <div style="background:#F4F6FA;border-radius:4px;padding:6px 9px;margin-bottom:2px">
+        <div style="font-size:8px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">📌 Composição da entrada</div>
+        <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#374151;padding:2px 0">
+          <span>🔑 Ato — valor pago na assinatura do contrato</span>
+          <strong style="color:#111">${fi(d.ato || 0)}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#374151;padding:2px 0;border-top:1px solid #E5E7EB">
+          <span>💰 FGTS — saldo do Fundo de Garantia utilizado na entrada</span>
+          <strong style="color:#111">${fi(d.fgts || 0)}</strong>
+        </div>
+      </div>
+      <div class="notice-blue">
+        🔒 <strong>Saldo congelado sem INCC</strong> após assinatura CEF + isenção de documentação. Por pagar o seguro, o cliente não paga INCC nem documentações.
+      </div>
+    </div>
+  </div>`;
+
+  const secSeguroObra = !optSeguroObra ? '' : `
+  <div class="sec no-break">
+    <div class="sec-head orange">🔒 Seguro de Obra — Evolução Gradual</div>
+    <div class="sec-body">
+      <table class="seg-tbl">
+        <thead><tr><th>Período</th><th>Faixa mensal</th><th>% obra</th></tr></thead>
+        <tbody>${linhasSeguro}</tbody>
+      </table>
+      <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;background:#FEF3E8;padding:6px 9px;border-radius:4px;border:1px solid #FCD9A8">
+        <span style="font-size:9px;font-weight:700;color:#8A3F00">MÉDIA TOTAL</span>
+        <span style="font-size:13px;font-weight:800;color:#C05A00">${fi(seguro)}</span>
+      </div>
+    </div>
+  </div>`;
+
+  const secEconomia = !optEconomia ? '' : `
+  <div class="sec no-break">
+    <div class="sec-head green">🏆 Economia com o Programa</div>
+    <div class="sec-body">
+      <div class="eco-line">
+        <span class="lbl">INCC — 10%/ano de obra restante</span>
+        <span class="val" style="color:#1B6E3F">${fi(eco.incc || 0)}</span>
+      </div>
+      <div class="eco-line">
+        <span class="lbl">RGI / ITBI — Média 5% do valor pronto</span>
+        <span class="val" style="color:#1B6E3F">${fi(eco.rgiItbi || 0)}</span>
+      </div>
+      <div class="eco-line">
+        <span class="lbl">Laudêmio — ${eco.temLaudemio ? 'Média 5% do valor pronto' : 'Não se aplica'}</span>
+        <span class="val" style="color:${eco.temLaudemio ? '#1B6E3F' : '#9CA3AF'}">${eco.temLaudemio ? fi(eco.laudemio || 0) : '—'}</span>
+      </div>
+      <div class="eco-line">
+        <span class="lbl">Seguro de obra — Período de construção <span style="font-size:8px;color:#B91C1C">(custo do cliente)</span></span>
+        <span class="val" style="color:#B91C1C">− ${fi(eco.seguro || 0)}</span>
+      </div>
+      <div class="eco-total-bar">
+        <span class="tl">🏆 TOTAL DE ECONOMIA</span>
+        <span class="tv">${fi(eco.total || 0)}</span>
+      </div>
+      <div class="notice-yellow" style="margin-top:6px;text-align:center;font-weight:700">
+        POR PAGAR O SEGURO, VOCÊ NÃO PAGA INCC E DOCUMENTAÇÕES
+      </div>
+    </div>
+  </div>`;
+
+  const secValorizacao = !optValorizacao ? '' : `
+  <div class="sec no-break">
+    <div class="sec-head purple">📈 Projeção de Valorização (${pct}%)</div>
+    <div class="sec-body">
+      <div class="val-banner">
+        <div class="val-card az"><div class="vc-lbl">Valor hoje</div><div class="vc-val az">${fi(d.vi)}</div></div>
+        <div class="val-card az"><div class="vc-lbl">Valorização (${pct}%)</div><div class="vc-val az">${fi(d.vi * pctD)}</div></div>
+        <div class="val-card vd"><div class="vc-lbl">Valor na entrega</div><div class="vc-val vd">${fi(vEntrega)}</div></div>
+        <div class="val-card am"><div class="vc-lbl">Financiado</div><div class="vc-val am">${fi(finPDF)}</div></div>
+        <div class="val-card gy"><div class="vc-lbl">Entrada total</div><div class="vc-val" style="color:#374151">${fi(totalEntradaPDF)}</div></div>
+        <div class="val-card rd"><div class="vc-lbl">Seguro pago</div><div class="vc-val rd">− ${fi(seguro)}</div></div>
+        <div class="val-card ${lucro>=0?'vd':'rd'} lucro">
+          <div class="vc-lbl">Lucro estimado</div>
+          <div class="vc-val ${lucro>=0?'vd':'rd'}" style="font-size:18px">${fi(lucro)}</div>
+        </div>
+      </div>
+      <div style="font-size:8.5px;color:#9CA3AF;margin-top:4px">* Estimativa. Não é garantia de retorno. Histórico Porto Maravilha: ~60% em 30 meses.</div>
+    </div>
+  </div>`;
+
+  const htmlLinha1 = _wrapTwoCol([secValores, secSeguroObra]);
+  const htmlLinha2 = _wrapTwoCol([secEconomia, secValorizacao]);
+
+  const secCapacidadeObra = !optCapacidadeObra ? '' : `
+    <div style="background:${fluxoStatusFundo};border:1.5px solid ${fluxoStatusBorda};border-radius:6px;padding:10px 12px;margin-top:8px">
+      <div style="font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📊 Capacidade de Pagamento — Período de Obra</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <div class="metric"><div class="m-lbl">Renda bruta familiar</div><div class="m-val">${fi(fluxoRenda)}</div></div>
+        <div class="metric"><div class="m-lbl">Máximo ${fluxoPctRendaLimiteNum.toFixed(0)}% da renda</div><div class="m-val">${fi(fluxoLimite30)}</div></div>
+        <div class="metric"><div class="m-lbl">Parcela média (período de obra)</div><div class="m-val" style="color:#C05A00">${fi(fluxoParcelaObraTotal)}</div></div>
+        <div class="metric"><div class="m-lbl">Parcela no pico (último mês)</div><div class="m-val" style="color:${fluxoStatusCor}">${fi(fluxoParcelaObraPico)}</div></div>
+      </div>
+      <div style="text-align:center;font-weight:800;font-size:11px;color:${fluxoStatusCor};background:#fff;border-radius:4px;padding:7px 9px;border:1px solid ${fluxoStatusBorda}">
+        ${fluxoStatusLabel} (${fluxoRenda > 0 ? fluxoPctRenda.toFixed(1).replace('.', ',') + '%' : '—'} no pico)
+      </div>
+      <div style="font-size:8px;color:#9CA3AF;margin-top:6px;line-height:1.5">
+        Referência: comprometimento até ${fluxoPctRendaLimiteNum.toFixed(0)}% da renda bruta é considerado saudável. A avaliação usa o PICO (último mês da obra, quando o seguro é mais alto), não a média — para refletir o momento de maior aperto financeiro real.
+      </div>
+    </div>`;
+
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -3433,107 +3583,11 @@ async function gerarPDF() {
   </div>
 </div>
 
-<!-- LINHA 1: VALORES + SEGURO -->
-<div class="two-col">
+<!-- LINHA 1: VALORES + SEGURO (Seguro de Obra é opcional) -->
+${htmlLinha1}
 
-  <!-- VALORES -->
-  <div class="sec no-break">
-    <div class="sec-head">💰 Valores da Proposta</div>
-    <div class="sec-body">
-      <div class="metrics cols2" style="margin-bottom:6px">
-        <div class="metric"><div class="m-lbl">Valor da unidade</div><div class="m-val az">${fi(d.vi)}</div></div>
-        <div class="metric"><div class="m-lbl">Financiamento liberado</div><div class="m-val az">${fi(finPDF)}</div></div>
-        <div class="metric"><div class="m-lbl">Entrada total</div><div class="m-val">${fi(totalEntradaPDF)}</div></div>
-        <div class="metric"><div class="m-lbl">Seguro de obra</div><div class="m-val am">${fi(seguro)}</div></div>
-      </div>
-      <div style="background:#F4F6FA;border-radius:4px;padding:6px 9px;margin-bottom:2px">
-        <div style="font-size:8px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">📌 Composição da entrada</div>
-        <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#374151;padding:2px 0">
-          <span>🔑 Ato — valor pago na assinatura do contrato</span>
-          <strong style="color:#111">${fi(d.ato || 0)}</strong>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#374151;padding:2px 0;border-top:1px solid #E5E7EB">
-          <span>💰 FGTS — saldo do Fundo de Garantia utilizado na entrada</span>
-          <strong style="color:#111">${fi(d.fgts || 0)}</strong>
-        </div>
-      </div>
-      <div class="notice-blue">
-        🔒 <strong>Saldo congelado sem INCC</strong> após assinatura CEF + isenção de documentação. Por pagar o seguro, o cliente não paga INCC nem documentações.
-      </div>
-    </div>
-  </div>
-
-  <!-- SEGURO DE OBRA -->
-  <div class="sec no-break">
-    <div class="sec-head orange">🔒 Seguro de Obra — Evolução Gradual</div>
-    <div class="sec-body">
-      <table class="seg-tbl">
-        <thead><tr><th>Período</th><th>Faixa mensal</th><th>% obra</th></tr></thead>
-        <tbody>${linhasSeguro}</tbody>
-      </table>
-      <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;background:#FEF3E8;padding:6px 9px;border-radius:4px;border:1px solid #FCD9A8">
-        <span style="font-size:9px;font-weight:700;color:#8A3F00">MÉDIA TOTAL</span>
-        <span style="font-size:13px;font-weight:800;color:#C05A00">${fi(seguro)}</span>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- LINHA 2: ECONOMIA + VALORIZAÇÃO -->
-<div class="two-col">
-
-  <!-- ECONOMIA -->
-  <div class="sec no-break">
-    <div class="sec-head green">🏆 Economia com o Programa</div>
-    <div class="sec-body">
-      <div class="eco-line">
-        <span class="lbl">INCC — 10%/ano de obra restante</span>
-        <span class="val" style="color:#1B6E3F">${fi(eco.incc || 0)}</span>
-      </div>
-      <div class="eco-line">
-        <span class="lbl">RGI / ITBI — Média 5% do valor pronto</span>
-        <span class="val" style="color:#1B6E3F">${fi(eco.rgiItbi || 0)}</span>
-      </div>
-      <div class="eco-line">
-        <span class="lbl">Laudêmio — ${eco.temLaudemio ? 'Média 5% do valor pronto' : 'Não se aplica'}</span>
-        <span class="val" style="color:${eco.temLaudemio ? '#1B6E3F' : '#9CA3AF'}">${eco.temLaudemio ? fi(eco.laudemio || 0) : '—'}</span>
-      </div>
-      <div class="eco-line">
-        <span class="lbl">Seguro de obra — Período de construção <span style="font-size:8px;color:#B91C1C">(custo do cliente)</span></span>
-        <span class="val" style="color:#B91C1C">− ${fi(eco.seguro || 0)}</span>
-      </div>
-      <div class="eco-total-bar">
-        <span class="tl">🏆 TOTAL DE ECONOMIA</span>
-        <span class="tv">${fi(eco.total || 0)}</span>
-      </div>
-      <div class="notice-yellow" style="margin-top:6px;text-align:center;font-weight:700">
-        POR PAGAR O SEGURO, VOCÊ NÃO PAGA INCC E DOCUMENTAÇÕES
-      </div>
-    </div>
-  </div>
-
-  <!-- VALORIZAÇÃO -->
-  <div class="sec no-break">
-    <div class="sec-head purple">📈 Projeção de Valorização (${pct}%)</div>
-    <div class="sec-body">
-      <div class="val-banner">
-        <div class="val-card az"><div class="vc-lbl">Valor hoje</div><div class="vc-val az">${fi(d.vi)}</div></div>
-        <div class="val-card az"><div class="vc-lbl">Valorização (${pct}%)</div><div class="vc-val az">${fi(d.vi * pctD)}</div></div>
-        <div class="val-card vd"><div class="vc-lbl">Valor na entrega</div><div class="vc-val vd">${fi(vEntrega)}</div></div>
-        <div class="val-card am"><div class="vc-lbl">Financiado</div><div class="vc-val am">${fi(finPDF)}</div></div>
-        <div class="val-card gy"><div class="vc-lbl">Entrada total</div><div class="vc-val" style="color:#374151">${fi(totalEntradaPDF)}</div></div>
-        <div class="val-card rd"><div class="vc-lbl">Seguro pago</div><div class="vc-val rd">− ${fi(seguro)}</div></div>
-        <div class="val-card ${lucro>=0?'vd':'rd'} lucro">
-          <div class="vc-lbl">Lucro estimado</div>
-          <div class="vc-val ${lucro>=0?'vd':'rd'}" style="font-size:18px">${fi(lucro)}</div>
-        </div>
-      </div>
-      <div style="font-size:8.5px;color:#9CA3AF;margin-top:4px">* Estimativa. Não é garantia de retorno. Histórico Porto Maravilha: ~60% em 30 meses.</div>
-    </div>
-  </div>
-
-</div>
+<!-- LINHA 2: ECONOMIA + VALORIZAÇÃO (ambas opcionais) -->
+${htmlLinha2}
 
 <!-- LINHA 3: FLUXO DE PAGAMENTO TOTAL -->
 <div class="sec no-break" style="margin-bottom:10px">
@@ -3569,21 +3623,7 @@ async function gerarPDF() {
       </tbody>
     </table>
 
-    <div style="background:${fluxoStatusFundo};border:1.5px solid ${fluxoStatusBorda};border-radius:6px;padding:10px 12px;margin-top:8px">
-      <div style="font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📊 Capacidade de Pagamento — Período de Obra</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
-        <div class="metric"><div class="m-lbl">Renda bruta familiar</div><div class="m-val">${fi(fluxoRenda)}</div></div>
-        <div class="metric"><div class="m-lbl">Máximo ${fluxoPctRendaLimiteNum.toFixed(0)}% da renda</div><div class="m-val">${fi(fluxoLimite30)}</div></div>
-        <div class="metric"><div class="m-lbl">Parcela média (período de obra)</div><div class="m-val" style="color:#C05A00">${fi(fluxoParcelaObraTotal)}</div></div>
-        <div class="metric"><div class="m-lbl">Parcela no pico (último mês)</div><div class="m-val" style="color:${fluxoStatusCor}">${fi(fluxoParcelaObraPico)}</div></div>
-      </div>
-      <div style="text-align:center;font-weight:800;font-size:11px;color:${fluxoStatusCor};background:#fff;border-radius:4px;padding:7px 9px;border:1px solid ${fluxoStatusBorda}">
-        ${fluxoStatusLabel} (${fluxoRenda > 0 ? fluxoPctRenda.toFixed(1).replace('.', ',') + '%' : '—'} no pico)
-      </div>
-      <div style="font-size:8px;color:#9CA3AF;margin-top:6px;line-height:1.5">
-        Referência: comprometimento até ${fluxoPctRendaLimiteNum.toFixed(0)}% da renda bruta é considerado saudável. A avaliação usa o PICO (último mês da obra, quando o seguro é mais alto), não a média — para refletir o momento de maior aperto financeiro real.
-      </div>
-    </div>
+    ${secCapacidadeObra}
   </div>
 </div>
 
