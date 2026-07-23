@@ -293,19 +293,7 @@ _sb.auth.getSession().then(async function(r){
 
   /* Carregar FAIXAS do servidor (protege dados do app contra cópia) */
   try {
-    var fr=await fetch(_EDGE,{method:'POST',
-      headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
-      body:JSON.stringify({action:'get_faixas'})});
-    var fd=await fr.json();
-    if(!fd.FAIXAS) throw new Error(fd.error||'sem dados');
-    /* Restaura Infinity (serializado como null pelo JSON) */
-    fd.FAIXAS.forEach(function(f){
-      if(f.rMax===null) f.rMax=Infinity;
-      if(f.iMax===null) f.iMax=Infinity;
-      f.subs.forEach(function(s){ if(s.a===null) s.a=Infinity; });
-    });
-    FAIXAS=fd.FAIXAS;
-    SEGURO_FAIXAS=fd.SEGURO_FAIXAS;
+    await carregarFaixas();
   } catch(e) {
     alert(e.message && e.message!=='sem dados' ? e.message : 'Erro ao carregar o simulador. Faça login novamente.');
     window.location.replace('login.html'); return;
@@ -541,6 +529,12 @@ async function _confirmarTroca(){
 <div class="card">
   <div class="card-header"><div class="ci ci-az">🏢</div><div><div class="ct">Dados do Imóvel</div><div class="cs">Valor, avaliação Caixa e composição da entrada</div></div></div>
   <div class="cb">
+    <div class="field" style="position:relative;max-width:360px">
+      <label>Município do imóvel <span style="font-weight:400;font-size:10px;color:#94A3B8">(ajusta o teto MCMV automaticamente — opcional)</span></label>
+      <input type="text" id="municipioInput" placeholder="Ex: Niterói, Campinas, Recife..." oninput="onMunicipioInput()" onblur="setTimeout(fecharSugestoesMunicipio,150)" autocomplete="off"/>
+      <div id="municipioSugestoes" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:#fff;border:1px solid #E2E8F0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.08);max-height:220px;overflow-y:auto;margin-top:2px"></div>
+    </div>
+    <div id="municipioTetoBadge" class="av" style="display:none;margin-bottom:9px"></div>
     <div class="g3">
       <div class="field"><label>Valor de venda</label><input type="text" id="vImovel" placeholder="R$ 0,00" oninput="M(this,event);onImovel()"/></div>
       <div class="field"><label>Avaliação Caixa <span style="font-weight:400;font-size:10px">(auto +10% — editável)</span></label><input type="text" id="vAval" placeholder="Automático (+10%)" oninput="M(this,event);onImovel()"/></div>
@@ -1050,6 +1044,72 @@ async function _confirmarTroca(){
 /* ── DADOS DAS FAIXAS — carregados do servidor após login ── */
 let FAIXAS = null;
 let SEGURO_FAIXAS = null;
+let municipioSelecionado = null; // {ibge_id, nome, uf, grupo_mcmv, teto_valor} ou null (padrão RJ)
+
+/* Busca FAIXAS no backend — se municipioId for informado, o teto MCMV de
+   Faixa 1/2 já vem ajustado pro grupo daquele município (cálculo 100% no
+   servidor, nunca no frontend). */
+async function carregarFaixas(municipioId) {
+  const s = window._session;
+  const body = { action: 'get_faixas' };
+  if (municipioId) body.municipioId = municipioId;
+  const fr = await fetch(_EDGE, { method:'POST',
+    headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
+    body: JSON.stringify(body) });
+  const fd = await fr.json();
+  if (!fd.FAIXAS) throw new Error(fd.error || 'sem dados');
+  fd.FAIXAS.forEach(function(f){
+    if (f.rMax===null) f.rMax=Infinity;
+    if (f.iMax===null) f.iMax=Infinity;
+    f.subs.forEach(function(s){ if (s.a===null) s.a=Infinity; });
+  });
+  FAIXAS = fd.FAIXAS;
+  SEGURO_FAIXAS = fd.SEGURO_FAIXAS;
+  municipioSelecionado = fd.municipio || null;
+}
+
+/* ── Autocomplete de município (teto MCMV Faixa 1/2 por região) ── */
+let _municipioDebounce = null;
+function onMunicipioInput() {
+  const q = document.getElementById('municipioInput').value.trim();
+  const box = document.getElementById('municipioSugestoes');
+  clearTimeout(_municipioDebounce);
+  if (q.length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  _municipioDebounce = setTimeout(async () => {
+    const s = window._session;
+    const fr = await fetch(_EDGE, { method:'POST',
+      headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'buscar_municipio', query:q }) });
+    const fd = await fr.json();
+    const resultados = fd.resultados || [];
+    if (!resultados.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.innerHTML = resultados.map(m =>
+      `<div style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #F1F5F9" onmousedown="selecionarMunicipio(${m.ibge_id},'${m.nome.replace(/'/g,"\\'")}','${m.uf}')">${m.nome} — ${m.uf}</div>`
+    ).join('');
+    box.style.display = 'block';
+  }, 300);
+}
+function fecharSugestoesMunicipio() {
+  document.getElementById('municipioSugestoes').style.display = 'none';
+}
+async function selecionarMunicipio(ibgeId, nome, uf) {
+  document.getElementById('municipioInput').value = nome + ' — ' + uf;
+  fecharSugestoesMunicipio();
+  try {
+    await carregarFaixas(ibgeId);
+    mostrarBadgeMunicipio();
+  } catch (e) {
+    alert('Não foi possível carregar o teto MCMV desse município. Tente novamente.');
+  }
+  onRenda(); onImovel();
+}
+function mostrarBadgeMunicipio() {
+  const badge = document.getElementById('municipioTetoBadge');
+  if (!municipioSelecionado) { badge.style.display = 'none'; return; }
+  const teto = Number(municipioSelecionado.teto_valor).toLocaleString('pt-BR', { style:'currency', currency:'BRL', minimumFractionDigits:0 });
+  badge.textContent = `📍 ${municipioSelecionado.nome}/${municipioSelecionado.uf} — teto MCMV Faixa 1/2 ajustado para ${teto}`;
+  badge.style.display = 'block';
+}
 
 /* ── ESTADO GLOBAL ── */
 let fx = null, sub = null, tipoTaxa = 'n', prazoMaxAnos = 35, fgtsPode = false, usaRedutor = true;
