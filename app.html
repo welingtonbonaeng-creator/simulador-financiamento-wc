@@ -991,13 +991,12 @@ async function _confirmarTroca(){
 
     <div class="ctr-grupo-toggle">
       <div class="sub">Anuais pré-chaves <span style="font-weight:400;font-size:10px">(opcional)</span></div>
-      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ctr_ckAP" onchange="ctrToggle('ctr_ap');ctrRecalc()"/> Ativar</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ctr_ckAP" onchange="ctrToggle('ctr_ap');if(this.checked&&!document.querySelector('#ctr_ap_lista > div'))ctrAddAnual('pre');ctrRecalc()"/> Ativar</label>
     </div>
     <div id="ctr_ap" style="display:none">
-      <div style="display:grid;grid-template-columns:130px 1fr;gap:10px;margin-bottom:4px">
-        <div class="field"><label class="fl">Quantidade</label><input class="fi" type="number" id="ctr_qtdAP" value="3" min="1" oninput="ctrRecalc()"/></div>
-        <div class="field"><label class="fl">Valor por anual <span style="font-weight:400;font-size:10px">(max = renda)</span></label><input class="fi" type="text" id="ctr_vAP" placeholder="R$ 0,00" oninput="M(this,event);ctrRecalc()"/></div>
-      </div>
+      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Valor máximo por anual: renda bruta do cliente</div>
+      <div id="ctr_ap_lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+      <button type="button" onclick="ctrAddAnual('pre')" style="width:100%;padding:8px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;margin-bottom:8px">＋ Adicionar anual</button>
       <div class="ctr-total-hint" id="ctr_hintAP">Total: R$ 0,00 · Reajuste: INCC</div>
     </div>
 
@@ -1043,13 +1042,12 @@ async function _confirmarTroca(){
 
     <div class="ctr-grupo-toggle">
       <div class="sub">Anuais pós-chaves <span style="font-weight:400;font-size:10px">(opcional)</span></div>
-      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ctr_ckAO" onchange="ctrToggle('ctr_ao');ctrRecalc()"/> Ativar</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ctr_ckAO" onchange="ctrToggle('ctr_ao');if(this.checked&&!document.querySelector('#ctr_ao_lista > div'))ctrAddAnual('pos');ctrRecalc()"/> Ativar</label>
     </div>
     <div id="ctr_ao" style="display:none">
-      <div style="display:grid;grid-template-columns:130px 1fr;gap:10px;margin-bottom:4px">
-        <div class="field"><label class="fl">Quantidade</label><input class="fi" type="number" id="ctr_qtdAO" value="4" min="1" oninput="ctrRecalc()"/></div>
-        <div class="field"><label class="fl">Valor por anual <span style="font-weight:400;font-size:10px">(max = renda)</span></label><input class="fi" type="text" id="ctr_vAO" placeholder="R$ 0,00" oninput="M(this,event);ctrRecalc()"/></div>
-      </div>
+      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Valor máximo por anual: renda bruta do cliente</div>
+      <div id="ctr_ao_lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+      <button type="button" onclick="ctrAddAnual('pos')" style="width:100%;padding:8px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;margin-bottom:8px">＋ Adicionar anual</button>
       <div class="ctr-total-hint" id="ctr_hintAO">Total: R$ 0,00 · Reajuste: IGPM + PRICE</div>
     </div>
 
@@ -3997,6 +3995,19 @@ async function reabrirSimulacao(id) {
     await simular();
   } else if (sim.tipo === 'construtora') {
     switchMainTab('construtora');
+    // Recria as linhas de anuais pré/pós ANTES do restore genérico abaixo —
+    // os inputs (ctr_ap_d_N / ctr_ap_v_N) só existem depois de ctrAddAnual().
+    document.getElementById('ctr_ap_lista').innerHTML = '';
+    document.getElementById('ctr_ao_lista').innerHTML = '';
+    _ctrApRowCnt = 0; _ctrAoRowCnt = 0;
+    [['ap','pre'], ['ao','pos']].forEach(([pfx, fase]) => {
+      const ids = new Set();
+      Object.keys(sim.entrada).forEach(k => {
+        const m = k.match(new RegExp('^ctr_' + pfx + '_d_(\\d+)$'));
+        if (m) ids.add(Number(m[1]));
+      });
+      [...ids].sort((a,b) => a-b).forEach(id => ctrAddAnual(fase, '', '', id));
+    });
     Object.entries(sim.entrada).forEach(([fid, val]) => {
       const el = document.getElementById(fid);
       if (!el) return;
@@ -4041,6 +4052,64 @@ function ctrToggle(id, ckId) {
   if (el) el.style.display = (ck && ck.checked) ? '' : 'none';
 }
 
+/* ── Anuais pré/pós-chaves — lista livre de mês/ano + valor ──
+   Cada item pode ter data e valor próprios; o corretor adiciona quantos
+   quiser (mesmo padrão de lista dinâmica já usado em amAddRow/amGetLista). */
+let _ctrApRowCnt = 0, _ctrAoRowCnt = 0;
+
+function ctrAddAnual(fase, defData, defValor, forceId) {
+  const isPre = fase === 'pre';
+  const prefix = isPre ? 'ctr_ap' : 'ctr_ao';
+  let id;
+  if (forceId != null) {
+    // usado ao reabrir uma simulação salva: recria a linha com o MESMO id
+    // que estava salvo (não pode confiar no contador auto-incremental,
+    // pois linhas podem ter sido removidas fora de ordem antes de salvar).
+    id = forceId;
+    if (isPre) _ctrApRowCnt = Math.max(_ctrApRowCnt, id); else _ctrAoRowCnt = Math.max(_ctrAoRowCnt, id);
+  } else {
+    id = isPre ? ++_ctrApRowCnt : ++_ctrAoRowCnt;
+  }
+  const wrap = document.createElement('div');
+  wrap.id = prefix + '_row_' + id;
+  wrap.style.cssText = 'display:grid;grid-template-columns:150px 1fr 36px;gap:8px;align-items:center';
+  wrap.innerHTML =
+    '<input type="month" id="' + prefix + '_d_' + id + '" value="' + (defData || '') + '" ' +
+      'style="height:40px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 10px;font-size:13px;font-family:\'Sora\',sans-serif;width:100%;outline:none" ' +
+      'oninput="ctrRecalc()"/>' +
+    '<input type="text" id="' + prefix + '_v_' + id + '" value="' + (defValor || '') + '" placeholder="R$ 0,00" ' +
+      'oninput="M(this,event);ctrRecalc()" ' +
+      'style="height:40px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 10px;font-size:13px;font-family:\'Sora\',sans-serif;width:100%;outline:none"/>' +
+    '<button onclick="ctrRemoveAnual(\'' + fase + '\',' + id + ')" title="Remover" ' +
+      'style="height:40px;width:36px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;font-size:14px;cursor:pointer;color:#991B1B;padding:0">✕</button>';
+  document.getElementById(prefix + '_lista').appendChild(wrap);
+}
+
+function ctrRemoveAnual(fase, id) {
+  const prefix = fase === 'pre' ? 'ctr_ap' : 'ctr_ao';
+  const el = document.getElementById(prefix + '_row_' + id);
+  if (el) el.remove();
+  ctrRecalc();
+}
+
+function ctrGetAnuaisLista(fase) {
+  const prefix = fase === 'pre' ? 'ctr_ap' : 'ctr_ao';
+  const rows = document.querySelectorAll('#' + prefix + '_lista > div');
+  return [...rows].map(r => {
+    const id = r.id.replace(prefix + '_row_', '');
+    const data = document.getElementById(prefix + '_d_' + id)?.value || '';
+    const valor = pv(document.getElementById(prefix + '_v_' + id)?.value || '0');
+    return { data, valor };
+  }).filter(x => x.valor > 0);
+}
+
+function ctrFmtMesAno(data) {
+  if (!data) return '—';
+  const [ano, mes] = data.split('-');
+  if (!ano || !mes) return '—';
+  return new Date(Number(ano), Number(mes) - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
 /* Monta o payload cru (sem nenhum cálculo) pra action 'preview_construtora_live' */
 function _buildCtrRawPayload() {
   return {
@@ -4052,14 +4121,12 @@ function _buildCtrRawPayload() {
     qtdM2:    parseInt(document.getElementById('ctr_qtdM2')?.value) || 0,
     vM2:      pv(document.getElementById('ctr_vM2')?.value || '0'),
     usaAP:    !!document.getElementById('ctr_ckAP')?.checked,
-    qtdAP:    parseInt(document.getElementById('ctr_qtdAP')?.value) || 0,
-    vAP:      pv(document.getElementById('ctr_vAP')?.value || '0'),
+    anuaisPreLista: ctrGetAnuaisLista('pre'),
     usaCH:    !!document.getElementById('ctr_ckCH')?.checked,
     vCH:      pv(document.getElementById('ctr_vCH')?.value || '0'),
     qtdM1:    parseInt(document.getElementById('ctr_qtdM1')?.value) || 1,
     usaAO:    !!document.getElementById('ctr_ckAO')?.checked,
-    qtdAO:    parseInt(document.getElementById('ctr_qtdAO')?.value) || 0,
-    vAO:      pv(document.getElementById('ctr_vAO')?.value || '0'),
+    anuaisPosLista: ctrGetAnuaisLista('pos'),
     usaG2POS: !!document.getElementById('ctr_ckG2POS')?.checked,
     qtdM2POS: parseInt(document.getElementById('ctr_qtdM2POS')?.value) || 0,
     vM2POS:   pv(document.getElementById('ctr_vM2POS')?.value || '0'),
@@ -4139,13 +4206,13 @@ async function ctrSimular() {
       { qtd: parseInt(document.getElementById('ctr_qtdM1')?.value) || 40, valor: vM1 },
       ...(usaG2 ? [{ qtd: parseInt(document.getElementById('ctr_qtdM2')?.value)||0, valor: pv(document.getElementById('ctr_vM2')?.value||'0') }] : [])
     ],
-    anuaisPre: usaAP ? { qtd: parseInt(document.getElementById('ctr_qtdAP')?.value)||0, valor: pv(document.getElementById('ctr_vAP')?.value||'0') } : { qtd:0, valor:0 },
+    anuaisPreLista: usaAP ? ctrGetAnuaisLista('pre') : [],
     valorChaves: usaCH ? pv(document.getElementById('ctr_vCH')?.value||'0') : 0,
     mensaisPosGrupos: [
       { qtd: parseInt(document.getElementById('ctr_qtdMP')?.value) || 40, valor: vMP },
       ...(usaG2POS ? [{ qtd: parseInt(document.getElementById('ctr_qtdM2POS')?.value)||0, valor: pv(document.getElementById('ctr_vM2POS')?.value||'0') }] : [])
     ],
-    anuaisPos: usaAO ? { qtd: parseInt(document.getElementById('ctr_qtdAO')?.value)||0, valor: pv(document.getElementById('ctr_vAO')?.value||'0') } : { qtd:0, valor:0 },
+    anuaisPosLista: usaAO ? ctrGetAnuaisLista('pos') : [],
     rendaCliente: pv(document.getElementById('ctr_renda')?.value||'0'),
   };
 
@@ -4161,7 +4228,7 @@ async function ctrSimular() {
   // Render tabela
   const corFase = f => f === 'pré' ? '#EBF5FF' : '#F0FDF4';
   const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)}">
-    <td style="padding:8px 12px;font-size:12px;font-weight:600">${l.desc}</td>
+    <td style="padding:8px 12px;font-size:12px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtMesAno(l.data) : ''}</td>
     <td style="padding:8px 12px;text-align:center;font-size:12px;font-family:'DM Mono',monospace">${l.qtd}×</td>
     <td style="padding:8px 12px;text-align:right;font-size:12px;font-family:'DM Mono',monospace">${fi(l.valor)}</td>
     <td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;font-family:'DM Mono',monospace">${fi(l.total)}</td>
@@ -4269,7 +4336,7 @@ async function ctrGerarPDF() {
   const corFase = f => f === 'pré' ? '#EBF5FF' : '#F0FDF4';
   const corBord = f => f === 'pré' ? '#BFDBFE' : '#86EFAC';
   const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)};border-left:3px solid ${corBord(l.fase)}">
-    <td style="padding:7px 10px;font-size:11px;font-weight:600">${l.desc}</td>
+    <td style="padding:7px 10px;font-size:11px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtMesAno(l.data) : ''}</td>
     <td style="padding:7px 10px;text-align:center;font-size:11px;font-family:monospace">${l.qtd}×</td>
     <td style="padding:7px 10px;text-align:right;font-size:11px;font-family:monospace">${fi(l.valor)}</td>
     <td style="padding:7px 10px;text-align:right;font-size:11px;font-weight:700;font-family:monospace">${fi(l.total)}</td>
