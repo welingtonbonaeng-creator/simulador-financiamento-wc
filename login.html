@@ -64,6 +64,9 @@ body{display:flex;min-height:100vh;background:#0B3D91;}
 
 .right-footer{position:absolute;bottom:1.5rem;font-size:11px;color:#94A3B8;text-align:center;}
 
+.btn-suporte-login{position:absolute;top:1.25rem;right:1.25rem;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#334155;background:#F1F5F9;border:1px solid #E2E8F0;padding:7px 14px;border-radius:20px;text-decoration:none;transition:all .2s;}
+.btn-suporte-login:hover{background:#0B3D91;border-color:#0B3D91;color:#fff;}
+
 /* Decoração laranja no canto */
 .accent-bar{position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#F57C00,#FF9800,#F57C00);}
 
@@ -114,6 +117,10 @@ body{display:flex;min-height:100vh;background:#0B3D91;}
 <!-- DIREITA -->
 <div class="right">
   <div class="accent-bar"></div>
+  <button type="button" onclick="document.getElementById('_modalSuporteLogin').style.display='flex'" class="btn-suporte-login" title="Falar com o suporte">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    Suporte
+  </button>
 
   <div style="text-align:center;margin-bottom:1.75rem;">
     <img src="logo.png" alt="SimulaPro" style="height:160px;width:auto;display:block;margin:0 auto;"/>
@@ -136,7 +143,7 @@ body{display:flex;min-height:100vh;background:#0B3D91;}
     <button type="button" class="btn-esqueci" onclick="esqueciSenha()">Esqueci minha senha</button>
   </form>
 
-  <div class="right-footer">Acesso exclusivo para corretores credenciados<br/><a href="mailto:simulador.wc@gmail.com" style="color:#94A3B8;text-decoration:underline">Suporte</a></div>
+  <div class="right-footer">Acesso exclusivo para corretores credenciados</div>
 </div>
 
 <script>
@@ -175,5 +182,24 @@ async function esqueciSenha(){
   setMsg('Se este e-mail estiver cadastrado, você receberá o link em breve.','ok');
 }
 </script>
+
+<!-- MODAL SUPORTE -->
+<div id="_modalSuporteLogin" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:100%;max-width:340px;margin:1rem;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="background:#0B3D91;padding:20px 24px;display:flex;align-items:center;justify-content:space-between">
+      <h3 style="color:#fff;margin:0;font-size:16px;font-family:'Sora',sans-serif;font-weight:700">Suporte</h3>
+      <button onclick="document.getElementById('_modalSuporteLogin').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0">×</button>
+    </div>
+    <div style="padding:24px">
+      <p style="margin:0 0 18px;font-size:13px;color:#475569;line-height:1.5">Dúvida, problema ou sugestão? Fala com a gente:</p>
+      <a href="mailto:simulador.wc@gmail.com" style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:#F4F6FA;border:1px solid #E8ECF4;border-radius:8px;text-decoration:none;color:#0F172A;font-size:13px;font-weight:600;margin-bottom:10px;font-family:'Sora',sans-serif">
+        <span style="font-size:16px">✉️</span> simulador.wc@gmail.com
+      </a>
+      <a href="https://instagram.com/simulapro.app" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:#F4F6FA;border:1px solid #E8ECF4;border-radius:8px;text-decoration:none;color:#0F172A;font-size:13px;font-weight:600;font-family:'Sora',sans-serif">
+        <span style="font-size:16px">📷</span> @simulapro.app
+      </a>
+    </div>
+  </div>
+</div>
 </body>
 </html>
