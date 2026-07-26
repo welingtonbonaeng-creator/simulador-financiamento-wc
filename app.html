@@ -356,6 +356,8 @@ function _abrirModal(){
   var b=document.getElementById('_btnTrocar');b.disabled=false;b.textContent='Trocar Senha';
 }
 function _fecharModal(){document.getElementById('_modalSenha').style.display='none';}
+function _abrirSuporte(){document.getElementById('_modalSuporte').style.display='flex';}
+function _fecharSuporte(){document.getElementById('_modalSuporte').style.display='none';}
 async function _confirmarTroca(){
   var atual=document.getElementById('_senhaAtual').value;
   var nova=document.getElementById('_senhaNova').value;
@@ -413,6 +415,24 @@ async function _confirmarTroca(){
     </div>
   </div>
 </div>
+<!-- MODAL SUPORTE -->
+<div id="_modalSuporte" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:100%;max-width:340px;margin:1rem;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="background:#0B3D91;padding:20px 24px;display:flex;align-items:center;justify-content:space-between">
+      <h3 style="color:#fff;margin:0;font-size:16px;font-family:'Sora',sans-serif;font-weight:700">Suporte</h3>
+      <button onclick="_fecharSuporte()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0">×</button>
+    </div>
+    <div style="padding:24px">
+      <p style="margin:0 0 18px;font-size:13px;color:#475569;line-height:1.5">Dúvida, problema ou sugestão? Fala com a gente:</p>
+      <a href="mailto:simulador.wc@gmail.com" style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:#F4F6FA;border:1px solid #E8ECF4;border-radius:8px;text-decoration:none;color:#0F172A;font-size:13px;font-weight:600;margin-bottom:10px;font-family:'Sora',sans-serif">
+        <span style="font-size:16px">✉️</span> simulador.wc@gmail.com
+      </a>
+      <a href="https://instagram.com/simulapro.app" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:#F4F6FA;border:1px solid #E8ECF4;border-radius:8px;text-decoration:none;color:#0F172A;font-size:13px;font-weight:600;font-family:'Sora',sans-serif">
+        <span style="font-size:16px">📷</span> @simulapro.app
+      </a>
+    </div>
+  </div>
+</div>
 </head>
 <body>
 <!-- MODAL MINHAS SIMULAÇÕES -->
@@ -437,6 +457,7 @@ async function _confirmarTroca(){
       <span id="_userEmail" style="color:var(--texto3);font-size:11px;font-family:'DM Mono',monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
       <button onclick="abrirMinhasSimulacoes()" style="background:var(--azulclaro);border:1px solid var(--cinza2);color:var(--azul);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600">📁 Minhas Simulações</button>
       <button onclick="_abrirModal()" style="background:var(--azulclaro);border:1px solid var(--cinza2);color:var(--azul);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600">Trocar Senha</button>
+      <button onclick="_abrirSuporte()" title="Suporte" style="background:none;border:1px solid var(--cinza2);color:var(--texto3);font-size:11px;padding:4px 9px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600">❓</button>
       <button onclick="_logout()" style="background:var(--azul);border:1px solid var(--azul);color:#fff;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600">Sair</button>
     </div>
   </div>
