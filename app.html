@@ -491,17 +491,21 @@ async function _confirmarTroca(){
 <div id="tabCaixa">
 <!-- TABELA REF -->
 <div class="card">
-  <div class="card-header"><div class="ci ci-az">📋</div><div><div class="ct">Tabela Oficial MCMV 2026</div><div class="cs">Parcela por R$100k financiados · PRICE 360 meses · Referência rápida</div></div></div>
+  <div class="card-header"><div class="ci ci-az">📋</div><div><div class="ct">Tabela Oficial MCMV 2026</div><div class="cs">Faixas de renda, taxas com e sem redutor · Referência rápida</div></div></div>
   <div class="cb" style="padding-top:.65rem">
     <div style="overflow-x:auto">
     <table class="ref-table">
-      <thead><tr><th>Faixa</th><th>Faixa de Renda</th><th>Imóvel Máx.</th><th>Máx. Financiado</th><th>Taxa Efetiva</th><th>Parcela/R$100k</th></tr></thead>
+      <thead><tr><th>Faixa</th><th>Renda Familiar Bruta</th><th>Com Redutor</th><th>Sem Redutor</th><th>Lim. Imóvel</th></tr></thead>
       <tbody>
-        <tr><td><span class="tag tg1">Faixa 1</span></td><td>Até R$ 2.850</td><td>R$ 275.000</td><td>80%</td><td>4,75% – 5,00%</td><td>R$ 525 – R$ 542</td></tr>
-        <tr><td><span class="tag tg2">Faixa 2</span></td><td>R$ 2.850 – R$ 5.000</td><td>R$ 275.000</td><td>80%</td><td>5,25% – 7,00%</td><td>R$ 560 – R$ 690</td></tr>
-        <tr><td><span class="tag tg3">Faixa 3</span></td><td>R$ 5.000 – R$ 9.600</td><td>R$ 400.000</td><td>80%</td><td>8,16%</td><td>R$ 776</td></tr>
-        <tr><td><span class="tag tg4">Faixa 4</span></td><td>R$ 9.600 – R$ 13.000</td><td>R$ 600.000</td><td>80%</td><td>10,00%</td><td>R$ 920 – R$ 940</td></tr>
-        <tr><td><span class="tag tgS">SBPE</span></td><td>Acima R$ 13.000</td><td>Acima R$ 600k</td><td>PRICE 80% / SAC 90%</td><td>11,49%</td><td>R$ 976 (P) / R$ 1.172 (S)</td></tr>
+        <tr><td rowspan="2"><span class="tag tg1">Faixa 1</span></td><td>Até R$ 2.160,00</td><td>4,25%</td><td>4,75%</td><td rowspan="6">R$ 275.000,00</td></tr>
+        <tr><td>R$ 2.160,01 a R$ 2.850,00</td><td>4,50%</td><td>5,00%</td></tr>
+        <tr><td rowspan="4"><span class="tag tg2">Faixa 2</span></td><td>R$ 2.850,01 a R$ 3.200,00</td><td>4,75%</td><td>5,25%</td></tr>
+        <tr><td>R$ 3.200,01 a R$ 3.500,00</td><td>5,00%</td><td>5,50%</td></tr>
+        <tr><td>R$ 3.500,01 a R$ 4.000,00</td><td>5,50%</td><td>6,00%</td></tr>
+        <tr><td>R$ 4.000,01 a R$ 5.000,00</td><td>6,50%</td><td>7,00%</td></tr>
+        <tr><td><span class="tag tg3">Faixa 3</span></td><td>R$ 5.000,01 a R$ 9.600,00</td><td>7,66%</td><td>8,16%</td><td>R$ 400.000,00</td></tr>
+        <tr><td><span class="tag tg4">Faixa 4</span></td><td>R$ 9.600,01 a R$ 13.000,00</td><td>10,00%</td><td>10,00%</td><td>R$ 600.000,00</td></tr>
+        <tr><td><span class="tag tgS">SBPE</span></td><td>Acima de R$ 13.000,00</td><td colspan="2" style="text-align:center">11,49% (sem opção de redutor)</td><td>Sem teto MCMV</td></tr>
       </tbody>
     </table>
     </div>
