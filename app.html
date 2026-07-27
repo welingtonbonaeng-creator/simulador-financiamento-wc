@@ -1014,13 +1014,13 @@ async function _confirmarTroca(){
     </div>
 
     <div class="ctr-grupo-toggle">
-      <div class="sub">Anuais pré-chaves <span style="font-weight:400;font-size:10px">(opcional)</span></div>
+      <div class="sub">Reforço pré-chaves <span style="font-weight:400;font-size:10px">(opcional)</span></div>
       <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ctr_ckAP" onchange="ctrToggle('ctr_ap');if(this.checked&&!document.querySelector('#ctr_ap_lista > div'))ctrAddAnual('pre');ctrRecalc()"/> Ativar</label>
     </div>
     <div id="ctr_ap" style="display:none">
-      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Valor máximo por anual: renda bruta do cliente</div>
+      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Valor máximo por reforço: renda bruta do cliente</div>
       <div id="ctr_ap_lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
-      <button type="button" onclick="ctrAddAnual('pre')" style="width:100%;padding:8px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;margin-bottom:8px">＋ Adicionar anual</button>
+      <button type="button" onclick="ctrAddAnual('pre')" style="width:100%;padding:8px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;margin-bottom:8px">＋ Adicionar reforço</button>
       <div class="ctr-total-hint" id="ctr_hintAP">Total: R$ 0,00 · Reajuste: INCC</div>
     </div>
 
@@ -1065,13 +1065,13 @@ async function _confirmarTroca(){
     </div>
 
     <div class="ctr-grupo-toggle">
-      <div class="sub">Anuais pós-chaves <span style="font-weight:400;font-size:10px">(opcional)</span></div>
+      <div class="sub">Reforço pós-chaves <span style="font-weight:400;font-size:10px">(opcional)</span></div>
       <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ctr_ckAO" onchange="ctrToggle('ctr_ao');if(this.checked&&!document.querySelector('#ctr_ao_lista > div'))ctrAddAnual('pos');ctrRecalc()"/> Ativar</label>
     </div>
     <div id="ctr_ao" style="display:none">
-      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Valor máximo por anual: renda bruta do cliente</div>
+      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Valor máximo por reforço: renda bruta do cliente</div>
       <div id="ctr_ao_lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
-      <button type="button" onclick="ctrAddAnual('pos')" style="width:100%;padding:8px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;margin-bottom:8px">＋ Adicionar anual</button>
+      <button type="button" onclick="ctrAddAnual('pos')" style="width:100%;padding:8px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;margin-bottom:8px">＋ Adicionar reforço</button>
       <div class="ctr-total-hint" id="ctr_hintAO">Total: R$ 0,00 · Reajuste: IGPM + PRICE</div>
     </div>
 
