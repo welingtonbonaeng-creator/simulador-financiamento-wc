@@ -180,11 +180,13 @@ tr:hover td{background:var(--cinza1);}
 .notice{font-size:11px;color:var(--texto3);margin-top:.85rem;padding:9px 11px;background:var(--cinza1);border-radius:var(--radius2);border-left:3px solid var(--cinza3);line-height:1.6;}
 footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--texto3);}
 /* Ref table */
-.ref-table{width:100%;border-collapse:collapse;font-size:11px;}
-.ref-table th{background:var(--azul);color:#fff;padding:6px 9px;text-align:center;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
-.ref-table td{padding:5px 9px;text-align:center;border-bottom:1px solid var(--cinza2);font-family:'DM Mono',monospace;font-size:11px;}
-.ref-table td:first-child{text-align:left;font-family:'Sora',sans-serif;font-weight:600;font-size:11px;}
-.ref-table tr:nth-child(even){background:var(--cinza1);}
+.ref-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.ref-table th{background:var(--azul);color:#fff;padding:10px 12px;text-align:center;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+.ref-table td{padding:9px 12px;text-align:center;border:1px solid var(--cinza2);font-family:'DM Mono',monospace;font-size:12.5px;vertical-align:middle;}
+.ref-table td:first-child{text-align:left;font-family:'Sora',sans-serif;font-weight:700;font-size:12px;}
+.ref-table tr.grp-last td{border-bottom:2px solid #94A3B8;}
+.ref-table tr.grp-fora td{background:#F8FAFC;color:var(--texto3);font-style:italic;}
+.ref-table td.lim-imovel{background:#EFF6FF;font-weight:700;color:#1E40AF;font-style:normal;}
 .tag{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;}
 .tg1{background:#EAF4EE;color:#14522F;} .tg2{background:#FEF3E8;color:#8A3F00;}
 .tg3{background:#FBE9F0;color:#761A35;} .tg4{background:#EDE8FA;color:#33196B;}
@@ -497,15 +499,15 @@ async function _confirmarTroca(){
     <table class="ref-table">
       <thead><tr><th>Faixa</th><th>Renda Familiar Bruta</th><th>Com Redutor</th><th>Sem Redutor</th><th>Lim. Imóvel</th></tr></thead>
       <tbody>
-        <tr><td rowspan="2"><span class="tag tg1">Faixa 1</span></td><td>Até R$ 2.160,00</td><td>4,25%</td><td>4,75%</td><td rowspan="6">R$ 275.000,00</td></tr>
-        <tr><td>R$ 2.160,01 a R$ 2.850,00</td><td>4,50%</td><td>5,00%</td></tr>
+        <tr><td rowspan="2"><span class="tag tg1">Faixa 1</span></td><td>Até R$ 2.160,00</td><td>4,25%</td><td>4,75%</td><td rowspan="6" class="lim-imovel">R$ 275.000,00</td></tr>
+        <tr class="grp-last"><td>R$ 2.160,01 a R$ 2.850,00</td><td>4,50%</td><td>5,00%</td></tr>
         <tr><td rowspan="4"><span class="tag tg2">Faixa 2</span></td><td>R$ 2.850,01 a R$ 3.200,00</td><td>4,75%</td><td>5,25%</td></tr>
         <tr><td>R$ 3.200,01 a R$ 3.500,00</td><td>5,00%</td><td>5,50%</td></tr>
         <tr><td>R$ 3.500,01 a R$ 4.000,00</td><td>5,50%</td><td>6,00%</td></tr>
-        <tr><td>R$ 4.000,01 a R$ 5.000,00</td><td>6,50%</td><td>7,00%</td></tr>
-        <tr><td><span class="tag tg3">Faixa 3</span></td><td>R$ 5.000,01 a R$ 9.600,00</td><td>7,66%</td><td>8,16%</td><td>R$ 400.000,00</td></tr>
-        <tr><td><span class="tag tg4">Faixa 4</span></td><td>R$ 9.600,01 a R$ 13.000,00</td><td>10,00%</td><td>10,00%</td><td>R$ 600.000,00</td></tr>
-        <tr><td><span class="tag tgS">SBPE</span></td><td>Acima de R$ 13.000,00</td><td colspan="2" style="text-align:center">11,49% (sem opção de redutor)</td><td>Sem teto MCMV</td></tr>
+        <tr class="grp-last"><td>R$ 4.000,01 a R$ 5.000,00</td><td>6,50%</td><td>7,00%</td></tr>
+        <tr class="grp-last"><td><span class="tag tg3">Faixa 3</span></td><td>R$ 5.000,01 a R$ 9.600,00</td><td>7,66%</td><td>8,16%</td><td class="lim-imovel">R$ 400.000,00</td></tr>
+        <tr class="grp-last"><td><span class="tag tg4">Faixa 4</span></td><td>R$ 9.600,01 a R$ 13.000,00</td><td>10,00%</td><td>10,00%</td><td class="lim-imovel">R$ 600.000,00</td></tr>
+        <tr class="grp-fora"><td><span class="tag tgS">SBPE</span></td><td>Acima de R$ 13.000,00</td><td colspan="2">11,49% (sem opção de redutor)</td><td class="lim-imovel" style="background:none">Sem teto MCMV</td></tr>
       </tbody>
     </table>
     </div>
