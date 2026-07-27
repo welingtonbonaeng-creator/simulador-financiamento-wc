@@ -569,7 +569,7 @@ async function _confirmarTroca(){
     <div id="fcCard" class="fcard"><div class="ft" id="fcTit"></div><div class="fx" id="fcInfo"></div>
       <div id="redutorBox" style="display:none;margin-top:8px">
         <div class="trow">
-          <div class="ttog" id="btnComRedutor" onclick="setRedutor(true)">✓ Com redutor</div>
+          <div class="ttog" id="btnComRedutor" onclick="setRedutor(true)">Com redutor</div>
           <div class="ttog" id="btnSemRedutor" onclick="setRedutor(false)">Sem redutor</div>
         </div>
       </div>
@@ -1426,6 +1426,10 @@ function atualizarBotoesRedutor() {
   if (!btnCom || !btnSem) return;
   btnCom.classList.toggle('ton-ok', usaRedutor);
   btnSem.classList.toggle('ton-er', !usaRedutor);
+  const taxaCom = sub ? ' · ' + sub.n.toFixed(2).replace('.', ',') + '%' : '';
+  const taxaSem = sub ? ' · ' + sub.e.toFixed(2).replace('.', ',') + '%' : '';
+  btnCom.textContent = (usaRedutor ? '✓ ' : '') + 'Com redutor' + taxaCom;
+  btnSem.textContent = (!usaRedutor ? '✓ ' : '') + 'Sem redutor' + taxaSem;
 }
 
 /* ══════════════════════════════════════
