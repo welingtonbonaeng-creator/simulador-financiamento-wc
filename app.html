@@ -950,7 +950,7 @@ async function _confirmarTroca(){
       <div class="field"><label class="fl">Nome do Cliente</label><input class="fi" type="text" id="ctr_nome" placeholder="Nome completo"/></div>
       <div class="field"><label class="fl">Produto / Empreendimento</label><input class="fi" type="text" id="ctr_produto" placeholder="Ex: Orla Central Niterói"/></div>
       <div class="field"><label class="fl">Tipologia</label><input class="fi" type="text" id="ctr_tipologia" placeholder="Ex: 2 Quartos · 65m²"/></div>
-      <div class="field"><label class="fl">Corretor</label><input class="fi" type="text" id="ctr_corretor" placeholder="Welington Silva" value="Welington Silva"/></div>
+      <div class="field"><label class="fl">Corretor</label><input class="fi" type="text" id="ctr_corretor" placeholder="Ex: Welington Silva · CRECI 12345"/></div>
     </div>
   </div>
 </div>
@@ -4352,7 +4352,7 @@ async function ctrGerarPDF() {
   const nome     = document.getElementById('ctr_nome')?.value || '—';
   const produto  = document.getElementById('ctr_produto')?.value || '—';
   const tipo     = document.getElementById('ctr_tipologia')?.value || '—';
-  const corretor = document.getElementById('ctr_corretor')?.value || 'Welington Silva';
+  const corretor = document.getElementById('ctr_corretor')?.value || '—';
   const hoje     = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
   const optValorizacao = document.getElementById('ctr_optPdfValorizacao')?.checked ?? true;
   const valoriz  = window._ctrValorizacao || null;
