@@ -967,7 +967,7 @@ async function _confirmarTroca(){
     </div>
     <div class="sub">Distribuição Pré / Pós</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div class="field"><label class="fl">% Pré-chaves</label><div style="display:flex;align-items:center;gap:6px"><input class="fi" type="number" id="ctr_pctPre" value="55" min="1" max="99" style="width:80px" oninput="ctrRecalc()"/><span style="font-size:12px;color:var(--texto3)">%</span></div></div>
+      <div class="field"><label class="fl">% Pré-chaves</label><div style="display:flex;align-items:center;gap:6px"><input class="fi" type="number" id="ctr_pctPre" value="55" min="1" max="99" style="width:80px" oninput="ctrAtualizarPctPos();ctrRecalc()"/><span style="font-size:12px;color:var(--texto3)">%</span></div></div>
       <div class="field"><label class="fl">% Pós-chaves</label><div style="display:flex;align-items:center;gap:6px"><input class="fi" type="number" id="ctr_pctPos" readonly style="width:80px;background:var(--cinza1)" placeholder="45"/><span style="font-size:12px;color:var(--texto3)">%</span></div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -4072,6 +4072,7 @@ function switchMainTab(tab) {
   document.getElementById('tabConstrutora').style.display  = tab === 'construtora' ? '' : 'none';
   document.getElementById('mtCaixa').classList.toggle('ton', tab === 'caixa');
   document.getElementById('mtConstrutora').classList.toggle('ton', tab === 'construtora');
+  if (tab === 'construtora') ctrAtualizarPctPos();
 }
 
 function ctrToggle(id, ckId) {
@@ -4166,6 +4167,16 @@ let _ctrTimer = null;
 function ctrRecalc() {
   clearTimeout(_ctrTimer);
   _ctrTimer = setTimeout(_doCtrRecalc, 300);
+}
+
+/* Complemento pra 100% — matemática trivial, atualiza na hora sem
+   esperar resposta do backend (evita o pós-chaves ficar vazio/atrasado). */
+function ctrAtualizarPctPos() {
+  const elPre = document.getElementById('ctr_pctPre');
+  const elPos = document.getElementById('ctr_pctPos');
+  if (!elPre || !elPos) return;
+  const pre = Math.min(99, Math.max(1, parseFloat(elPre.value) || 55));
+  elPos.value = 100 - pre;
 }
 
 async function _doCtrRecalc() {
