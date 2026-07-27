@@ -180,13 +180,17 @@ tr:hover td{background:var(--cinza1);}
 .notice{font-size:11px;color:var(--texto3);margin-top:.85rem;padding:9px 11px;background:var(--cinza1);border-radius:var(--radius2);border-left:3px solid var(--cinza3);line-height:1.6;}
 footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--texto3);}
 /* Ref table */
-.ref-table{width:100%;border-collapse:collapse;font-size:12.5px;}
-.ref-table th{background:var(--azul);color:#fff;padding:10px 12px;text-align:center;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
-.ref-table td{padding:9px 12px;text-align:center;border:1px solid var(--cinza2);font-family:'DM Mono',monospace;font-size:12.5px;vertical-align:middle;}
+.ref-table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
+.ref-table th{background:var(--azul);color:#fff;padding:10px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+.ref-table td{padding:9px 8px;text-align:center;border-bottom:1px solid var(--cinza2);font-family:'DM Mono',monospace;font-size:12.5px;font-weight:600;vertical-align:middle;}
 .ref-table td:first-child{text-align:left;font-family:'Sora',sans-serif;font-weight:700;font-size:12px;}
 .ref-table tr.grp-last td{border-bottom:2px solid #94A3B8;}
-.ref-table tr.grp-fora td{background:#F8FAFC;color:var(--texto3);font-style:italic;}
-.ref-table td.lim-imovel{background:#EFF6FF;font-weight:700;color:#1E40AF;font-style:normal;}
+.ref-table tr.grp-fora td{background:#F8FAFC;color:var(--texto3)!important;font-style:italic;font-weight:600;}
+.ref-table td.lim-imovel{background:#EFF6FF!important;font-weight:700;color:#1E40AF!important;font-style:normal;}
+.ref-table tr.c-f1-1 td{color:#14522F;} .ref-table tr.c-f1-2 td{color:#3F8760;}
+.ref-table tr.c-f2-1 td{color:#8A3F00;} .ref-table tr.c-f2-2 td{color:#A6540A;}
+.ref-table tr.c-f2-3 td{color:#C26B1D;} .ref-table tr.c-f2-4 td{color:#DE8730;}
+.ref-table tr.c-f3 td{color:#761A35;} .ref-table tr.c-f4 td{color:#33196B;}
 .tag{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;}
 .tg1{background:#EAF4EE;color:#14522F;} .tg2{background:#FEF3E8;color:#8A3F00;}
 .tg3{background:#FBE9F0;color:#761A35;} .tg4{background:#EDE8FA;color:#33196B;}
@@ -497,16 +501,17 @@ async function _confirmarTroca(){
   <div class="cb" style="padding-top:.65rem">
     <div style="overflow-x:auto">
     <table class="ref-table">
+      <colgroup><col style="width:13%"><col style="width:35%"><col style="width:16%"><col style="width:16%"><col style="width:20%"></colgroup>
       <thead><tr><th>Faixa</th><th>Renda Familiar Bruta</th><th>Com Redutor</th><th>Sem Redutor</th><th>Lim. Imóvel</th></tr></thead>
       <tbody>
-        <tr><td rowspan="2"><span class="tag tg1">Faixa 1</span></td><td>Até R$ 2.160,00</td><td>4,25%</td><td>4,75%</td><td rowspan="6" class="lim-imovel">R$ 275.000,00</td></tr>
-        <tr class="grp-last"><td>R$ 2.160,01 a R$ 2.850,00</td><td>4,50%</td><td>5,00%</td></tr>
-        <tr><td rowspan="4"><span class="tag tg2">Faixa 2</span></td><td>R$ 2.850,01 a R$ 3.200,00</td><td>4,75%</td><td>5,25%</td></tr>
-        <tr><td>R$ 3.200,01 a R$ 3.500,00</td><td>5,00%</td><td>5,50%</td></tr>
-        <tr><td>R$ 3.500,01 a R$ 4.000,00</td><td>5,50%</td><td>6,00%</td></tr>
-        <tr class="grp-last"><td>R$ 4.000,01 a R$ 5.000,00</td><td>6,50%</td><td>7,00%</td></tr>
-        <tr class="grp-last"><td><span class="tag tg3">Faixa 3</span></td><td>R$ 5.000,01 a R$ 9.600,00</td><td>7,66%</td><td>8,16%</td><td class="lim-imovel">R$ 400.000,00</td></tr>
-        <tr class="grp-last"><td><span class="tag tg4">Faixa 4</span></td><td>R$ 9.600,01 a R$ 13.000,00</td><td>10,00%</td><td>10,00%</td><td class="lim-imovel">R$ 600.000,00</td></tr>
+        <tr class="c-f1-1"><td rowspan="2"><span class="tag tg1">Faixa 1</span></td><td>Até R$ 2.160,00</td><td>4,25%</td><td>4,75%</td><td rowspan="6" class="lim-imovel">R$ 275.000,00</td></tr>
+        <tr class="grp-last c-f1-2"><td>R$ 2.160,01 a R$ 2.850,00</td><td>4,50%</td><td>5,00%</td></tr>
+        <tr class="c-f2-1"><td rowspan="4"><span class="tag tg2">Faixa 2</span></td><td>R$ 2.850,01 a R$ 3.200,00</td><td>4,75%</td><td>5,25%</td></tr>
+        <tr class="c-f2-2"><td>R$ 3.200,01 a R$ 3.500,00</td><td>5,00%</td><td>5,50%</td></tr>
+        <tr class="c-f2-3"><td>R$ 3.500,01 a R$ 4.000,00</td><td>5,50%</td><td>6,00%</td></tr>
+        <tr class="grp-last c-f2-4"><td>R$ 4.000,01 a R$ 5.000,00</td><td>6,50%</td><td>7,00%</td></tr>
+        <tr class="grp-last c-f3"><td><span class="tag tg3">Faixa 3</span></td><td>R$ 5.000,01 a R$ 9.600,00</td><td>7,66%</td><td>8,16%</td><td class="lim-imovel">R$ 400.000,00</td></tr>
+        <tr class="grp-last c-f4"><td><span class="tag tg4">Faixa 4</span></td><td>R$ 9.600,01 a R$ 13.000,00</td><td>10,00%</td><td>10,00%</td><td class="lim-imovel">R$ 600.000,00</td></tr>
         <tr class="grp-fora"><td><span class="tag tgS">SBPE</span></td><td>Acima de R$ 13.000,00</td><td colspan="2">11,49% (sem opção de redutor)</td><td class="lim-imovel" style="background:none">Sem teto MCMV</td></tr>
       </tbody>
     </table>
