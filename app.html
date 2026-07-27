@@ -4098,7 +4098,7 @@ function ctrAddAnual(fase, defData, defValor, forceId) {
   wrap.id = prefix + '_row_' + id;
   wrap.style.cssText = 'display:grid;grid-template-columns:150px 1fr 36px;gap:8px;align-items:center';
   wrap.innerHTML =
-    '<input type="month" id="' + prefix + '_d_' + id + '" value="' + (defData || '') + '" ' +
+    '<input type="date" id="' + prefix + '_d_' + id + '" value="' + (defData || '') + '" ' +
       'style="height:40px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 10px;font-size:13px;font-family:\'Sora\',sans-serif;width:100%;outline:none" ' +
       'oninput="ctrRecalc()"/>' +
     '<input type="text" id="' + prefix + '_v_' + id + '" value="' + (defValor || '') + '" placeholder="R$ 0,00" ' +
@@ -4127,11 +4127,11 @@ function ctrGetAnuaisLista(fase) {
   }).filter(x => x.valor > 0);
 }
 
-function ctrFmtMesAno(data) {
+function ctrFmtData(data) {
   if (!data) return '—';
-  const [ano, mes] = data.split('-');
-  if (!ano || !mes) return '—';
-  return new Date(Number(ano), Number(mes) - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const [ano, mes, dia] = data.split('-');
+  if (!ano || !mes || !dia) return '—';
+  return dia + '/' + mes + '/' + ano;
 }
 
 /* Monta o payload cru (sem nenhum cálculo) pra action 'preview_construtora_live' */
@@ -4252,7 +4252,7 @@ async function ctrSimular() {
   // Render tabela
   const corFase = f => f === 'pré' ? '#EBF5FF' : '#F0FDF4';
   const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)}">
-    <td style="padding:8px 12px;font-size:12px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtMesAno(l.data) : ''}</td>
+    <td style="padding:8px 12px;font-size:12px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtData(l.data) : ''}</td>
     <td style="padding:8px 12px;text-align:center;font-size:12px;font-family:'DM Mono',monospace">${l.qtd}×</td>
     <td style="padding:8px 12px;text-align:right;font-size:12px;font-family:'DM Mono',monospace">${fi(l.valor)}</td>
     <td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;font-family:'DM Mono',monospace">${fi(l.total)}</td>
@@ -4360,7 +4360,7 @@ async function ctrGerarPDF() {
   const corFase = f => f === 'pré' ? '#EBF5FF' : '#F0FDF4';
   const corBord = f => f === 'pré' ? '#BFDBFE' : '#86EFAC';
   const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)};border-left:3px solid ${corBord(l.fase)}">
-    <td style="padding:7px 10px;font-size:11px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtMesAno(l.data) : ''}</td>
+    <td style="padding:7px 10px;font-size:11px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtData(l.data) : ''}</td>
     <td style="padding:7px 10px;text-align:center;font-size:11px;font-family:monospace">${l.qtd}×</td>
     <td style="padding:7px 10px;text-align:right;font-size:11px;font-family:monospace">${fi(l.valor)}</td>
     <td style="padding:7px 10px;text-align:right;font-size:11px;font-weight:700;font-family:monospace">${fi(l.total)}</td>
