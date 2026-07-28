@@ -668,7 +668,7 @@ async function _confirmarTroca(){
       </label>
       <input type="text" id="vFinanciado" readonly placeholder="R$ 0,00" style="background:#D1FAE5;color:#065F46;font-weight:700;border-color:#6EE7B7;" oninput="M(this,event);onFinanciadoManual()"/>
       <div id="avFinManual" style="display:none;margin-top:4px;font-size:11px;color:#065F46;background:#D1FAE5;border:1px solid #6EE7B7;border-radius:6px;padding:4px 10px">
-        ✏️ Valor personalizado ativo — o cálculo automático está suspenso. <button onclick="toggleFinManual()" style="background:none;border:none;color:#065F46;font-weight:700;cursor:pointer;padding:0;font-size:11px;text-decoration:underline">Voltar ao automático</button>
+        ✏️ Valor personalizado ativo — permite aumentar em até R$ 12.000 sobre o automático; parcela, seguro e PDF recalculam sobre esse valor. <button onclick="toggleFinManual()" style="background:none;border:none;color:#065F46;font-weight:700;cursor:pointer;padding:0;font-size:11px;text-decoration:underline">Voltar ao automático</button>
       </div>
     </div>
     <div id="sircObs" style="display:none;margin-top:6px;font-size:12px;padding:8px 12px;border-radius:var(--radius2);background:#FEF3E8;color:#8A3F00;border:1px solid #FCD9A8;line-height:1.6"></div>
@@ -1469,6 +1469,7 @@ function toggleFinManual() {
     aviso.style.display = 'block';
     inp.focus();
     inp.select();
+    scheduleUpdatePreview(true); // busca o teto (automático + R$12k) no backend imediatamente
   } else {
     inp.setAttribute('readonly', '');
     inp.style.background = '#D1FAE5';
@@ -1654,14 +1655,21 @@ function renderCapacidade(d) {
   const pct = c.pct;
   const limProg = vi > 0 ? c.maxFin : 0;
 
-  // ── PASSO 4: Financiado aprovado = menor entre ② e ③ ──
-  const finAprov = limProg > 0 ? Math.min(capTeorica, limProg) : capTeorica;
+  // ── PASSO 4: Financiado aprovado — já vem pronto do backend em d.finSAC/
+  // d.finPRICE (que é min(②,③,vi−entrada) automático, ou o valor
+  // personalizado pelo corretor quando ativo, sempre travado no teto de
+  // +R$12k). Não recalcular aqui — é exatamente o que será usado na
+  // tabela de amortização e no PDF. ──
+  const personalizado = d.finManualAplicado != null;
+  const finAprov = isSACAtivo ? d.finSAC : d.finPRICE;
   const limitadoPor = limProg > 0
     ? (capTeorica <= limProg ? (sircAtivo ? 'SIRC' : 'renda') : 'programa')
     : (sircAtivo ? 'SIRC' : 'renda');
 
-  // ── PASSO 5: Parcela real recalculada (escala linear de p100k) ──
-  const parcelaReal = finAprov > 0 ? (finAprov / 100000) * p100k : 0;
+  // ── PASSO 5: Parcela real — valor exato já calculado pelo backend sobre
+  // a tabela de amortização (1ª parcela SAC / parcela fixa PRICE), em vez
+  // de reaproximar por escala linear de p100k aqui. ──
+  const parcelaReal = isSACAtivo ? d.parcelaSAC1 : d.pP;
 
   const prazoA = parseInt(document.getElementById('prazoSlider')?.value) || 30;
 
@@ -1693,18 +1701,20 @@ function renderCapacidade(d) {
       <div class="cap-l">③ Limite programa (${(pct*100).toFixed(0)}% da avaliação)</div>
       <div class="cap-v cv-am">${fi(va)} × ${(pct*100).toFixed(0)}% = <strong>${fi(limProg)}</strong></div>
     </div>
-    <div class="cap-i" style="border-left:3px solid var(--vermelho);background:${limitadoPor==='renda'||limitadoPor==='SIRC'?'#EAF4EE':'#FDE8E8'}">
-      <div class="cap-l">④ Financiado aprovado = menor entre ② e ③</div>
-      <div class="cap-v" style="color:${limitadoPor==='renda'||limitadoPor==='SIRC'?'var(--verde)':'var(--vermelho)'}">
-        min(${fi(capTeorica)}, ${fi(limProg)}) = <strong>${fi(finAprov)}</strong>
-        <span style="font-size:10px;font-weight:600;margin-left:4px">[limitado pela ${limitadoPor==='SIRC'?'parcela SIRC':limitadoPor==='renda'?'renda':'avaliação'}]</span>
+    <div class="cap-i" style="border-left:3px solid ${personalizado?'#F59E0B':'var(--vermelho)'};background:${personalizado?'#FFF9E6':(limitadoPor==='renda'||limitadoPor==='SIRC'?'#EAF4EE':'#FDE8E8')}">
+      <div class="cap-l">④ Financiado aprovado${personalizado?' — ✏️ personalizado pelo corretor':' = menor entre ② e ③'}</div>
+      <div class="cap-v" style="color:${personalizado?'#92400E':(limitadoPor==='renda'||limitadoPor==='SIRC'?'var(--verde)':'var(--vermelho)')}">
+        ${personalizado
+          ? `<strong>${fi(finAprov)}</strong> <span style="font-size:10px;font-weight:600;margin-left:4px">(automático seria ${fi(d.finManualBase)}${d.finManualClampado?' · travado no teto de +R$12.000':''})</span>`
+          : `min(${fi(capTeorica)}, ${fi(limProg)}) = <strong>${fi(finAprov)}</strong>
+        <span style="font-size:10px;font-weight:600;margin-left:4px">[limitado pela ${limitadoPor==='SIRC'?'parcela SIRC':limitadoPor==='renda'?'renda':'avaliação'}]</span>`}
       </div>
     </div>
     ` : ''}
     ${finAprov > 0 ? `
     <div class="cap-i" style="border-left:3px solid #185FA5;background:var(--azulclaro)">
-      <div class="cap-l">⑤ Parcela recalculada sobre valor aprovado</div>
-      <div class="cap-v" style="color:var(--azul)">(${fi(finAprov)} ÷ 100k) × R$ ${p100k} = <strong>${fb(parcelaReal)}</strong>/mês</div>
+      <div class="cap-l">⑤ Parcela ${isSACAtivo ? '(1ª, SAC)' : '(fixa, PRICE)'} sobre o valor aprovado</div>
+      <div class="cap-v" style="color:var(--azul)">${fi(finAprov)} financiado → <strong>${fb(parcelaReal)}</strong>/mês</div>
     </div>
     ` : ''}
     <div class="cap-i" style="background:var(--cinza1)">
@@ -1714,8 +1724,10 @@ function renderCapacidade(d) {
   `;
 
   const origemCap = sircAtivo ? 'parcela SIRC' : 'renda';
-  document.getElementById('capObs').innerHTML =
-    `${sircAtivo ? '⚠️ <strong>SIRC ativo</strong>' : '⭐ <strong>Regra de Ouro:</strong>'} o banco aprova o <strong>menor</strong> entre ② capacidade por ${origemCap} (${fi(capTeorica)}) e ③ limite do programa (${vi > 0 ? fi(limProg) : '—'}).
+  document.getElementById('capObs').innerHTML = personalizado
+    ? `✏️ <strong>Valor personalizado ativo</strong> — o corretor confirmou o valor real aprovado pelo banco, substituindo a estimativa automática (que seria ${fi(d.finManualBase)}).
+    Financiado aprovado: <strong style="color:#92400E">${fi(finAprov)}</strong> · Parcela: <strong style="color:#92400E">${fb(parcelaReal)}</strong>/mês.`
+    : `${sircAtivo ? '⚠️ <strong>SIRC ativo</strong>' : '⭐ <strong>Regra de Ouro:</strong>'} o banco aprova o <strong>menor</strong> entre ② capacidade por ${origemCap} (${fi(capTeorica)}) e ③ limite do programa (${vi > 0 ? fi(limProg) : '—'}).
     Financiado aprovado: <strong style="color:var(--azul)">${fi(finAprov)}</strong> · Parcela estimada: <strong style="color:var(--azul)">${fb(parcelaReal)}</strong>/mês.`;
 }
 
@@ -1837,6 +1849,20 @@ function renderEntradaFGTS(d) {
   if (!finManual) {
     if (financiado > 0) setVal('vFinanciado', financiado);
     else document.getElementById('vFinanciado').value = '';
+  } else {
+    // Personalizado ativo: o valor digitado só é substituído se o backend
+    // travou no teto (nunca durante digitação de um valor ainda válido).
+    const aviso = document.getElementById('avFinManual');
+    const efetivo = isSAC ? d.finSAC : d.finPRICE;
+    if (d.finManualClampado && efetivo > 0) setVal('vFinanciado', efetivo);
+    if (aviso && d.finManualBase != null) {
+      aviso.innerHTML = d.finManualClampado
+        ? '⚠️ Valor travado no teto permitido: <strong>' + fi(efetivo) + '</strong> (automático ' + fi(d.finManualBase) + ' + até R$ 12.000 de aumento). <button onclick="toggleFinManual()" style="background:none;border:none;color:#92400E;font-weight:700;cursor:pointer;padding:0;font-size:11px;text-decoration:underline">Voltar ao automático</button>'
+        : '✏️ Valor personalizado ativo — permitido entre ' + fi(d.finManualBase) + ' e ' + fi(d.finManualTeto) + '. <button onclick="toggleFinManual()" style="background:none;border:none;color:#065F46;font-weight:700;cursor:pointer;padding:0;font-size:11px;text-decoration:underline">Voltar ao automático</button>';
+      aviso.style.background = d.finManualClampado ? '#FFF9E6' : '#D1FAE5';
+      aviso.style.borderColor = d.finManualClampado ? '#F59E0B' : '#6EE7B7';
+      aviso.style.color = d.finManualClampado ? '#92400E' : '#065F46';
+    }
   }
 
   // ── Observação SIRC ──
@@ -2099,10 +2125,10 @@ function onObra(skipPreview) {
   const _lastPv = window._lastPreview;
   const cObra = _lastPv ? (_sistemaAtivoIsSAC() ? _lastPv.calcSAC : _lastPv.calcPRICE) : null;
 
-  // Financiado teórico (sem considerar a entrada digitada) — menor entre
-  // valor do imóvel, limite do banco (maxFin) e capacidade por renda/SIRC
-  // (capTeorica), ambos já calculados pelo backend.
-  const finAprov = cObra ? Math.min(vi, cObra.maxFin, cObra.capTeorica ?? Infinity) : 0;
+  // Financiado aprovado do sistema ativo — já vem pronto de finSAC/finPRICE
+  // (automático, ou personalizado pelo corretor e travado no teto de
+  // +R$12k). Não recalcular aqui.
+  const finAprov = _lastPv ? (_sistemaAtivoIsSAC() ? _lastPv.finSAC : _lastPv.finPRICE) : 0;
 
   // FGTS dentro do teto (já calculado pelo backend para o ato atual)
   const fgtsUsar = cObra ? cObra.fgtsUsar : 0;
@@ -2178,19 +2204,14 @@ function onObra(skipPreview) {
         html += `<div class="obra-linha"><span>📆 ${meses}× parcelas mensais de obra</span><span>${meses} × ${fb(mens)} = <strong>${fb(totM)}</strong></span></div>`;
       }
 
-      // ── Bloco resumo do financiamento bancário ──
-      const prazoA = parseInt(document.getElementById('prazoSlider').value) || 30;
+      // ── Bloco resumo do financiamento bancário — parcelas e prazo já vêm
+      // prontos do backend (tabela de amortização real, sobre o valor
+      // efetivo finSAC/finPRICE já com a personalização aplicada). ──
+      const prazoA = _lastPv ? _lastPv.prazoA : (parseInt(document.getElementById('prazoSlider').value) || 30);
       const nFin = prazoA * 12;
-      const taxaMesF = _lastPv ? _lastPv.taxa : 0; // taxa mensal já resolvida pelo backend
-      // SAC
-      const amortSAC = finAprov / nFin;
-      const parcSAC1 = amortSAC + (finAprov * taxaMesF);
-      const parcSACult = amortSAC + (amortSAC * taxaMesF);
-      // PRICE
-      const coefFin = nFin > 0 && taxaMesF > 0
-        ? (taxaMesF * Math.pow(1 + taxaMesF, nFin)) / (Math.pow(1 + taxaMesF, nFin) - 1)
-        : 1 / nFin;
-      const parcPRICE = finAprov * coefFin;
+      const parcSAC1    = _lastPv ? _lastPv.parcelaSAC1   : 0;
+      const parcSACult  = _lastPv ? _lastPv.parcelaSACult : 0;
+      const parcPRICE   = _lastPv ? _lastPv.pP            : 0;
 
       html += `
         <div style="background:var(--azul-claro,#EEF4FF);border-radius:8px;padding:10px 12px;margin-top:6px;border-left:3px solid var(--azul,#1A56DB)">
@@ -2243,10 +2264,11 @@ function calcEntradaFaltando() {
   const _lastPv = window._lastPreview;
   const c = _lastPv ? (_sistemaAtivoIsSAC() ? _lastPv.calcSAC : _lastPv.calcPRICE) : null;
 
-  // Entrada necessária = venda − máx financiado teórico (limite banco/renda
-  // já vem pronto do backend em maxFin/capTeorica; correto para imóveis na planta)
+  // Entrada necessária = venda − financiado aprovado. O financiado já vem
+  // pronto do backend em finSAC/finPRICE (automático, ou personalizado pelo
+  // corretor e travado no teto de +R$12k — nunca recalcular aqui).
   const fgtsUsar = c ? c.fgtsUsar : 0;
-  const finAprov = c ? Math.min(vi, c.maxFin, c.capTeorica ?? Infinity) : 0;
+  const finAprov = _lastPv ? (_sistemaAtivoIsSAC() ? _lastPv.finSAC : _lastPv.finPRICE) : 0;
   const entradaNecessaria = Math.max(0, vi - finAprov);
   // Já comprometido: ato + FGTS + reforços
   const totRef = pv(document.getElementById('totalRef').value) || 0;
@@ -2588,27 +2610,33 @@ async function simular() {
     const tabAtivo = document.querySelector('.res-tab.ton');
     const sistemaAtivo = (!tabAtivo || tabAtivo.textContent.includes('SAC')) ? 'sac' : 'price';
 
+    const payloadSimular = {
+      action:       'simular',
+      renda:        pv(document.getElementById('renda').value),
+      vImovel:      vi,
+      vAval:        pv(document.getElementById('vAval').value) || vi * 1.10,
+      ato:          pv(document.getElementById('ato').value),
+      fgtsPode,
+      fgtsDisp:     fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0,
+      parcelaSIRC:  getSIRC(),
+      dataNasc:     document.getElementById('nasc').value,
+      prazoAnos:    parseInt(document.getElementById('prazoSlider').value) || 30,
+      mesesObra:    parseInt(document.getElementById('mesesObra').value) || 0,
+      tipoTaxa,
+      dtEntrega:    document.getElementById('dtEntrega').value,
+      dtLancamento: document.getElementById('dtLancamento').value,
+      sistemaAtivo,
+      residenteRegiao,
+    };
+    if (finManual) {
+      const fm = pv(document.getElementById('vFinanciado')?.value);
+      if (fm > 0) payloadSimular.finManualOverride = fm;
+    }
+
     const resp = await fetch(_EDGE, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action:       'simular',
-        renda:        pv(document.getElementById('renda').value),
-        vImovel:      vi,
-        vAval:        pv(document.getElementById('vAval').value) || vi * 1.10,
-        ato:          pv(document.getElementById('ato').value),
-        fgtsPode,
-        fgtsDisp:     fgtsPode ? pv(document.getElementById('fgtsDisp').value) : 0,
-        parcelaSIRC:  getSIRC(),
-        dataNasc:     document.getElementById('nasc').value,
-        prazoAnos:    parseInt(document.getElementById('prazoSlider').value) || 30,
-        mesesObra:    parseInt(document.getElementById('mesesObra').value) || 0,
-        tipoTaxa,
-        dtEntrega:    document.getElementById('dtEntrega').value,
-        dtLancamento: document.getElementById('dtLancamento').value,
-        sistemaAtivo,
-        residenteRegiao,
-      })
+      body: JSON.stringify(payloadSimular)
     });
 
     const d = await resp.json();
@@ -2616,6 +2644,11 @@ async function simular() {
     if (d.finSAC <= 100 || d.finPRICE <= 100) {
       alert('Valor financiado inválido. Verifique os dados (renda, valor do imóvel ou entrada).');
       return;
+    }
+    if (finManual && d.finManualClampado) {
+      const efetivo = sistemaAtivo === 'sac' ? d.finSAC : d.finPRICE;
+      setVal('vFinanciado', efetivo);
+      alert('O valor personalizado foi travado em ' + fi(efetivo) + ' — o teto é o automático (' + fi(d.finManualBase) + ') + até R$ 12.000.');
     }
 
     window._lastCaixaResult = d;

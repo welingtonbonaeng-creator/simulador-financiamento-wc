@@ -230,8 +230,32 @@ export function executarSimulacao(params: {
   const calcSAC_semSIRC   = calcFinanciamentoPara(true,  vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, 0, p100kDynSAC);
   const calcPRICE_semSIRC = calcFinanciamentoPara(false, vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, 0, p100kDynPRICE);
 
-  const finSAC   = calcSAC.fin;
-  const finPRICE = calcPRICE.fin;
+  const isSACAtivo = sistemaAtivo === 'sac';
+
+  /* ── Personalização do valor financiado ──
+     O corretor pode confirmar que o banco aprovou um valor real diferente
+     do calculado automaticamente. Regra: só permite AUMENTAR, em até
+     R$12.000 acima do automático do sistema ativo agora — nunca reduzir,
+     nunca passar do teto. Uma vez válido, o valor personalizado substitui
+     finSAC/finPRICE para TODOS os cálculos derivados (tabela de
+     amortização, parcela, seguro de obra) — é o mesmo empréstimo real,
+     SAC/PRICE só mudam a forma de pagar, não o valor emprestado.
+     calcSAC.fin / calcPRICE.fin continuam com o valor 100% automático
+     (usados nos cards de FGTS/entrada/comparativo, que refletem o que o
+     banco calcularia sem a confirmação manual do corretor). */
+  const finAutoAtivo    = isSACAtivo ? calcSAC.fin : calcPRICE.fin;
+  const FIN_MANUAL_TETO = 12000;
+  let finManualAplicado: number | null = null;
+  let finManualClampado = false;
+  if (params.finManualOverride && params.finManualOverride > 0 && finAutoAtivo > 0) {
+    const bruto = params.finManualOverride;
+    const teto  = finAutoAtivo + FIN_MANUAL_TETO;
+    finManualAplicado = Math.min(Math.max(bruto, finAutoAtivo), teto);
+    finManualClampado = finManualAplicado !== bruto;
+  }
+
+  const finSAC   = finManualAplicado ?? calcSAC.fin;
+  const finPRICE = finManualAplicado ?? calcPRICE.fin;
 
   /* ── Tabela SAC ── */
   const amSAC = finSAC / n;
@@ -254,14 +278,10 @@ export function executarSimulacao(params: {
     tjP += j; sP -= a;
   }
 
-  /* ── Seguro de obra ── */
-  const isSACAtivo = sistemaAtivo === 'sac';
-  // Financiado manual (corretor personalizou o campo) tem prioridade sobre
-  // o valor calculado — o seguro de obra é sempre relativo ao que será
-  // efetivamente financiado, não à estimativa automática.
-  const finAtivo   = (params.finManualOverride && params.finManualOverride > 0)
-    ? params.finManualOverride
-    : (isSACAtivo ? finSAC : finPRICE);
+  /* ── Seguro de obra ──
+     finSAC/finPRICE já incorporam a personalização (se houver e válida) —
+     o seguro é sempre relativo ao que será efetivamente financiado. */
+  const finAtivo   = isSACAtivo ? finSAC : finPRICE;
   const segResult  = mesesObra > 0
     ? calcularSeguroTotal(finAtivo, mesesObra, prazoA, taxa, isSACAtivo, dtLancamento, dtEntrega)
     : { total: 0, parcelaRef: 0, limite: 0, mesesDetalhes: [], totalMesesObra: 0, obraOffset: 0 };
@@ -279,6 +299,10 @@ export function executarSimulacao(params: {
     finSAC,   finPRICE,
     calcSAC,  calcPRICE,
     calcSAC_semSIRC, calcPRICE_semSIRC,
+    finManualBase:      finAutoAtivo,
+    finManualTeto:      finAutoAtivo + FIN_MANUAL_TETO,
+    finManualAplicado,
+    finManualClampado,
     tjS,      tjP,
     pP,
     prazoA,   prazoPrice,
@@ -297,6 +321,135 @@ export function executarSimulacao(params: {
 }
 
 function fi2(v: number) { return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 }) }
+
+/* ── Fluxo direto pela construtora (pré/pós-chaves) ──
+   Função pura: usada tanto pelo preview ao vivo (debounce) quanto pelo
+   clique em "Calcular" — fonte única, evita duplicar a fórmula no frontend. */
+export function calcularConstrutora(body: any) {
+  const {
+    valorVenda, desconto, pctPre,
+    ato,
+    mensaisPreGrupos,   // [{qtd, valor}]
+    anuaisPreLista,     // [{data, valor}]
+    valorChaves,
+    mensaisPosGrupos,   // [{qtd, valor}]
+    anuaisPosLista,     // [{data, valor}]
+    rendaCliente,
+  } = body
+
+  const _anuaisPre = (anuaisPreLista || []) as { data: string; valor: number }[]
+  const _anuaisPos = (anuaisPosLista || []) as { data: string; valor: number }[]
+
+  const vProposta   = Math.max(0, (valorVenda || 0) - (desconto || 0))
+  const pctPreN     = Math.min(99, Math.max(1, parseFloat(pctPre) || 55))
+  const pctPosN     = 100 - pctPreN
+  const vPre        = Math.round(vProposta * pctPreN / 100)
+  const vPos        = vProposta - vPre
+
+  const totalMPre   = (mensaisPreGrupos || []).reduce((s: number, g: any) => s + (g.qtd || 0) * (g.valor || 0), 0)
+  const totalAPre   = _anuaisPre.reduce((s, it) => s + (it.valor || 0), 0)
+  const totalChaves = valorChaves || 0
+  const totalPre    = (ato || 0) + totalMPre + totalAPre + totalChaves
+  const saldoPre    = vPre - totalPre
+
+  const totalMPos   = (mensaisPosGrupos || []).reduce((s: number, g: any) => s + (g.qtd || 0) * (g.valor || 0), 0)
+  const totalAPos   = _anuaisPos.reduce((s, it) => s + (it.valor || 0), 0)
+  const totalPos    = totalMPos + totalAPos
+  const saldoPos    = vPos - totalPos
+
+  const warnings: string[] = []
+  _anuaisPre.forEach(it => {
+    if (rendaCliente && it.valor > rendaCliente)
+      warnings.push(`Reforço pré-chaves de ${fi2(it.valor)} (${it.data || '—'}) supera renda bruta (${fi2(rendaCliente)})`)
+  })
+  _anuaisPos.forEach(it => {
+    if (rendaCliente && it.valor > rendaCliente)
+      warnings.push(`Reforço pós-chaves de ${fi2(it.valor)} (${it.data || '—'}) supera renda bruta (${fi2(rendaCliente)})`)
+  })
+
+  const linhas: any[] = []
+  if (ato) linhas.push({ tipo:'ato',      desc:'Ato (assinatura)',       qtd:1,                fase:'pré', valor:ato||0,              total:ato||0,    reajuste:'N/A' })
+  ;(mensaisPreGrupos||[]).forEach((g:any,i:number) => {
+    if (g.qtd && g.valor) linhas.push({ tipo:'mensal_pre', desc:`Mensais pré-chaves${i>0?' (Reforço)':''}`, qtd:g.qtd, fase:'pré', valor:g.valor, total:g.qtd*g.valor, reajuste:'INCC' })
+  })
+  _anuaisPre.forEach(it => {
+    if (it.valor) linhas.push({ tipo:'anual_pre', desc:'Reforço pré-chaves', qtd:1, fase:'pré', valor:it.valor, total:it.valor, reajuste:'INCC', data: it.data })
+  })
+  if (totalChaves)
+    linhas.push({ tipo:'chaves',     desc:'Parcela de chaves',       qtd:1,                fase:'pré', valor:totalChaves,       total:totalChaves,  reajuste:'INCC' })
+  ;(mensaisPosGrupos||[]).forEach((g:any,i:number) => {
+    if (g.qtd && g.valor) linhas.push({ tipo:'mensal_pos', desc:`Mensais pós-chaves${i>0?' (Reforço)':''}`, qtd:g.qtd, fase:'pós', valor:g.valor, total:g.qtd*g.valor, reajuste:'IGPM + PRICE' })
+  })
+  _anuaisPos.forEach(it => {
+    if (it.valor) linhas.push({ tipo:'anual_pos', desc:'Reforço pós-chaves', qtd:1, fase:'pós', valor:it.valor, total:it.valor, reajuste:'IGPM + PRICE', data: it.data })
+  })
+
+  return { vProposta, pctPre:pctPreN, pctPos:pctPosN, vPre, vPos, totalPre, totalPos, saldoPre, saldoPos, grandTotal: totalPre + totalPos, warnings, linhas }
+}
+
+/* ── Preview ao vivo do fluxo Construtora — resolve a parcela mensal
+   "automática" (M1/MP) a partir do saldo restante ÷ quantidade, e devolve
+   os totais/saldos pra tela atualizar a cada tecla. Função pura, mesma
+   fórmula que já existia hardcoded no app.html. ── */
+export function calcularConstrutoraPreview(body: any) {
+  const {
+    vUnidade, desconto, pctPre, ato,
+    usaG2, qtdM2, vM2, usaAP, anuaisPreLista, usaCH, vCH, qtdM1,
+    usaAO, anuaisPosLista, usaG2POS, qtdM2POS, vM2POS, qtdMP,
+  } = body
+
+  const vProposta = Math.max(0, (vUnidade || 0) - (desconto || 0))
+  const pctPreN   = Math.min(99, Math.max(1, parseFloat(pctPre) || 55))
+  const pctPosN   = 100 - pctPreN
+  const vPre      = vProposta * pctPreN / 100
+  const vPos      = vProposta - vPre
+
+  const _qtdM2  = usaG2  ? (qtdM2  || 0) : 0, _vM2  = usaG2  ? (vM2  || 0) : 0
+  const _totalAP = usaAP ? (anuaisPreLista || []).reduce((s: number, it: any) => s + (it.valor || 0), 0) : 0
+  const _vCH    = usaCH  ? (vCH    || 0) : 0
+  const _qtdM1  = qtdM1  || 1
+
+  const remainPre = vPre - (ato || 0) - (_qtdM2 * _vM2) - _totalAP - _vCH
+  const vM1       = _qtdM1 > 0 ? Math.max(0, remainPre / _qtdM1) : 0
+
+  const totalPre = (ato || 0) + _qtdM1 * vM1 + _qtdM2 * _vM2 + _totalAP + _vCH
+  const saldoPre = Math.round(vPre - totalPre)
+
+  const _totalAO  = usaAO ? (anuaisPosLista || []).reduce((s: number, it: any) => s + (it.valor || 0), 0) : 0
+  const _qtdM2POS = usaG2POS ? (qtdM2POS || 0) : 0, _vM2POS = usaG2POS ? (vM2POS || 0) : 0
+  const _qtdMP    = qtdMP    || 1
+
+  const vMP = _qtdMP > 0 ? Math.max(0, (vPos - _totalAO - _qtdM2POS * _vM2POS) / _qtdMP) : 0
+
+  const totalPos = _qtdMP * vMP + _totalAO + _qtdM2POS * _vM2POS
+  const saldoPos = Math.round(vPos - totalPos)
+
+  return {
+    vProposta, pctPre: pctPreN, pctPos: pctPosN, vPre, vPos,
+    vM1, vMP, totalPre: Math.round(totalPre), saldoPre, totalPos: Math.round(totalPos), saldoPos,
+    hintM1: Math.round(_qtdM1 * vM1), hintM2: Math.round(_qtdM2 * _vM2), hintAP: Math.round(_totalAP),
+    hintMP: Math.round(_qtdMP * vMP), hintM2POS: Math.round(_qtdM2POS * _vM2POS), hintAO: Math.round(_totalAO),
+  }
+}
+
+/* ── Economia do programa (INCC / RGI-ITBI / Laudêmio / taxa de ligação) ──
+   Função pura: percentuais e regras de composição da "economia" mostrada
+   ao cliente — não pode ficar exposta em texto plano no frontend. */
+export function calcularEconomia(params: {
+  vf: number; vEntrega: number; mesesRestantes: number; seguro: number;
+  temRgiItbi: boolean; temLaudemio: boolean; temTaxaLig: boolean;
+}) {
+  const { vf, vEntrega, mesesRestantes, seguro } = params
+  const incc     = vf * 0.10 * (mesesRestantes / 12)          // INCC: 10% ao ano de obra restante
+  const rgiItbi  = params.temRgiItbi  ? vEntrega * 0.05 : 0    // RGI/ITBI: 5% do valor de entrega
+  const laudemio = params.temLaudemio ? vEntrega * 0.05 : 0    // Laudêmio: 5% do valor de entrega
+  const taxaLig  = params.temTaxaLig  ? vf * 0.06 : 0          // Taxa ligação + decoração: 6% do imóvel
+
+  const grossEconom = incc + rgiItbi + laudemio + taxaLig
+  const total = grossEconom - (seguro || 0)
+
+  return { incc, rgiItbi, laudemio, taxaLig, grossEconom, total }
+}
 
 /* ── Amortização extra (SAC/PRICE, múltiplos eventos) ──
    Função pura: dado o financiamento base e uma lista de amortizações
@@ -545,67 +698,28 @@ Deno.serve(async (req) => {
   }
 
   /* ── simular_construtora: fluxo direto pela construtora ── */
-  if (body.action === 'simular_construtora') {
-    const {
-      valorVenda, desconto, pctPre,
-      ato,
-      mensaisPreGrupos,   // [{qtd, valor}]
-      anuaisPre,          // {qtd, valor}
-      valorChaves,
-      mensaisPosGrupos,   // [{qtd, valor}]
-      anuaisPos,          // {qtd, valor}
-      rendaCliente,
-    } = body
+  if (body.action === 'simular_construtora' || body.action === 'preview_construtora') {
+    const payload = calcularConstrutora(body)
+    if (body.action === 'simular_construtora') {
+      await sbLog.from('events').insert({
+        user_id: user.id,
+        email: user.email,
+        action: 'simulacao_construtora',
+        details: { t:'construtora', vi: body.valorVenda ?? 0, pctPre: payload.pctPre },
+      });
+    }
+    return new Response(JSON.stringify(payload), { headers: { ...CORS, 'Content-Type': 'application/json' } })
+  }
 
-    const vProposta   = Math.max(0, (valorVenda || 0) - (desconto || 0))
-    const pctPreN     = Math.min(99, Math.max(1, parseFloat(pctPre) || 55))
-    const pctPosN     = 100 - pctPreN
-    const vPre        = Math.round(vProposta * pctPreN / 100)
-    const vPos        = vProposta - vPre
+  /* ── preview_construtora_live: resolve M1/MP e saldos a cada tecla ── */
+  if (body.action === 'preview_construtora_live') {
+    const payload = calcularConstrutoraPreview(body)
+    return new Response(JSON.stringify(payload), { headers: { ...CORS, 'Content-Type': 'application/json' } })
+  }
 
-    // PRÉ
-    const totalMPre   = (mensaisPreGrupos || []).reduce((s: number, g: any) => s + (g.qtd || 0) * (g.valor || 0), 0)
-    const totalAPre   = ((anuaisPre?.qtd || 0) * (anuaisPre?.valor || 0))
-    const totalChaves = valorChaves || 0
-    const totalPre    = (ato || 0) + totalMPre + totalAPre + totalChaves
-    const saldoPre    = vPre - totalPre
-
-    // PÓS
-    const totalMPos   = (mensaisPosGrupos || []).reduce((s: number, g: any) => s + (g.qtd || 0) * (g.valor || 0), 0)
-    const totalAPos   = ((anuaisPos?.qtd || 0) * (anuaisPos?.valor || 0))
-    const totalPos    = totalMPos + totalAPos
-    const saldoPos    = vPos - totalPos
-
-    // Alertas
-    const warnings: string[] = []
-    if (rendaCliente && anuaisPre?.valor > rendaCliente)
-      warnings.push(`Anual pré-chaves (${fi2(anuaisPre.valor)}) supera renda bruta (${fi2(rendaCliente)})`)
-    if (rendaCliente && anuaisPos?.valor > rendaCliente)
-      warnings.push(`Anual pós-chaves (${fi2(anuaisPos.valor)}) supera renda bruta (${fi2(rendaCliente)})`)
-
-    // Linhas do fluxo
-    const linhas: any[] = []
-    if (ato) linhas.push({ tipo:'ato',      desc:'Ato (assinatura)',       qtd:1,                fase:'pré', valor:ato||0,              total:ato||0,    reajuste:'N/A' })
-    ;(mensaisPreGrupos||[]).forEach((g:any,i:number) => {
-      if (g.qtd && g.valor) linhas.push({ tipo:'mensal_pre', desc:`Mensais pré-chaves${i>0?' (Reforço)':''}`, qtd:g.qtd, fase:'pré', valor:g.valor, total:g.qtd*g.valor, reajuste:'INCC' })
-    })
-    if (anuaisPre?.qtd && anuaisPre?.valor)
-      linhas.push({ tipo:'anual_pre',  desc:'Anuais pré-chaves',       qtd:anuaisPre.qtd,    fase:'pré', valor:anuaisPre.valor,  total:anuaisPre.qtd*anuaisPre.valor,   reajuste:'INCC' })
-    if (totalChaves)
-      linhas.push({ tipo:'chaves',     desc:'Parcela de chaves',       qtd:1,                fase:'pré', valor:totalChaves,       total:totalChaves,  reajuste:'INCC' })
-    ;(mensaisPosGrupos||[]).forEach((g:any,i:number) => {
-      if (g.qtd && g.valor) linhas.push({ tipo:'mensal_pos', desc:`Mensais pós-chaves${i>0?' (Reforço)':''}`, qtd:g.qtd, fase:'pós', valor:g.valor, total:g.qtd*g.valor, reajuste:'IGPM + PRICE' })
-    })
-    if (anuaisPos?.qtd && anuaisPos?.valor)
-      linhas.push({ tipo:'anual_pos',  desc:'Anuais pós-chaves',       qtd:anuaisPos.qtd,    fase:'pós', valor:anuaisPos.valor,  total:anuaisPos.qtd*anuaisPos.valor,   reajuste:'IGPM + PRICE' })
-
-    const payload = { vProposta, pctPre:pctPreN, pctPos:pctPosN, vPre, vPos, totalPre, totalPos, saldoPre, saldoPos, grandTotal: totalPre + totalPos, warnings, linhas }
-    await sbLog.from('events').insert({
-      user_id: user.id,
-      email: user.email,
-      action: 'simulacao_construtora',
-      details: { t:'construtora', vi: valorVenda ?? 0, pctPre: pctPreN },
-    });
+  /* ── calc_economia: INCC / RGI-ITBI / Laudêmio / taxa de ligação ── */
+  if (body.action === 'calc_economia') {
+    const payload = calcularEconomia(body)
     return new Response(JSON.stringify(payload), { headers: { ...CORS, 'Content-Type': 'application/json' } })
   }
 
