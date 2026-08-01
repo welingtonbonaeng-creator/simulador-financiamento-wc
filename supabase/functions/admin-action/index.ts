@@ -296,7 +296,7 @@ Deno.serve(async (req: Request) => {
               <div style="background:#F4F6FA;border:1px solid #E8ECF4;border-radius:10px;padding:18px;margin:0 0 16px;font-family:monospace;text-align:center">
                 <p style="margin:0;font-size:20px;font-weight:700;letter-spacing:1px;color:#0B3D91">${senhaProvisoria}</p>
               </div>
-              <p style="margin:0 0 20px;font-size:12.5px;color:#991B1B;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 12px;line-height:1.5">⚠️ Essa senha funciona só uma vez. Assim que você fizer login com ela, vai deixar de funcionar — então entre logo em seguida e defina sua senha definitiva.</p>
+              <p style="margin:0 0 20px;font-size:12.5px;color:#991B1B;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 12px;line-height:1.5">⚠️ Essa senha é provisória: assim que você entrar, o app já vai pedir pra você escolher sua senha definitiva — e essa senha temporária deixa de existir. Entre logo em seguida e complete a troca.</p>
               <a href="${APP}/login.html" style="display:inline-block;width:100%;background:#0B3D91;color:#fff;padding:14px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;box-sizing:border-box">Acessar o SimulaPro →</a>
             </div>
           </div>`
@@ -615,24 +615,6 @@ Deno.serve(async (req: Request) => {
         termosAceitos: !!termo, termosVersao: TERMOS_VERSAO,
         mustChangePassword: !!perfil?.must_change_password,
       })
-    }
-
-    // consumir_senha_provisoria: chamado pelo login.html logo após um login
-    // bem-sucedido — se a conta tinha senha provisória pendente (fluxo de
-    // "esqueci minha senha"), rotaciona a senha na hora pra um segredo
-    // aleatório que ninguém conhece. Isso invalida a senha provisória pra
-    // qualquer tentativa futura de login, mesmo que o usuário ainda não
-    // tenha definido a senha definitiva — a sessão atual continua válida
-    // e é usada pra forçar a tela de "definir nova senha".
-    if (action === 'consumir_senha_provisoria') {
-      const { data: perfil } = await sb.from('user_profiles').select('must_change_password').eq('id', user.id).maybeSingle()
-      if (perfil?.must_change_password) {
-        const bytes = new Uint8Array(24)
-        crypto.getRandomValues(bytes)
-        const segredoAleatorio = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
-        await sb.auth.admin.updateUserById(user.id, { password: segredoAleatorio })
-      }
-      return json({ success: true })
     }
 
     // aceitar_termos: qualquer usuário autenticado registra o aceite dos

@@ -349,8 +349,8 @@ async function _confirmarNovaSenha(){
     showMsg(r.error||'Erro ao definir senha. Tente novamente.',false);
     return;
   }
-  showMsg('Senha definida! Entrando no SimulaPro...',true);
-  setTimeout(function(){window.location.replace('app.html');},1200);
+  showMsg('Senha definida! Faça login novamente com sua nova senha...',true);
+  setTimeout(function(){_sb.auth.signOut().then(function(){window.location.replace('login.html');});},1800);
 }
 function _mostrarBloqueioTotal(){
   document.documentElement.style.visibility='';

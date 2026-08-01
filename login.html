@@ -179,11 +179,6 @@ async function login(){
     setMsg(msgs[error.message]||'Erro ao entrar. Tente novamente.','er');return;
   }
   await _sb.from('events').insert({user_id:data.user.id,email:data.user.email,action:'login',user_agent:navigator.userAgent});
-  // Se essa era uma senha provisória (fluxo "esqueci minha senha"), invalida ela
-  // na hora — antes mesmo do usuário terminar de escolher a senha definitiva.
-  try{
-    await fetch(_ADMIN_EDGE,{method:'POST',headers:{'Authorization':'Bearer '+data.session.access_token,'Content-Type':'application/json'},body:JSON.stringify({action:'consumir_senha_provisoria'})});
-  }catch(e){}
   window.location.replace('app.html');
 }
 async function esqueciSenha(){
