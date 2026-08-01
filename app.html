@@ -216,6 +216,7 @@ footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--texto3);}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function(){document.documentElement.style.visibility='hidden';})();
+window._isRecovery = /type=recovery/.test(window.location.hash);
 const _sb=supabase.createClient('https://uefnirdmhtsbpdxnonnd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s');
 const _EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/simulapro';
 const _ADMIN_EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/admin-action';
@@ -309,6 +310,49 @@ async function _confirmarAceiteTermos(){
     btn.disabled=false;btn.textContent='Aceitar e continuar';
   }
 }
+function _mostrarDefinirNovaSenha(s){
+  document.documentElement.style.visibility='';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0B3D91;padding:20px;font-family:\'Sora\',sans-serif">'+
+    '<div style="background:#fff;border-radius:16px;max-width:400px;width:100%;padding:32px 28px">'+
+      '<div style="font-size:34px;margin-bottom:10px;text-align:center">🔑</div>'+
+      '<div style="font-size:17px;font-weight:800;color:#0F172A;margin-bottom:8px;text-align:center">Defina sua nova senha</div>'+
+      '<div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:20px;text-align:center">Você está redefinindo o acesso de <strong>'+s.user.email+'</strong>.</div>'+
+      '<div id="_msgNovaSenha"></div>'+
+      '<div style="margin-bottom:12px">'+
+        '<label style="font-size:10px;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Nova Senha</label>'+
+        '<input type="password" id="_recNovaSenha" placeholder="••••••••" style="width:100%;height:44px;border:1.5px solid #E8ECF4;border-radius:8px;padding:0 12px;font-size:14px;font-family:\'Sora\',sans-serif;box-sizing:border-box;outline:none"/>'+
+      '</div>'+
+      '<div style="margin-bottom:20px">'+
+        '<label style="font-size:10px;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Confirmar Nova Senha</label>'+
+        '<input type="password" id="_recConfirmSenha" placeholder="••••••••" style="width:100%;height:44px;border:1.5px solid #E8ECF4;border-radius:8px;padding:0 12px;font-size:14px;font-family:\'Sora\',sans-serif;box-sizing:border-box;outline:none"/>'+
+      '</div>'+
+      '<button id="_btnDefinirSenha" onclick="_confirmarNovaSenha()" style="width:100%;background:#0B3D91;color:#fff;border:none;padding:13px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px">Definir Senha</button>'+
+      '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'login.html\')})" style="width:100%;background:none;border:none;color:#94A3B8;padding:12px;font-size:12px;cursor:pointer;font-family:inherit;margin-top:4px">Cancelar</button>'+
+    '</div></div>';
+}
+async function _confirmarNovaSenha(){
+  var nova=document.getElementById('_recNovaSenha').value;
+  var conf=document.getElementById('_recConfirmSenha').value;
+  var msg=document.getElementById('_msgNovaSenha');
+  var btn=document.getElementById('_btnDefinirSenha');
+  function showMsg(txt,ok){
+    msg.style.cssText='display:block;font-size:12px;padding:9px 12px;border-radius:8px;margin-bottom:14px;background:'+(ok?'#EAF4EE':'#FDE8E8')+';color:'+(ok?'#14522F':'#991B1B')+';border:1px solid '+(ok?'#B5D9C3':'#FCA5A5');
+    msg.textContent=txt;
+  }
+  if(!nova||!conf){showMsg('Preencha os dois campos.',false);return;}
+  if(nova.length<6){showMsg('A nova senha deve ter pelo menos 6 caracteres.',false);return;}
+  if(nova!==conf){showMsg('As senhas não conferem.',false);return;}
+  btn.disabled=true;btn.textContent='Salvando...';
+  var r=await _sb.auth.updateUser({password:nova});
+  if(r.error){
+    btn.disabled=false;btn.textContent='Definir Senha';
+    showMsg(r.error.message==='New password should be different from the old password.'?'A nova senha deve ser diferente da anterior.':'Erro ao definir senha. Peça um novo link de redefinição.',false);
+    return;
+  }
+  showMsg('Senha definida! Entrando no SimulaPro...',true);
+  window._isRecovery=false;
+  setTimeout(function(){window.location.replace('app.html');},1200);
+}
 function _mostrarBloqueioTotal(){
   document.documentElement.style.visibility='';
   document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0B3D91;padding:20px;font-family:\'Sora\',sans-serif">'+
@@ -336,6 +380,8 @@ if(!window._authError) _sb.auth.getSession().then(async function(r){
   var s=r.data.session;
   if(!s){window.location.replace('login.html');return;}
   window._sb=_sb;window._session=s;
+
+  if(window._isRecovery){ _mostrarDefinirNovaSenha(s); return; }
 
   var assinaturaCheck=await _checkAssinatura(s);
   if(assinaturaCheck==='bloqueado'){ _mostrarBloqueioTotal(); return; }
