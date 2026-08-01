@@ -445,6 +445,18 @@ Deno.serve(async (req: Request) => {
         return json({ error: 'É necessário aceitar os Termos de Uso e a Política de Privacidade.' }, 400)
       }
 
+      // Rate limit por IP — sem isso, dá pra criar conta real + mandar e-mail
+      // com senha de verdade pra qualquer endereço em massa (spam/harassment,
+      // além de estourar a cota diária da Brevo e travar todo e-mail do negócio).
+      const ipSubmit = clientIp(req) ?? 'desconhecido'
+      const janelaSubmit = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+      const { count: tentativasIpSubmit } = await sb.from('events').select('*', { count: 'exact', head: true })
+        .eq('action', 'submit_request_attempt').contains('details', { ip: ipSubmit }).gte('created_at', janelaSubmit)
+      await sb.from('events').insert({ email, action: 'submit_request_attempt', details: { ip: ipSubmit }, user_agent: 'submit_request' })
+      if ((tentativasIpSubmit ?? 0) >= 3) {
+        return json({ error: 'Muitas solicitações deste endereço. Tente novamente mais tarde ou fale com a gente pelo WhatsApp.' }, 429)
+      }
+
       // anti-abuso: já existe pedido de teste com este e-mail?
       const { data: existente } = await sb.from('solicitacoes_teste').select('id').eq('email', email).maybeSingle()
       if (existente) {
