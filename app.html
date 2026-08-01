@@ -4067,7 +4067,20 @@ async function salvarSimulacao(tipo) {
     user_id: s.user.id, email: s.user.email, tipo, nome_cliente: nomeCliente, entrada, resumo,
   });
   if (error) { alert('Erro ao salvar: ' + error.message); return; }
+  await _limitarSimulacoesSalvas(s.user.id);
   alert('Simulação salva! Acesse em "📁 Minhas Simulações".');
+}
+
+const LIMITE_SIMULACOES_SALVAS = 20;
+async function _limitarSimulacoesSalvas(userId) {
+  const { data } = await _sb.from('simulacoes')
+    .select('id')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .range(LIMITE_SIMULACOES_SALVAS, 100000);
+  if (data && data.length) {
+    await _sb.from('simulacoes').delete().in('id', data.map(r => r.id));
+  }
 }
 
 async function abrirMinhasSimulacoes() {
