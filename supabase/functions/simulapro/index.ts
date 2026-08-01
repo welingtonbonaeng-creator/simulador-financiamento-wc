@@ -194,7 +194,9 @@ export function executarSimulacao(params: {
   const sub = getSub(fx, renda);
 
   const prazoA     = Math.min(prazoAnos, 35);
-  const prazoPrice = fx.sbpe ? 30 : prazoA;
+  // SBPE: PRICE tem teto próprio de 30 anos, mas isso não pode ignorar o corte
+  // por idade já aplicado em prazoA (966 − idade − obra) — sempre o menor dos dois.
+  const prazoPrice = fx.sbpe ? Math.min(prazoA, 30) : prazoA;
   const n          = prazoA * 12;
   const nPrice     = prazoPrice * 12;
   const taxa       = (tipoTaxa === 'n' ? sub.n : sub.e) / 100 / 12;

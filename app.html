@@ -3101,7 +3101,7 @@ async function gerarPDF() {
     const _mens  = pv(document.getElementById('mensalObra').value);
     const _meses = parseInt(document.getElementById('mesesObra').value) || 0;
     const _totM  = _mens * _meses;
-    const _prazoFin = (d.prazoSAC || d.prazoPrice || 30);
+    const _prazoFin = (sistemaAtivo === 'sac' ? d.prazoSAC : d.prazoPrice) || 30;
     const _nFin  = _prazoFin * 12;
     // Usa os MESMOS valores já calculados e corretos da simulação principal
     // (d.parcelaSAC1, d.parcelaSACult, d.parcelaPrice) em vez de recalcular
@@ -3719,7 +3719,7 @@ function preencherAmort() {
 
   const isSAC     = d.sistemaAtivo !== 'price';
   const fin       = isSAC ? (d.finSAC ?? d.fin) : (d.finPRICE ?? d.fin);
-  const prazoA    = d.prazoSAC || 30;
+  const prazoA    = (isSAC ? d.prazoSAC : d.prazoPrice) || 30;
   const prazoM    = prazoA * 12;
   const taxaM     = (sub ? (tipoTaxa === 'n' ? sub.n : sub.e) : 10) / 100 / 12;
   const parcela1  = isSAC ? d.parcelaSAC1 : d.parcelaPrice;
