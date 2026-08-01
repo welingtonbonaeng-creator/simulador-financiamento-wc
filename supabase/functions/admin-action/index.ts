@@ -75,6 +75,18 @@ function gerarSenha() {
   return Math.random().toString(36).slice(-8) + Math.floor(Math.random() * 100)
 }
 
+// Senha provisória — charset sem caracteres ambíguos (0/O, 1/l/I), aleatoriedade
+// criptográfica (crypto.getRandomValues, não Math.random) por ser enviada por e-mail
+// e servir de credencial de login, ainda que de uso único.
+function gerarSenhaProvisoria() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+  const bytes = new Uint8Array(10)
+  crypto.getRandomValues(bytes)
+  let s = ''
+  for (let i = 0; i < bytes.length; i++) s += chars[bytes[i] % chars.length]
+  return s
+}
+
 Deno.serve(async (req: Request) => {
   const reqOrigin = req.headers.get('origin')
   CORS = {
@@ -236,6 +248,63 @@ Deno.serve(async (req: Request) => {
     const body = await req.json()
     const action  = body.action ?? ''
     const payload = body.payload ?? {}
+
+    // ── AÇÃO PÚBLICA: forgot_password (sem autenticação) ──────
+    // Em vez do link de recovery nativo do Supabase (limite de e-mail baixo,
+    // e não resolvia "esqueceu a senha, mas trocar senha pede a senha atual"),
+    // emite uma senha provisória de uso único por e-mail. Resposta é sempre
+    // genérica (não revela se o e-mail existe, está bloqueado, ou foi limitado).
+    if (action === 'forgot_password') {
+      const email = String(payload.email ?? '').trim().toLowerCase()
+      const generic = { success: true, msg: 'Se este e-mail estiver cadastrado, você vai receber uma senha provisória em instantes.' }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(generic)
+
+      const ip = clientIp(req) ?? 'desconhecido'
+      const janela = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+
+      const { count: tentativasEmail } = await sb.from('events').select('*', { count: 'exact', head: true })
+        .eq('action', 'forgot_password_requested').eq('email', email).gte('created_at', janela)
+      const { count: tentativasIp } = await sb.from('events').select('*', { count: 'exact', head: true })
+        .eq('action', 'forgot_password_requested').contains('details', { ip }).gte('created_at', janela)
+
+      // Loga a tentativa sempre — inclusive as barradas — é o que alimenta o rate limit
+      await sb.from('events').insert({ email, action: 'forgot_password_requested', details: { ip }, user_agent: 'forgot_password' })
+
+      if ((tentativasEmail ?? 0) >= 1 || (tentativasIp ?? 0) >= 5) return json(generic)
+
+      const { data: perfil } = await sb.from('user_profiles').select('id, nome, status').eq('email', email).maybeSingle()
+      if (!perfil || perfil.status === 'bloqueado') return json(generic)
+
+      const senhaProvisoria = gerarSenhaProvisoria()
+      const { error: pe } = await sb.auth.admin.updateUserById(perfil.id, { password: senhaProvisoria })
+      if (pe) return json(generic)
+
+      await sb.from('user_profiles').update({ must_change_password: true }).eq('id', perfil.id)
+      await sb.from('events').insert({ user_id: perfil.id, email, action: 'forgot_password_issued', details: { ip }, user_agent: 'forgot_password' })
+
+      if (BREVO) {
+        await sendBrevo(BREVO, email, perfil.nome || email,
+          'Sua senha provisória do SimulaPro',
+          `<div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+            <div style="background:linear-gradient(135deg,#0B3D91,#1565C0);padding:28px 24px;border-radius:8px 8px 0 0;text-align:center">
+              <h2 style="color:#fff;margin:0 0 6px;font-size:20px">🔑 SimulaPro</h2>
+              <p style="color:rgba(255,255,255,.7);margin:0;font-size:13px">Redefinição de senha</p>
+            </div>
+            <div style="background:#fff;border:1px solid #E8ECF4;padding:28px 24px;border-radius:0 0 8px 8px">
+              <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#0F172A">Olá, ${perfil.nome || ''}!</p>
+              <p style="margin:0 0 16px;font-size:14px;color:#334155;line-height:1.6">Geramos uma senha provisória pra você entrar no SimulaPro. Use ela pra fazer login — na hora, o app vai pedir pra você escolher sua senha definitiva.</p>
+              <div style="background:#F4F6FA;border:1px solid #E8ECF4;border-radius:10px;padding:18px;margin:0 0 16px;font-family:monospace;text-align:center">
+                <p style="margin:0;font-size:20px;font-weight:700;letter-spacing:1px;color:#0B3D91">${senhaProvisoria}</p>
+              </div>
+              <p style="margin:0 0 20px;font-size:12.5px;color:#991B1B;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 12px;line-height:1.5">⚠️ Essa senha funciona só uma vez. Assim que você fizer login com ela, vai deixar de funcionar — então entre logo em seguida e defina sua senha definitiva.</p>
+              <a href="${APP}/login.html" style="display:inline-block;width:100%;background:#0B3D91;color:#fff;padding:14px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;box-sizing:border-box">Acessar o SimulaPro →</a>
+            </div>
+          </div>`
+        )
+      }
+
+      return json(generic)
+    }
 
     // ── AÇÃO PÚBLICA: asaas_checkout (sem autenticação) ───────
     // Só fala com a Asaas pelo backend — a API key nunca chega no navegador.
@@ -535,7 +604,7 @@ Deno.serve(async (req: Request) => {
     // get_my_status: qualquer usuário autenticado vê a própria assinatura
     // (usado pelo app.html para mostrar aviso de renovação, sem precisar ser admin)
     if (action === 'get_my_status') {
-      const { data: perfil } = await sb.from('user_profiles').select('status, plano').eq('id', user.id).maybeSingle()
+      const { data: perfil } = await sb.from('user_profiles').select('status, plano, must_change_password').eq('id', user.id).maybeSingle()
       const { data: assinatura } = await sb.from('asaas_assinaturas')
         .select('plano, valor, status, invoice_url, proximo_vencimento')
         .eq('user_id', user.id).maybeSingle()
@@ -544,7 +613,26 @@ Deno.serve(async (req: Request) => {
       return json({
         status: perfil?.status ?? 'ativo', plano: perfil?.plano ?? null, assinatura: assinatura ?? null,
         termosAceitos: !!termo, termosVersao: TERMOS_VERSAO,
+        mustChangePassword: !!perfil?.must_change_password,
       })
+    }
+
+    // consumir_senha_provisoria: chamado pelo login.html logo após um login
+    // bem-sucedido — se a conta tinha senha provisória pendente (fluxo de
+    // "esqueci minha senha"), rotaciona a senha na hora pra um segredo
+    // aleatório que ninguém conhece. Isso invalida a senha provisória pra
+    // qualquer tentativa futura de login, mesmo que o usuário ainda não
+    // tenha definido a senha definitiva — a sessão atual continua válida
+    // e é usada pra forçar a tela de "definir nova senha".
+    if (action === 'consumir_senha_provisoria') {
+      const { data: perfil } = await sb.from('user_profiles').select('must_change_password').eq('id', user.id).maybeSingle()
+      if (perfil?.must_change_password) {
+        const bytes = new Uint8Array(24)
+        crypto.getRandomValues(bytes)
+        const segredoAleatorio = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+        await sb.auth.admin.updateUserById(user.id, { password: segredoAleatorio })
+      }
+      return json({ success: true })
     }
 
     // aceitar_termos: qualquer usuário autenticado registra o aceite dos
@@ -562,6 +650,8 @@ Deno.serve(async (req: Request) => {
 
       const { error: pe } = await sb.auth.admin.updateUserById(user.id, { password: novaSenha })
       if (pe) return json({ error: pe.message }, 400)
+
+      await sb.from('user_profiles').update({ must_change_password: false }).eq('id', user.id)
 
       await sb.from('events').insert({
         user_id: user.id, email: user.email, action: 'change_password', user_agent: 'self-service',

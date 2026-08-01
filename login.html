@@ -151,6 +151,7 @@ const _sb=supabase.createClient(
   'https://uefnirdmhtsbpdxnonnd.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s'
 );
+const _ADMIN_EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/admin-action';
 (async function(){
   const {data:{session}}=await _sb.auth.getSession();
   if(session) window.location.replace('app.html');
@@ -178,14 +179,18 @@ async function login(){
     setMsg(msgs[error.message]||'Erro ao entrar. Tente novamente.','er');return;
   }
   await _sb.from('events').insert({user_id:data.user.id,email:data.user.email,action:'login',user_agent:navigator.userAgent});
+  // Se essa era uma senha provisória (fluxo "esqueci minha senha"), invalida ela
+  // na hora — antes mesmo do usuário terminar de escolher a senha definitiva.
+  try{
+    await fetch(_ADMIN_EDGE,{method:'POST',headers:{'Authorization':'Bearer '+data.session.access_token,'Content-Type':'application/json'},body:JSON.stringify({action:'consumir_senha_provisoria'})});
+  }catch(e){}
   window.location.replace('app.html');
 }
 async function esqueciSenha(){
   const email=document.getElementById('email').value.trim();
   if(!email){setMsg('Digite seu e-mail acima primeiro.','er');return;}
-  const base=window.location.href.replace('login.html','').replace(/\/$/,'')+'/';
-  await _sb.auth.resetPasswordForEmail(email,{redirectTo:base+'app.html'});
-  setMsg('Se este e-mail estiver cadastrado, você receberá o link em breve.','ok');
+  await fetch(_ADMIN_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'forgot_password',payload:{email}})});
+  setMsg('Se este e-mail estiver cadastrado, você vai receber uma senha provisória em instantes. Use ela pra entrar — na hora, o app pede pra você escolher sua senha definitiva.','ok');
 }
 </script>
 
