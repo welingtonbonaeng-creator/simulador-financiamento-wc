@@ -168,6 +168,12 @@ async function login(){
   const {data,error}=await _sb.auth.signInWithPassword({email,password:senha});
   if(error){
     btn.disabled=false;btn.textContent='Entrar no SimulaPro';
+    if(/banned/i.test(error.message)){
+      const el=document.getElementById('msg');
+      el.className='msg er';
+      el.innerHTML='Sua conta está temporariamente bloqueada. Fale com o suporte pelo WhatsApp: <a href="https://wa.me/5521978901629" target="_blank" rel="noopener" style="color:#991B1B;font-weight:700;text-decoration:underline">(21) 97890-1629</a>';
+      return;
+    }
     const msgs={'Invalid login credentials':'E-mail ou senha incorretos.','Email not confirmed':'Confirme seu e-mail antes de entrar.','Too many requests':'Muitas tentativas. Aguarde alguns minutos.'};
     setMsg(msgs[error.message]||'Erro ao entrar. Tente novamente.','er');return;
   }
@@ -192,6 +198,9 @@ async function esqueciSenha(){
     </div>
     <div style="padding:24px">
       <p style="margin:0 0 18px;font-size:13px;color:#475569;line-height:1.5">Dúvida, problema ou sugestão? Fala com a gente:</p>
+      <a href="https://wa.me/5521978901629" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:#F4F6FA;border:1px solid #E8ECF4;border-radius:8px;text-decoration:none;color:#0F172A;font-size:13px;font-weight:600;margin-bottom:10px;font-family:'Sora',sans-serif">
+        <span style="font-size:16px">💬</span> (21) 97890-1629
+      </a>
       <a href="mailto:simulador.wc@gmail.com" style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:#F4F6FA;border:1px solid #E8ECF4;border-radius:8px;text-decoration:none;color:#0F172A;font-size:13px;font-weight:600;margin-bottom:10px;font-family:'Sora',sans-serif">
         <span style="font-size:16px">✉️</span> simulador.wc@gmail.com
       </a>

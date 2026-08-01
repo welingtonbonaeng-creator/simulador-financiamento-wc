@@ -220,6 +220,20 @@ const _sb=supabase.createClient('https://uefnirdmhtsbpdxnonnd.supabase.co','eyJh
 const _EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/simulapro';
 const _ADMIN_EDGE = 'https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/admin-action';
 
+/* Link de redefinição de senha (ou qualquer link de auth) cai aqui com erro no hash quando a conta está bloqueada */
+window._authError = false;
+(function(){
+  var h = window.location.hash;
+  if(!h || h.indexOf('error=')===-1) return;
+  var p = new URLSearchParams(h.replace(/^#/,''));
+  var code = p.get('error_code');
+  if(code==='user_banned' || code==='access_denied'){
+    window._authError = true;
+    document.documentElement.style.visibility='';
+    document.body.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;font-family:\'Sora\',sans-serif;background:#F4F6FA"><div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:32px 28px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.12)"><div style="font-size:40px;margin-bottom:12px">🔒</div><div style="font-size:18px;font-weight:800;color:#0F172A;margin-bottom:8px">Sua conta está bloqueada</div><div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:22px">Isso costuma acontecer por assinatura em atraso. Fale com o suporte para regularizar o acesso.</div><a href="https://wa.me/5521978901629" target="_blank" rel="noopener" style="display:block;background:#25D366;color:#fff;padding:14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px">Falar no WhatsApp →</a><a href="login.html" style="display:block;color:#94A3B8;font-size:12px;text-decoration:none;padding:8px">Voltar para o login</a></div></div>';
+  }
+})();
+
 /* ═══════════════════════════════════════════════════════════════════
    ⚠️ REGRA DE ARQUITETURA — LEIA ANTES DE ADICIONAR QUALQUER CÁLCULO
    Nenhuma fórmula de negócio (financiamento, FGTS, seguro de obra,
@@ -318,7 +332,7 @@ function _mostrarAvisoRenovacao(assinatura){
   document.body.insertAdjacentHTML('beforeend',html);
 }
 
-_sb.auth.getSession().then(async function(r){
+if(!window._authError) _sb.auth.getSession().then(async function(r){
   var s=r.data.session;
   if(!s){window.location.replace('login.html');return;}
   window._sb=_sb;window._session=s;
@@ -430,6 +444,9 @@ async function _confirmarTroca(){
     </div>
     <div style="padding:24px">
       <p style="margin:0 0 18px;font-size:13px;color:#475569;line-height:1.5">Dúvida, problema ou sugestão? Fala com a gente:</p>
+      <a href="https://wa.me/5521978901629" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:#F4F6FA;border:1px solid #E8ECF4;border-radius:8px;text-decoration:none;color:#0F172A;font-size:13px;font-weight:600;margin-bottom:10px;font-family:'Sora',sans-serif">
+        <span style="font-size:16px">💬</span> (21) 97890-1629
+      </a>
       <a href="mailto:simulador.wc@gmail.com" style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:#F4F6FA;border:1px solid #E8ECF4;border-radius:8px;text-decoration:none;color:#0F172A;font-size:13px;font-weight:600;margin-bottom:10px;font-family:'Sora',sans-serif">
         <span style="font-size:16px">✉️</span> simulador.wc@gmail.com
       </a>
