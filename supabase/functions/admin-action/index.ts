@@ -677,6 +677,34 @@ Deno.serve(async (req: Request) => {
       .maybeSingle()
     if (!adminRow) return json({ error: 'Acesso negado' }, 403)
 
+    // ── GET_SYSTEM_HEALTH ──────────────────────────────────────
+    // Painel de saúde: cota de e-mail (Brevo reseta 300/dia no free), tamanho
+    // do banco (limite 500MB no free do Supabase) e total de usuários.
+    // Não cobre banda/invocações de function — o Supabase não expõe isso
+    // por API pública, só no Dashboard.
+    if (action === 'get_system_health') {
+      let brevoCreditos: number | null = null
+      if (BREVO) {
+        try {
+          const r = await fetch('https://api.brevo.com/v3/account', { headers: { 'api-key': BREVO } })
+          if (r.ok) {
+            const d = await r.json()
+            const plano = (d.plan ?? []).find((p: any) => p.creditsType === 'sendLimit')
+            brevoCreditos = plano?.credits ?? null
+          }
+        } catch (_e) { /* segue sem esse dado */ }
+      }
+
+      const { data: dbBytes } = await sb.rpc('get_db_size_bytes')
+      const { count: totalUsuarios } = await sb.from('user_profiles').select('*', { count: 'exact', head: true })
+
+      return json({
+        brevo: { creditosRestantes: brevoCreditos, limiteDiario: 300 },
+        banco: { bytes: dbBytes ?? null, limiteBytes: 500 * 1024 * 1024 },
+        usuarios: { total: totalUsuarios ?? 0 },
+      })
+    }
+
     // ── GET_ASAAS_ASSINATURAS ─────────────────────────────────
     if (action === 'get_asaas_assinaturas') {
       const { data, error: ae } = await sb.from('asaas_assinaturas').select('*').order('criado_em', { ascending: false })

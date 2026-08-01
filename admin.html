@@ -433,8 +433,24 @@ tbody tr:hover td{background:var(--cinza1);}
         <div class="cfg-section-title">Informações do sistema</div>
         <div class="cfg-row"><div class="cfg-label">URL do app</div><div class="cfg-val">simulapro.app.br</div></div>
         <div class="cfg-row"><div class="cfg-label">Supabase Project</div><div class="cfg-val">uefnirdmhtsbpdxnonnd</div></div>
-        <div class="cfg-row"><div class="cfg-label">Email transacional</div><div class="cfg-val">Brevo · 300 emails/dia</div></div>
         <div class="cfg-row"><div class="cfg-label">Versão do painel</div><div class="cfg-val">2.0.0</div></div>
+      </div>
+
+      <div class="cfg-section">
+        <div class="cfg-section-title">Saúde do sistema</div>
+        <div class="cfg-row">
+          <div><div class="cfg-label">Cota de e-mail (Brevo, hoje)</div><div class="cfg-sub">Reseta à meia-noite — usada por redefinição de senha, testes grátis e confirmações</div></div>
+          <div class="cfg-val" id="healthBrevo">—</div>
+        </div>
+        <div class="cfg-row">
+          <div><div class="cfg-label">Tamanho do banco</div><div class="cfg-sub">Limite do plano Free do Supabase</div></div>
+          <div class="cfg-val" id="healthDb">—</div>
+        </div>
+        <div class="cfg-row">
+          <div><div class="cfg-label">Usuários cadastrados</div><div class="cfg-sub">Total de corretores no sistema</div></div>
+          <div class="cfg-val" id="healthUsuarios">—</div>
+        </div>
+        <div style="font-size:11px;color:var(--texto3);margin-top:10px;line-height:1.5">Banda e invocações de function não aparecem aqui — o Supabase não expõe esses números por API, só no <a href="https://supabase.com/dashboard/project/uefnirdmhtsbpdxnonnd/settings/billing/subscription" target="_blank" rel="noopener" style="color:var(--azul);font-weight:600">Dashboard de billing</a>.</div>
       </div>
     </div>
 
@@ -1086,6 +1102,35 @@ function renderConfig() {
   document.getElementById('cfgTrialDias').value     = fin.trial_dias || 14
   document.getElementById('cfgEmailSuporte').value  = fin.email_suporte || 'simulador.wc@gmail.com'
   renderPlanoList(fin.planos || [{id:'mensal',nome:'Mensal',preco:70},{id:'anual',nome:'Anual',preco:600}])
+  loadSystemHealth()
+}
+
+async function loadSystemHealth() {
+  const el = id => document.getElementById(id)
+  const r = await call('get_system_health')
+  if (!r || r.error || r._forbidden) { el('healthBrevo').textContent = 'Erro ao carregar'; return }
+
+  const creditos = r.brevo && r.brevo.creditosRestantes
+  if (creditos != null) {
+    const pct = creditos / r.brevo.limiteDiario
+    const cor = pct < 0.15 ? 'kv-verm' : pct < 0.4 ? 'kv-laranja' : 'kv-verde'
+    el('healthBrevo').innerHTML = `<span class="${cor}">${creditos} / ${r.brevo.limiteDiario} restantes</span>`
+  } else {
+    el('healthBrevo').textContent = 'Indisponível'
+  }
+
+  const bytes = r.banco && r.banco.bytes
+  if (bytes != null) {
+    const mb = (bytes/1024/1024).toFixed(1)
+    const limMb = (r.banco.limiteBytes/1024/1024).toFixed(0)
+    const pct = bytes / r.banco.limiteBytes
+    const cor = pct > 0.85 ? 'kv-verm' : pct > 0.6 ? 'kv-laranja' : 'kv-verde'
+    el('healthDb').innerHTML = `<span class="${cor}">${mb} MB / ${limMb} MB</span>`
+  } else {
+    el('healthDb').textContent = 'Indisponível'
+  }
+
+  el('healthUsuarios').textContent = (r.usuarios && r.usuarios.total) ?? '—'
 }
 
 function renderPlanoList(pl) {
