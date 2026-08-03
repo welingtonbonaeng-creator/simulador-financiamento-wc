@@ -182,12 +182,6 @@ section{padding:5rem 1.5rem;}
 .preco-card.destaque{border-color:var(--laranja);box-shadow:0 16px 48px rgba(245,124,0,.2);}
 .preco-card.blurred{filter:blur(8px);pointer-events:none;user-select:none;}
 .preco-card.blurred::after{content:'';position:absolute;inset:0;border-radius:var(--radius);background:rgba(255,255,255,.15);}
-.teste-card{border-radius:var(--radius);padding:2.5rem;border:2px dashed #CBD5E1;background:linear-gradient(135deg,#F0F4FF,#F8F9FF);text-align:center;margin-top:1.5rem;max-width:480px;margin-left:auto;margin-right:auto;}
-.teste-card-icon{font-size:2.5rem;margin-bottom:.75rem;}
-.teste-card h3{font-size:1.25rem;font-weight:800;color:var(--texto);margin:0 0 .5rem;}
-.teste-card p{font-size:14px;color:var(--texto2);margin:0 0 1.5rem;line-height:1.6;}
-.btn-teste{display:inline-block;background:var(--azul);color:#fff;padding:.875rem 2rem;border-radius:var(--radius);font-weight:700;font-size:15px;text-decoration:none;cursor:pointer;border:none;transition:opacity .2s;}
-.btn-teste:hover{opacity:.85;}
 /* Modal solicitação */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:1rem;}
 .modal-overlay.open{display:flex;}
@@ -810,55 +804,8 @@ footer{background:#0F172A;padding:3rem 1.5rem;}
         <a href="#" class="btn-preco laranja" onclick="abrirCheckout('anual');return false;">Assinar Plano Anual →</a>
       </div>
     </div>
-
-    <!-- Card solicitar teste -->
-    <div class="teste-card fade-up">
-      <div class="teste-card-icon">🧪</div>
-      <h3>Quer testar antes de assinar?</h3>
-      <p>Solicite um acesso de teste gratuito por 7 dias. Sem cartão de crédito, sem compromisso.</p>
-      <button class="btn-teste" onclick="abrirModalTeste()">Solicitar Acesso de Teste</button>
-    </div>
   </div>
 </section>
-
-<!-- Modal solicitar teste -->
-<div class="modal-overlay" id="modalTeste">
-  <div class="modal-box">
-    <div id="modalForm">
-      <h3>🧪 Solicitar Acesso de Teste</h3>
-      <p>Preencha os dados abaixo. As credenciais chegam no seu e-mail em segundos.</p>
-      <div class="modal-field">
-        <label for="testeNome">Nome completo</label>
-        <input type="text" id="testeNome" placeholder="Ex: João Silva" autocomplete="name"/>
-      </div>
-      <div class="modal-field">
-        <label for="testeEmail">E-mail</label>
-        <input type="email" id="testeEmail" placeholder="seu@email.com" autocomplete="email"/>
-      </div>
-      <div class="modal-field">
-        <label for="testeEmailConfirm">Confirme seu e-mail</label>
-        <input type="email" id="testeEmailConfirm" placeholder="digite novamente" autocomplete="off" onpaste="return false" oncopy="return false" oncut="return false"/>
-      </div>
-      <div class="modal-field">
-        <label for="testeTel">WhatsApp / Telefone</label>
-        <input type="tel" id="testeTel" placeholder="(21) 99999-9999" autocomplete="tel"/>
-      </div>
-      <div class="modal-field" style="display:flex;align-items:flex-start;gap:8px;margin-top:4px">
-        <input type="checkbox" id="testeTermos" style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer"/>
-        <label for="testeTermos" style="font-size:12px;font-weight:400;color:#475569;line-height:1.5;cursor:pointer">Li e aceito os <a href="termos.html" target="_blank" rel="noopener" style="color:#0B3D91;font-weight:600">Termos de Uso e a Política de Privacidade</a>.</label>
-      </div>
-      <div class="modal-btns">
-        <button class="btn-modal-cancel" onclick="fecharModalTeste()">Cancelar</button>
-        <button class="btn-modal-submit" id="btnEnviarTeste" onclick="enviarSolicitacaoTeste()">Enviar Solicitação</button>
-      </div>
-    </div>
-    <div class="modal-success" id="modalSucesso">
-      <div class="success-icon">✅</div>
-      <h4>Acesso liberado!</h4>
-      <p>Seu login e senha já foram enviados por e-mail — chega em segundos. Fique de olho na caixa de entrada (e no spam, por garantia).</p>
-    </div>
-  </div>
-</div>
 
 <!-- Modal checkout (assinatura Asaas) -->
 <div class="modal-overlay" id="modalCheckout">
@@ -1048,26 +995,6 @@ var _sb = supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s'
 );
 
-function abrirModalTeste(){
-  document.getElementById('modalTeste').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-function fecharModalTeste(){
-  document.getElementById('modalTeste').classList.remove('open');
-  document.body.style.overflow='';
-  // reset form
-  document.getElementById('modalForm').style.display='block';
-  document.getElementById('modalSucesso').style.display='none';
-  document.getElementById('testeNome').value='';
-  document.getElementById('testeEmail').value='';
-  document.getElementById('testeEmailConfirm').value='';
-  document.getElementById('testeTel').value='';
-  document.getElementById('testeTermos').checked=false;
-}
-document.getElementById('modalTeste').addEventListener('click',function(e){
-  if(e.target===this)fecharModalTeste();
-});
-
 var _planoSelecionado = null;
 // Permite abrir o checkout direto num plano específico via link, ex:
 // vendas.html?plano=mensal&cupom=TESTE30 — evita depender de qual botão
@@ -1179,36 +1106,6 @@ async function enviarCheckout(){
   }
 }
 
-async function enviarSolicitacaoTeste(){
-  var nome=document.getElementById('testeNome').value.trim();
-  var email=document.getElementById('testeEmail').value.trim();
-  var emailConfirm=document.getElementById('testeEmailConfirm').value.trim();
-  var tel=document.getElementById('testeTel').value.trim();
-  var aceitouTermos=document.getElementById('testeTermos').checked;
-  if(!nome){alert('Informe seu nome completo.');return;}
-  if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
-  if(email.toLowerCase()!==emailConfirm.toLowerCase()){alert('Os e-mails digitados não são iguais. Confira e digite novamente — é nele que chega seu login e senha.');return;}
-  if(!aceitouTermos){alert('Para continuar, marque que você leu e aceita os Termos de Uso e a Política de Privacidade.');return;}
-  var btn=document.getElementById('btnEnviarTeste');
-  btn.disabled=true;btn.textContent='Enviando...';
-  try{
-    var res=await _sb.functions.invoke('admin-action',{body:{
-      action:'submit_request',
-      payload:{ nome:nome, email:email, telefone:tel, aceitouTermos:true, userAgent:navigator.userAgent }
-    }});
-    if(res.error){
-      var msg='Erro ao enviar solicitação. Tente novamente.';
-      try{ var body=await res.error.context.json(); if(body&&body.error) msg=body.error; }catch(_){}
-      throw new Error(msg);
-    }
-    if(res.data && res.data.error) throw new Error(res.data.error);
-    document.getElementById('modalForm').style.display='none';
-    document.getElementById('modalSucesso').style.display='block';
-  }catch(e){
-    alert(e.message||'Erro ao enviar solicitação. Tente novamente.');
-    btn.disabled=false;btn.textContent='Enviar Solicitação';
-  }
-}
 </script>
 </body>
 </html>
