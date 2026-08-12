@@ -312,6 +312,20 @@ Deno.serve(async (req: Request) => {
     // ── AÇÃO PÚBLICA: asaas_checkout (sem autenticação) ───────
     // Só fala com a Asaas pelo backend — a API key nunca chega no navegador.
     if (action === 'asaas_checkout') {
+      // Rate limit por IP: essa ação bate na API da Asaas e cria cliente/assinatura
+      // de verdade a cada chamada — sem trava, um script poderia floodar sem parar.
+      const ipCheckout = clientIp(req) ?? 'desconhecido'
+      const janelaCheckout = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+      const { count: tentativasCheckoutIp } = await sb.from('events').select('*', { count: 'exact', head: true })
+        .eq('action', 'asaas_checkout_tentativa').contains('details', { ip: ipCheckout }).gte('created_at', janelaCheckout)
+      await sb.from('events').insert({
+        email: payload?.email ?? null, action: 'asaas_checkout_tentativa',
+        details: { ip: ipCheckout }, user_agent: 'asaas_checkout',
+      })
+      if ((tentativasCheckoutIp ?? 0) >= 10) {
+        return json({ error: 'Muitas tentativas de checkout. Aguarde alguns minutos e tente novamente.' }, 429)
+      }
+
       const { nome, email, cpfCnpj, telefone, plano, aceitouTermos } = payload
       if (!nome || !email || !cpfCnpj || !plano) {
         return json({ error: 'nome, email, cpfCnpj e plano são obrigatórios' }, 400)
@@ -566,6 +580,18 @@ Deno.serve(async (req: Request) => {
     // expiração é só anti-vazamento de link, não limita o acesso do
     // cliente, que é permanente enquanto ele tiver sessão válida.
     if (action === 'get_training_urls') {
+      // Rate limit por usuário: cada chamada é barata (assinatura é só cálculo
+      // local), mas ainda assim vale travar uso automatizado/anormal.
+      const janelaTreino = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+      const { count: tentativasTreino } = await sb.from('events').select('*', { count: 'exact', head: true })
+        .eq('action', 'get_training_urls_requested').eq('user_id', user.id).gte('created_at', janelaTreino)
+      await sb.from('events').insert({
+        user_id: user.id, email: user.email, action: 'get_training_urls_requested', user_agent: 'get_training_urls',
+      })
+      if ((tentativasTreino ?? 0) >= 20) {
+        return json({ error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' }, 429)
+      }
+
       const R2_ACCOUNT_ID = Deno.env.get('R2_ACCOUNT_ID') ?? ''
       const R2_ACCESS_KEY_ID = Deno.env.get('R2_ACCESS_KEY_ID') ?? ''
       const R2_SECRET_ACCESS_KEY = Deno.env.get('R2_SECRET_ACCESS_KEY') ?? ''
