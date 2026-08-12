@@ -87,7 +87,7 @@ function _renderVideos(videos){
   grid.innerHTML=videos.map(function(v){
     return '<div class="vcard">'+
       '<div class="vcard-head"><div class="vnum">'+v.ordem+'</div></div>'+
-      '<video controls preload="metadata" src="'+v.url+'"></video>'+
+      '<video controls controlsList="nodownload noremoteplayback" disablePictureInPicture oncontextmenu="return false" preload="metadata" src="'+v.url+'"></video>'+
     '</div>';
   }).join('');
   status.style.display='none';
