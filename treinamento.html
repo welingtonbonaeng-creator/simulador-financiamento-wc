@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
+<title>Central de Treinamento — SimulaPro</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --azul:#0B3D91;--azul2:#1565C0;--azul3:#1976D2;--azulclaro:#E3F0FF;
+  --verde:#1B6E3F;--verdeClaro:#E6F4EC;
+  --cinza1:#F4F6FA;--cinza2:#E8ECF4;--cinza3:#C8CDD8;
+  --texto:#111827;--texto2:#4B5563;--texto3:#9CA3AF;
+  --branco:#FFFFFF;--sombra:0 2px 16px rgba(11,61,145,.09);
+  --radius:12px;--radius2:8px;
+}
+html{visibility:hidden;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sora',sans-serif;background:var(--cinza1);color:var(--texto);min-height:100vh;}
+header{background:#fff;padding:0 1.5rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(11,61,145,.1);border-bottom:2px solid var(--azulclaro);}
+.header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:72px;flex-wrap:wrap;gap:8px;padding:10px 0;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo img{height:44px;width:auto;display:block;}
+.badge-header{background:var(--azulclaro);color:var(--azul);font-size:11px;padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace;font-weight:600;}
+.hdr-btn{background:var(--azulclaro);border:1px solid var(--cinza2);color:var(--azul);font-size:11px;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.hdr-btn.dark{background:var(--azul);border-color:var(--azul);color:#fff}
+.hero{background:linear-gradient(135deg,#0B3D91,#1565C0 60%,#1976D2);padding:1.75rem 1.5rem 2rem;overflow:hidden;position:relative;}
+.hero::before{content:'';position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.05);}
+.hero-inner{max-width:960px;margin:0 auto;position:relative;z-index:1;}
+.hero h1{color:#fff;font-size:22px;font-weight:700;margin-bottom:4px;}
+.hero p{color:rgba(255,255,255,.65);font-size:13px;}
+main{max-width:960px;margin:0 auto;padding:1.5rem 1.1rem 3rem;}
+.status{color:var(--texto2);font-size:13px;padding:2rem 0;text-align:center;}
+.grid{display:grid;grid-template-columns:1fr;gap:14px;}
+.vcard{background:var(--branco);border-radius:var(--radius);box-shadow:var(--sombra);overflow:hidden;}
+.vcard-head{display:flex;align-items:center;gap:10px;padding:.9rem 1.1rem;border-bottom:1px solid var(--cinza2);}
+.vnum{width:26px;height:26px;border-radius:50%;background:var(--azulclaro);color:var(--azul);font-family:'DM Mono',monospace;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.vtitle{font-size:14px;font-weight:600;color:var(--texto);}
+.vcard video{width:100%;display:block;background:#0B1220;max-height:520px;}
+.footnote{color:var(--texto3);font-size:11.5px;text-align:center;margin-top:1.5rem;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <img src="logo.png" alt="SimulaPro"/>
+      <div class="badge-header">🎓 Central de Treinamento</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <a href="app.html" class="hdr-btn">← Voltar ao simulador</a>
+      <button onclick="_logout()" class="hdr-btn dark">Sair</button>
+    </div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h1>Aprenda a usar o SimulaPro</h1>
+    <p>9 vídeos curtos, na ordem certa, do começo da simulação até a amortização.</p>
+  </div>
+</div>
+
+<main>
+  <div id="status" class="status">Carregando seus vídeos...</div>
+  <div id="grid" class="grid" style="display:none"></div>
+  <p class="footnote">Esses vídeos são de uso exclusivo dos clientes SimulaPro. Sempre que gravarmos um treinamento novo, ele aparece aqui automaticamente.</p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const _sb=supabase.createClient('https://uefnirdmhtsbpdxnonnd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s');
+const FN_URL='https://uefnirdmhtsbpdxnonnd.supabase.co/functions/v1/admin-action';
+
+function _logout(){
+  _sb.auth.signOut().then(function(){window.location.replace('login.html');});
+}
+
+function _renderVideos(videos){
+  const grid=document.getElementById('grid');
+  const status=document.getElementById('status');
+  if(!videos||videos.length===0){
+    status.textContent='Nenhum vídeo de treinamento disponível no momento.';
+    return;
+  }
+  grid.innerHTML=videos.map(function(v){
+    return '<div class="vcard">'+
+      '<div class="vcard-head"><div class="vnum">'+v.ordem+'</div><div class="vtitle">'+v.titulo.replace(/^\d+\.\s*/,'')+'</div></div>'+
+      '<video controls preload="metadata" src="'+v.url+'"></video>'+
+    '</div>';
+  }).join('');
+  status.style.display='none';
+  grid.style.display='grid';
+}
+
+_sb.auth.getSession().then(async function(r){
+  const s=r.data.session;
+  if(!s){window.location.replace('login.html');return;}
+  document.documentElement.style.visibility='';
+
+  try{
+    const res=await fetch(FN_URL,{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+s.access_token,
+        'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZm5pcmRtaHRzYnBkeG5vbm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzEwOTQsImV4cCI6MjA5Nzc0NzA5NH0.eUkpLvQ0Wqz1LAUrAVuBqAPhjR3WFJZ7RaNrPLNro4s',
+        'Content-Type':'application/json',
+      },
+      body:JSON.stringify({action:'get_training_urls'}),
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Erro ao carregar treinamento');
+    _renderVideos(data.videos);
+  }catch(e){
+    document.getElementById('status').textContent='Não foi possível carregar os vídeos agora. Tente novamente em instantes.';
+  }
+});
+</script>
+</body>
+</html>

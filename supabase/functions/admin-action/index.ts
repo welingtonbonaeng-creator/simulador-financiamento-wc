@@ -1,4 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { S3Client, GetObjectCommand } from 'npm:@aws-sdk/client-s3@3'
+import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3'
 
 const ALLOWED_ORIGINS = [
   'https://simulapro.app.br',
@@ -179,6 +181,7 @@ Deno.serve(async (req: Request) => {
                           <p style="margin:4px 0;font-size:14px"><strong>Senha:</strong> ${senha}</p>
                         </div>
                         <a href="${APP}/login.html" style="display:inline-block;width:100%;background:#0B3D91;color:#fff;padding:14px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;box-sizing:border-box">Acessar o SimulaPro →</a>
+                        <a href="${APP}/treinamento.html" style="display:inline-block;width:100%;background:#fff;color:#0B3D91;border:1px solid #0B3D91;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;text-align:center;box-sizing:border-box;margin-top:10px">🎓 Ver Central de Treinamento</a>
                       </div>
                     </div>`
                   )
@@ -556,6 +559,43 @@ Deno.serve(async (req: Request) => {
       return json({ success: true })
     }
 
+    // ── GET_TRAINING_URLS ──────────────────────────────────────
+    // Qualquer usuário autenticado (chegar aqui já prova que é conta real
+    // com sessão válida — é exatamente a "base de clientes" que deve ver o
+    // treinamento). Gera signed URLs curtas pro R2 a cada chamada: a
+    // expiração é só anti-vazamento de link, não limita o acesso do
+    // cliente, que é permanente enquanto ele tiver sessão válida.
+    if (action === 'get_training_urls') {
+      const R2_ACCOUNT_ID = Deno.env.get('R2_ACCOUNT_ID') ?? ''
+      const R2_ACCESS_KEY_ID = Deno.env.get('R2_ACCESS_KEY_ID') ?? ''
+      const R2_SECRET_ACCESS_KEY = Deno.env.get('R2_SECRET_ACCESS_KEY') ?? ''
+      const R2_BUCKET = Deno.env.get('R2_BUCKET') ?? ''
+      if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET) {
+        return json({ error: 'Treinamento ainda não configurado' }, 503)
+      }
+
+      const { data: videos, error: te } = await sb
+        .from('treinamentos')
+        .select('titulo, chave, ordem')
+        .eq('ativo', true)
+        .order('ordem', { ascending: true })
+      if (te) return json({ error: te.message }, 500)
+
+      const s3 = new S3Client({
+        region: 'auto',
+        endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
+      })
+
+      const withUrls = await Promise.all((videos ?? []).map(async (v: any) => ({
+        titulo: v.titulo,
+        ordem: v.ordem,
+        url: await getSignedUrl(s3, new GetObjectCommand({ Bucket: R2_BUCKET, Key: v.chave }), { expiresIn: 6 * 3600 }),
+      })))
+
+      return json({ videos: withUrls })
+    }
+
     // verificar se é admin
     const { data: adminRow } = await sb
       .from('admins')
@@ -714,6 +754,7 @@ Deno.serve(async (req: Request) => {
                 <p style="margin:4px 0;font-size:14px"><strong>Senha:</strong> ${senha}</p>
               </div>
               <a href="${APP}/login.html" style="display:inline-block;width:100%;background:#0B3D91;color:#fff;padding:14px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;box-sizing:border-box">Acessar o SimulaPro →</a>
+              <a href="${APP}/treinamento.html" style="display:inline-block;width:100%;background:#fff;color:#0B3D91;border:1px solid #0B3D91;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;text-align:center;box-sizing:border-box;margin-top:10px">🎓 Ver Central de Treinamento</a>
             </div>
           </div>`
         )
@@ -786,6 +827,7 @@ Deno.serve(async (req: Request) => {
                 <p style="margin:4px 0;font-size:14px"><strong>Senha:</strong> ${senha}</p>
               </div>
               <a href="${APP}/login.html" style="display:inline-block;width:100%;background:#0B3D91;color:#fff;padding:14px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;box-sizing:border-box">Acessar o SimulaPro →</a>
+              <a href="${APP}/treinamento.html" style="display:inline-block;width:100%;background:#fff;color:#0B3D91;border:1px solid #0B3D91;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;text-align:center;box-sizing:border-box;margin-top:10px">🎓 Ver Central de Treinamento</a>
             </div>
           </div>`
         )
