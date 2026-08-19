@@ -1341,7 +1341,25 @@ function gerarSenhaRand() {
   return Array.from({length:8},()=>c[Math.floor(Math.random()*c.length)]).join('')
 }
 
+// Nunca libera um 2º teste sem o admin ver e confirmar — pedido do Well.
+// Só considera testes já APROVADOS antes (ignora a própria solicitação
+// pendente sendo processada agora). Retorna true pra seguir, false pra abortar.
+async function _avisarSeTesteDuplicado(email) {
+  const { data } = await _sb.from('solicitacoes_teste')
+    .select('nome, validade, aprovado_em')
+    .ilike('email', email)
+    .eq('status', 'aprovado')
+    .order('aprovado_em', { ascending: false })
+  if (!data || !data.length) return true
+  const ultimo = data[0]
+  const quando = ultimo.aprovado_em ? fmtDate(ultimo.aprovado_em) : 'data desconhecida'
+  const venc   = ultimo.validade ? `, válido até ${fmtDate(ultimo.validade)}` : ''
+  return confirm(`Esse e-mail já teve um acesso de teste antes (aprovado em ${quando}${venc}). Deseja liberar outro teste mesmo assim?`)
+}
+
 async function aprovarSolicitacao(requestId, nome, email, telefone) {
+  const podeSeguir = await _avisarSeTesteDuplicado(email)
+  if (!podeSeguir) return
   if (!confirm(`Criar acesso de teste para ${nome} (${email})?`)) return
   const senha = gerarSenhaRand()
   const btn = document.querySelector(`button[onclick*="${requestId}"]`)
@@ -1393,6 +1411,8 @@ async function criarTeste() {
   const msgEl    = document.getElementById('modalTesteMsg')
   const btn      = document.getElementById('btnCriarTeste')
   if (!nome||!email||!senha) { msgEl.textContent='Preencha nome, e-mail e senha.'; msgEl.className='msg er'; return }
+  const podeSeguir = await _avisarSeTesteDuplicado(email)
+  if (!podeSeguir) return
   btn.disabled=true; btn.textContent='Criando...'
   const r = await call('create_user', { nome, email, senha, tipo: 'teste' })
   btn.disabled=false; btn.textContent='Criar Acesso de Teste'
