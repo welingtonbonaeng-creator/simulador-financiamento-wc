@@ -243,17 +243,23 @@ async function _calcBackend(action, payload) {
 }
 
 /* Verifica se a assinatura está atrasada/bloqueada e avisa o corretor
-   dentro do próprio app — em vez de simplesmente banir o login. */
+   dentro do próprio app — em vez de simplesmente banir o login.
+   Atraso tem 3 dias de tolerância (com aviso a cada acesso, contagem
+   regressiva calculada no backend); depois disso o app trava o uso até
+   o pagamento ser identificado — sem banir a conta. */
 async function _checkAssinatura(s){
   try{
     var r=await fetch(_ADMIN_EDGE,{method:'POST',
       headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
       body:JSON.stringify({action:'get_my_status'})});
     var d=await r.json();
-    if(d.status==='bloqueado') return 'bloqueado';
-    if(d.status==='atrasado') return d.assinatura||{};
-    return null;
-  }catch(e){ return null; }
+    if(d.status==='bloqueado') return {tipo:'bloqueado'};
+    if(d.status==='atrasado'){
+      if(d.atraso && d.atraso.bloqueado) return {tipo:'suspenso', assinatura:d.assinatura||{}};
+      return {tipo:'atrasado', assinatura:d.assinatura||{}, atraso:d.atraso};
+    }
+    return {tipo:'ok'};
+  }catch(e){ return {tipo:'ok'}; }
 }
 /* Conta ainda usando a senha provisória do "esqueci minha senha"? Força a
    tela de definir senha definitiva antes de qualquer outra coisa no app. */
@@ -362,17 +368,46 @@ function _mostrarBloqueioTotal(){
       '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'login.html\')})" style="background:#0B3D91;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">Sair</button>'+
     '</div></div>';
 }
-function _mostrarAvisoRenovacao(assinatura){
+function _mostrarAvisoRenovacao(assinatura, atraso){
   var url=assinatura&&assinatura.invoice_url;
+  var ultimoDia = !!(atraso && atraso.ultimoDia);
+  var diasRestantes = atraso ? atraso.diasRestantes : null;
+  var titulo, corpo;
+  if(ultimoDia){
+    titulo='Hoje é seu último dia de acesso';
+    corpo='O pagamento do SimulaPro ainda não foi identificado. Regularize hoje — a partir de amanhã o acesso fica suspenso até o pagamento ser confirmado.';
+  } else if(diasRestantes!=null){
+    titulo='Sua assinatura está atrasada';
+    corpo='Faltam '+diasRestantes+' dia'+(diasRestantes===1?'':'s')+' para você perder o acesso ao SimulaPro. Regularize o pagamento pra continuar usando sem interrupção.';
+  } else {
+    titulo='Sua assinatura está atrasada';
+    corpo='O pagamento do SimulaPro não foi identificado. Renove agora para continuar usando o simulador sem interrupção.';
+  }
   var html='<div id="_avisoRenovacao" style="position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:\'Sora\',sans-serif">'+
     '<div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:32px 28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">'+
       '<div style="font-size:40px;margin-bottom:12px">⚠️</div>'+
-      '<div style="font-size:18px;font-weight:800;color:#0F172A;margin-bottom:8px">Sua assinatura está atrasada</div>'+
-      '<div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:22px">O pagamento do SimulaPro não foi identificado. Renove agora para continuar usando o simulador sem interrupção.</div>'+
+      '<div style="font-size:18px;font-weight:800;color:#0F172A;margin-bottom:8px">'+titulo+'</div>'+
+      '<div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:22px">'+corpo+'</div>'+
       (url?'<a href="'+url+'" target="_blank" rel="noopener" style="display:block;background:#0B3D91;color:#fff;padding:14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px">Pagar agora →</a>':'')+
       '<button onclick="document.getElementById(\'_avisoRenovacao\').remove()" style="background:none;border:none;color:#94A3B8;font-size:12px;cursor:pointer;padding:8px;font-family:inherit">Continuar mesmo assim</button>'+
     '</div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
+}
+/* Passou dos 3 dias de tolerância sem pagar — trava o uso do app (a conta
+   não é banida, só o acesso ao simulador; volta sozinho no próximo login
+   assim que o pagamento for confirmado). Sem botão de pular, diferente do
+   aviso dos primeiros 3 dias. */
+function _mostrarAcessoSuspenso(assinatura){
+  var url=assinatura&&assinatura.invoice_url;
+  document.documentElement.style.visibility='';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0B3D91;padding:20px;font-family:\'Sora\',sans-serif">'+
+    '<div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:36px 28px;text-align:center">'+
+      '<div style="font-size:40px;margin-bottom:12px">🔒</div>'+
+      '<div style="font-size:18px;font-weight:800;color:#0F172A;margin-bottom:8px">Acesso suspenso por atraso no pagamento</div>'+
+      '<div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:22px">O prazo de tolerância acabou e o pagamento ainda não foi identificado. Regularize agora pra voltar a usar o SimulaPro — o acesso libera automaticamente assim que o pagamento for confirmado.</div>'+
+      (url?'<a href="'+url+'" target="_blank" rel="noopener" style="display:block;background:#0B3D91;color:#fff;padding:14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px">Pagar agora →</a>':'')+
+      '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'login.html\')})" style="background:none;border:none;color:#94A3B8;padding:10px;font-size:12px;cursor:pointer;font-family:inherit">Sair</button>'+
+    '</div></div>';
 }
 
 _sb.auth.getSession().then(async function(r){
@@ -384,7 +419,8 @@ _sb.auth.getSession().then(async function(r){
   if(precisaTrocarSenha){ _mostrarDefinirNovaSenha(s); return; }
 
   var assinaturaCheck=await _checkAssinatura(s);
-  if(assinaturaCheck==='bloqueado'){ _mostrarBloqueioTotal(); return; }
+  if(assinaturaCheck.tipo==='bloqueado'){ _mostrarBloqueioTotal(); return; }
+  if(assinaturaCheck.tipo==='suspenso'){ _mostrarAcessoSuspenso(assinaturaCheck.assinatura); return; }
 
   var termosOk=await _checkTermosAceitos(s);
   if(!termosOk){ _mostrarTermosBloqueio(s); return; }
@@ -398,7 +434,7 @@ _sb.auth.getSession().then(async function(r){
   }
 
   document.documentElement.style.visibility='';
-  if(assinaturaCheck && typeof assinaturaCheck==='object') _mostrarAvisoRenovacao(assinaturaCheck);
+  if(assinaturaCheck.tipo==='atrasado') _mostrarAvisoRenovacao(assinaturaCheck.assinatura, assinaturaCheck.atraso);
   document.addEventListener('DOMContentLoaded',function(){
     var el=document.getElementById('_userEmail');
     if(el)el.textContent=s.user.email;
