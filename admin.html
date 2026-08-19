@@ -627,14 +627,24 @@ let _session = null
 let _users   = []
 let _allLogs = []
 let _logPage = 0
-let _asaasMap = {} // { [userId]: linha real de asaas_assinaturas }
+let _asaasMap  = {} // { [userId]: linha real de asaas_assinaturas }
+let _testesMap = {} // { [userId]: linha aprovada de solicitacoes_teste }
 let _finCache = { assinaturas:{}, planos:[{id:'mensal',nome:'Mensal',preco:70},{id:'anual',nome:'Anual',preco:600}], trial_dias:14, email_suporte:'simulador.wc@gmail.com' }
 
-// Resolve a assinatura de um corretor: dado real da Asaas tem prioridade
-// sobre o controle manual (localStorage), usado só p/ quem não paga via Asaas.
+// Resolve a assinatura de um corretor pra exibição no Financeiro. Ordem de
+// prioridade: assinatura real na Asaas > acesso de teste (validade definida
+// pelo admin ao aprovar, varia por corretor) > controle manual (fora dos
+// dois primeiros casos).
 function resolvedAssinatura(userId, fin) {
   const a = _asaasMap[userId]
   if (a) return { plano: a.plano, valor: a.valor, status: a.status, vencimento: a.proximo_vencimento, _asaas: true }
+  const t = _testesMap[userId]
+  if (t) {
+    const hoje = new Date(); hoje.setHours(0,0,0,0)
+    const venc = t.validade ? new Date(t.validade) : null
+    const vencido = venc ? venc < hoje : false
+    return { plano: 'teste', valor: 0, status: vencido ? 'cancelado' : 'trial', vencimento: t.validade, _teste: true }
+  }
   return (fin.assinaturas||{})[userId] || null
 }
 
@@ -642,6 +652,14 @@ async function loadAsaasAssinaturas() {
   const r = await call('get_asaas_assinaturas')
   _asaasMap = {}
   ;(r?.assinaturas||[]).forEach(a => { if (a.user_id) _asaasMap[a.user_id] = a })
+}
+
+async function loadTestesCache() {
+  const { data, error } = await _sb.from('solicitacoes_teste').select('*').eq('status', 'aprovado').order('aprovado_em', { ascending: false })
+  if (error) throw error
+  _testesCache = data || []
+  _testesMap = {}
+  _testesCache.forEach(t => { if (t.user_id) _testesMap[t.user_id] = t })
 }
 
 // Controle manual de plano/status (corretores fora da Asaas) — vive no
@@ -676,6 +694,7 @@ async function enterApp() {
   if (!stats) { show('login'); return }
   await loadFinData()
   await loadAsaasAssinaturas()
+  await loadTestesCache()
   applyStats(stats)
   await loadUsers()
   show('app')
@@ -964,6 +983,8 @@ function renderFinanceiro() {
       :`<span style="color:${dias<=7?'var(--laranja)':'var(--verde)'};">${dias}d</span>`
     const acaoCell = ass._asaas
       ? `<span style="color:var(--texto3);font-size:10px" title="Assinatura gerenciada automaticamente pela Asaas">🔒 Via Asaas</span>`
+      : ass._teste
+      ? `<span style="color:var(--texto3);font-size:10px" title="Prazo definido na aba Acessos de Teste">🎓 Via Teste</span>`
       : `<button class="btn-act a-editar" onclick="openModalFin('${u.id}','${esc(u.nome||'')}','${esc(u.email)}')">Editar</button>`
     return `<tr>
       <td><strong>${esc(u.nome||'—')}</strong></td>
@@ -1217,14 +1238,8 @@ async function renderTestes() {
   const tbody = document.getElementById('testeBody')
   tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Carregando...</td></tr>'
 
-  const { data, error } = await _sb
-    .from('solicitacoes_teste')
-    .select('*')
-    .eq('status', 'aprovado')
-    .order('aprovado_em', { ascending: false })
-
-  if (error) { tbody.innerHTML = `<tr class="empty-row"><td colspan="9">Erro: ${esc(error.message)}</td></tr>`; return }
-  _testesCache = data || []
+  try { await loadTestesCache() }
+  catch (error) { tbody.innerHTML = `<tr class="empty-row"><td colspan="9">Erro: ${esc(error.message)}</td></tr>`; return }
 
   const hoje = new Date(); hoje.setHours(0,0,0,0)
   let ativos = 0, vencidos = 0
