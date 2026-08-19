@@ -242,11 +242,14 @@ async function _calcBackend(action, payload) {
   return d;
 }
 
-/* Verifica se a assinatura está atrasada/bloqueada e avisa o corretor
-   dentro do próprio app — em vez de simplesmente banir o login.
-   Atraso tem 3 dias de tolerância (com aviso a cada acesso, contagem
-   regressiva calculada no backend); depois disso o app trava o uso até
-   o pagamento ser identificado — sem banir a conta. */
+/* Verifica se a assinatura está atrasada/bloqueada, ou se é um acesso de
+   teste vencendo/vencido, e avisa o corretor dentro do próprio app — em
+   vez de simplesmente banir o login.
+   Atraso (pago) tem 3 dias de tolerância com aviso regressivo, calculado
+   no backend; depois disso trava o uso até o pagamento ser identificado.
+   Teste NÃO tem tolerância extra: vale exatamente os dias que o admin deu,
+   com aviso nos últimos 3 dias; no dia seguinte ao vencimento, trava e
+   direciona pra tela de planos. Nunca bane a conta em nenhum dos casos. */
 async function _checkAssinatura(s){
   try{
     var r=await fetch(_ADMIN_EDGE,{method:'POST',
@@ -257,6 +260,10 @@ async function _checkAssinatura(s){
     if(d.status==='atrasado'){
       if(d.atraso && d.atraso.bloqueado) return {tipo:'suspenso', assinatura:d.assinatura||{}};
       return {tipo:'atrasado', assinatura:d.assinatura||{}, atraso:d.atraso};
+    }
+    if(d.trial){
+      if(d.trial.vencido) return {tipo:'trial_vencido'};
+      if(d.trial.avisar) return {tipo:'trial_aviso', trial:d.trial};
     }
     return {tipo:'ok'};
   }catch(e){ return {tipo:'ok'}; }
@@ -409,6 +416,43 @@ function _mostrarAcessoSuspenso(assinatura){
       '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'login.html\')})" style="background:none;border:none;color:#94A3B8;padding:10px;font-size:12px;cursor:pointer;font-family:inherit">Sair</button>'+
     '</div></div>';
 }
+/* Aviso de teste vencendo (últimos 3 dias) — dismissível, mesmo padrão do
+   aviso de atraso pago, mas manda pra tela de planos em vez de um boleto. */
+function _mostrarAvisoTrial(trial){
+  var titulo, corpo;
+  if(trial.ultimoDia){
+    titulo='Hoje é o último dia do seu teste';
+    corpo='A partir de amanhã o acesso fica bloqueado até você assinar. Escolha um plano agora pra continuar sem interrupção.';
+  } else {
+    titulo='Seu teste está acabando';
+    corpo='Faltam '+trial.diasRestantes+' dia'+(trial.diasRestantes===1?'':'s')+' pra terminar o seu período de teste. Escolha um plano pra não perder o acesso.';
+  }
+  var html='<div id="_avisoTrial" style="position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:\'Sora\',sans-serif">'+
+    '<div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:32px 28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">'+
+      '<div style="font-size:40px;margin-bottom:12px">⏳</div>'+
+      '<div style="font-size:18px;font-weight:800;color:#0F172A;margin-bottom:8px">'+titulo+'</div>'+
+      '<div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:22px">'+corpo+'</div>'+
+      '<a href="vendas.html#preco" target="_blank" rel="noopener" style="display:block;background:#0B3D91;color:#fff;padding:14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px">Ver planos e assinar →</a>'+
+      '<button onclick="document.getElementById(\'_avisoTrial\').remove()" style="background:none;border:none;color:#94A3B8;font-size:12px;cursor:pointer;padding:8px;font-family:inherit">Continuar testando</button>'+
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+/* Teste venceu (dia seguinte ao prazo dado pelo admin, sem tolerância
+   extra) — trava o uso, sem botão de pular. A conta continua ativa (não
+   é banida) só pra ele conseguir logar e assinar; o acesso libera sozinho
+   assim que o pagamento for confirmado. Não pode pedir outro teste
+   sozinho — só o admin libera outro, se quiser. */
+function _mostrarTrialVencido(){
+  document.documentElement.style.visibility='';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0B3D91;padding:20px;font-family:\'Sora\',sans-serif">'+
+    '<div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:36px 28px;text-align:center">'+
+      '<div style="font-size:40px;margin-bottom:12px">⏳</div>'+
+      '<div style="font-size:18px;font-weight:800;color:#0F172A;margin-bottom:8px">Seu teste terminou</div>'+
+      '<div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:22px">O período de teste chegou ao fim. Escolha um plano pra continuar usando o SimulaPro — o acesso libera automaticamente assim que o pagamento for confirmado.</div>'+
+      '<a href="vendas.html#preco" target="_blank" rel="noopener" style="display:block;background:#0B3D91;color:#fff;padding:14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px">Ver planos e assinar →</a>'+
+      '<button onclick="_sb.auth.signOut().then(function(){window.location.replace(\'login.html\')})" style="background:none;border:none;color:#94A3B8;padding:10px;font-size:12px;cursor:pointer;font-family:inherit">Sair</button>'+
+    '</div></div>';
+}
 
 _sb.auth.getSession().then(async function(r){
   var s=r.data.session;
@@ -421,6 +465,7 @@ _sb.auth.getSession().then(async function(r){
   var assinaturaCheck=await _checkAssinatura(s);
   if(assinaturaCheck.tipo==='bloqueado'){ _mostrarBloqueioTotal(); return; }
   if(assinaturaCheck.tipo==='suspenso'){ _mostrarAcessoSuspenso(assinaturaCheck.assinatura); return; }
+  if(assinaturaCheck.tipo==='trial_vencido'){ _mostrarTrialVencido(); return; }
 
   var termosOk=await _checkTermosAceitos(s);
   if(!termosOk){ _mostrarTermosBloqueio(s); return; }
@@ -435,6 +480,7 @@ _sb.auth.getSession().then(async function(r){
 
   document.documentElement.style.visibility='';
   if(assinaturaCheck.tipo==='atrasado') _mostrarAvisoRenovacao(assinaturaCheck.assinatura, assinaturaCheck.atraso);
+  if(assinaturaCheck.tipo==='trial_aviso') _mostrarAvisoTrial(assinaturaCheck.trial);
   document.addEventListener('DOMContentLoaded',function(){
     var el=document.getElementById('_userEmail');
     if(el)el.textContent=s.user.email;
