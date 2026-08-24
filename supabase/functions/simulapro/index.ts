@@ -24,6 +24,37 @@ export function getFaixasComTeto(tetoF1F2: number) {
   return FAIXAS.map(f => (f.tag === 'f1' || f.tag === 'f2') ? { ...f, iMax: tetoF1F2 } : f);
 }
 
+/* ── MIP/DFI/taxa admin — deduzidos do teto de comprometimento de renda
+   ANTES de calcular quanto dá pra financiar (a Caixa faz isso, o app não
+   fazia — por isso liberava valor maior que o real). Taxas calibradas a
+   partir de simulações reais (GPM Financiamentos, ago/2026); DFI tem alta
+   confiança (3/3 e 2/2 exemplos batendo exato), MIP é aproximação linear
+   por falta de mais pontos de idade — não expor esses números na tela,
+   só usar internamente pra ajustar a capacidade de financiamento. */
+const TAXA_ADMIN_MENSAL = 25;
+const DFI_RATE_MCMV = 0.000071;   // 0,0071% a.m. sobre o valor do imóvel
+const DFI_RATE_SBPE = 0.000066;   // 0,0066% a.m. sobre o valor do imóvel
+const MIP_SLOPE_PCT_ANO = (0.010801 - 0.008509) / 2; // 0,001146%/ano (2 pontos MCMV: 29 e 31 anos)
+const MIP_ANCORA_MCMV = { idade: 31, taxaPct: 0.010801 };
+const MIP_ANCORA_SBPE = { idade: 31, taxaPct: 0.0116 }; // 1 ponto só — mesma inclinação do MCMV até ter mais dados
+
+function calcIdadeAnosSimples(dataNasc?: string): number | null {
+  if (!dataNasc) return null;
+  const hoje = new Date();
+  const d = new Date(dataNasc);
+  if (isNaN(d.getTime())) return null;
+  let anos = hoje.getFullYear() - d.getFullYear();
+  const mesR = hoje.getMonth() - d.getMonth();
+  if (mesR < 0 || (mesR === 0 && hoje.getDate() < d.getDate())) anos--;
+  return anos;
+}
+
+function calcMipMensal(idadeAnos: number, isSbpe: boolean): number {
+  const ancora = isSbpe ? MIP_ANCORA_SBPE : MIP_ANCORA_MCMV;
+  const taxaPct = Math.max(0, ancora.taxaPct + MIP_SLOPE_PCT_ANO * (idadeAnos - ancora.idade));
+  return taxaPct / 100;
+}
+
 const SEGURO_FAIXAS = [
   { fase:'início da obra',    mInicio:1,  mFim:12, minR:500,  maxR:1000, pctObra:'0% – 30%',  pctProg:30 },
   { fase:'obra em andamento', mInicio:13, mFim:24, minR:1100, maxR:1500, pctObra:'30% – 60%', pctProg:60 },
@@ -146,7 +177,8 @@ export function calcularSeguroTotal(
 export function calcFinanciamentoPara(
   isSAC: boolean, vi: number, va: number, ato: number,
   renda: number, fgtsPode: boolean, fgtsDisp: number,
-  fx: typeof FAIXAS[0], sub: any, parcelaSIRC: number = 0, p100kSIRC: number = 0
+  fx: typeof FAIXAS[0], sub: any, parcelaSIRC: number = 0, p100kSIRC: number = 0,
+  idadeAnos: number | null = null
 ) {
   const pctLocal      = getPct(fx, isSAC);
   const maxFinLocal   = va * pctLocal;
@@ -159,9 +191,26 @@ export function calcFinanciamentoPara(
   const totalEntradaLocal = ato + fgtsUsarLocal;
   // SIRC override: usa parcela SIRC quando disponível, senão renda × pctRenda
   const parcelaEfetiva = parcelaSIRC > 0 ? parcelaSIRC : (renda * pctRendaLocal);
-  const capTeoricaLocal = (parcelaEfetiva > 0 && p100kLocal > 0)
-    ? (parcelaEfetiva / p100kLocal) * 100000
-    : Infinity;
+  // O teto de comprometimento de renda é sobre a PARCELA TOTAL (amortização +
+  // juros + MIP + DFI + taxa admin), não só amortização+juros — a Caixa cobra
+  // os seguros e a taxa admin dentro do mesmo teto de 30%/25% de renda.
+  // MIP depende da idade (não do valor financiado) então dá pra resolver
+  // direto, sem iteração: budget = fin×(p100k/100000) + fin×taxaMIP.
+  let capTeoricaLocal: number;
+  if (parcelaEfetiva > 0 && p100kLocal > 0) {
+    if (idadeAnos !== null) {
+      const dfiRate  = fx.sbpe ? DFI_RATE_SBPE : DFI_RATE_MCMV;
+      const mipTaxa  = calcMipMensal(idadeAnos, fx.sbpe);
+      const budgetPI = parcelaEfetiva - va * dfiRate - TAXA_ADMIN_MENSAL;
+      capTeoricaLocal = budgetPI > 0 ? budgetPI / (p100kLocal / 100000 + mipTaxa) : 0;
+    } else {
+      // Sem data de nascimento informada ainda: mantém o comportamento
+      // histórico (sem desconto de seguro) até o corretor preencher.
+      capTeoricaLocal = (parcelaEfetiva / p100kLocal) * 100000;
+    }
+  } else {
+    capTeoricaLocal = Infinity;
+  }
   let finLocal = Math.max(0, vi - totalEntradaLocal);
   finLocal = Math.min(finLocal, maxFinLocal, isFinite(capTeoricaLocal) ? capTeoricaLocal : finLocal);
   return {
@@ -225,12 +274,16 @@ export function executarSimulacao(params: {
   // p100k dinâmico por sistema: SAC usa coef da 1ª parcela (maior) → garante 1ª SAC ≤ 30% renda
   const p100kDynSAC   = calcP100kDinamico(taxaAnual, n,      true);
   const p100kDynPRICE = calcP100kDinamico(taxaAnual, nPrice, false);
-  const calcSAC   = calcFinanciamentoPara(true,  vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, parcelaSIRC, parcelaSIRC > 0 ? p100kSIRC_SAC   : p100kDynSAC);
-  const calcPRICE = calcFinanciamentoPara(false, vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, parcelaSIRC, parcelaSIRC > 0 ? p100kSIRC_PRICE : p100kDynPRICE);
+  // Idade usada só pra calibrar o desconto de MIP/DFI/taxa admin dentro do
+  // teto de renda (calcFinanciamentoPara) — não confundir com idadeMeses do
+  // bloco SIRC acima, que serve pro corte de prazo (966 − idade − obra).
+  const idadeAnosMip = calcIdadeAnosSimples(params.dataNasc);
+  const calcSAC   = calcFinanciamentoPara(true,  vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, parcelaSIRC, parcelaSIRC > 0 ? p100kSIRC_SAC   : p100kDynSAC, idadeAnosMip);
+  const calcPRICE = calcFinanciamentoPara(false, vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, parcelaSIRC, parcelaSIRC > 0 ? p100kSIRC_PRICE : p100kDynPRICE, idadeAnosMip);
   // Variante sempre sem SIRC — usada só para o comparativo "sem restrição
   // seria X" exibido ao corretor quando o cliente tem parcela SIRC ativa.
-  const calcSAC_semSIRC   = calcFinanciamentoPara(true,  vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, 0, p100kDynSAC);
-  const calcPRICE_semSIRC = calcFinanciamentoPara(false, vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, 0, p100kDynPRICE);
+  const calcSAC_semSIRC   = calcFinanciamentoPara(true,  vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, 0, p100kDynSAC, idadeAnosMip);
+  const calcPRICE_semSIRC = calcFinanciamentoPara(false, vi, va, ato, renda, fgtsPode, fgtsDisp, fx, sub, 0, p100kDynPRICE, idadeAnosMip);
 
   const isSACAtivo = sistemaAtivo === 'sac';
 

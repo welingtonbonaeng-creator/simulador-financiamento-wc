@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { S3Client, GetObjectCommand } from 'npm:@aws-sdk/client-s3@3'
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3'
+import { escolherVencimentoReal, calcAtrasoInfo, calcTrialInfo } from './vencimento.ts'
 
 const ALLOWED_ORIGINS = [
   'https://simulapro.app.br',
@@ -73,6 +74,23 @@ async function asaasFetch(path: string, opts: RequestInit = {}) {
   return { ok: r.ok, status: r.status, data }
 }
 
+/* Vencimento REAL de uma assinatura — NÃO é o `nextDueDate` da assinatura
+   na Asaas. Esse campo avança pro ciclo seguinte assim que a Asaas pré-gera
+   a próxima fatura (dias antes do vencimento), independente de a fatura
+   atual já ter sido paga — então pode apontar um ciclo inteiro à frente de
+   uma cobrança pendente/vencida ainda em aberto (achado real: assinatura
+   com fatura de R$70 PENDING vencendo dia X, mas nextDueDate já em X+1 mês).
+   Aqui usamos a fatura pendente/vencida mais próxima como vencimento real;
+   só cai pro nextDueDate da assinatura quando não há nenhuma fatura em
+   aberto (tudo pago, sem gap de cobrança). */
+async function calcVencimentoReal(subscriptionId: string): Promise<string | null> {
+  const pagamentos = await asaasFetch(`/payments?subscription=${subscriptionId}`)
+  const lista: any[] = pagamentos.ok ? (pagamentos.data?.data ?? []) : []
+  const subInfo = await asaasFetch(`/subscriptions/${subscriptionId}`)
+  const fallback = subInfo.ok ? (subInfo.data?.nextDueDate ?? null) : null
+  return escolherVencimentoReal(lista, fallback)
+}
+
 function gerarSenha() {
   return Math.random().toString(36).slice(-8) + Math.floor(Math.random() * 100)
 }
@@ -129,8 +147,7 @@ Deno.serve(async (req: Request) => {
 
         if (assinatura) {
           if (eventName === 'PAYMENT_CONFIRMED' || eventName === 'PAYMENT_RECEIVED') {
-            const subInfo = await asaasFetch(`/subscriptions/${subscriptionId}`)
-            const proximoVenc = subInfo.ok ? (subInfo.data?.nextDueDate ?? null) : null
+            const proximoVenc = await calcVencimentoReal(subscriptionId)
 
             if (!assinatura.user_id) {
               // primeiro pagamento confirmado → cria o acesso do corretor
@@ -218,7 +235,7 @@ Deno.serve(async (req: Request) => {
               await sb.from('user_profiles').update({ status: 'ativo' }).eq('id', assinatura.user_id)
               await sb.from('asaas_assinaturas').update({
                 status: 'ativo', invoice_url: null, proximo_vencimento: proximoVenc,
-                atualizado_em: new Date().toISOString(),
+                aviso_atraso_enviado: false, atualizado_em: new Date().toISOString(),
               }).eq('id', assinatura.id)
             }
           } else if (eventName === 'PAYMENT_OVERDUE') {
@@ -353,6 +370,10 @@ Deno.serve(async (req: Request) => {
           return json({ error: 'Este cupom já atingiu o limite de usos.' }, 400)
         }
         valorFinal = parseFloat(c.valor_com_cupom)
+        // A Asaas recusa qualquer cobrança abaixo de R$5 — cupom configurado
+        // errado (achado testando essa correção) não pode travar o checkout
+        // silenciosamente, então barra aqui com mensagem clara pro admin ver.
+        if (valorFinal < 5) return json({ error: 'Cupom configurado com valor abaixo do mínimo permitido (R$5,00). Avise o suporte.' }, 400)
         cupomRow = c
       }
 
@@ -394,16 +415,23 @@ Deno.serve(async (req: Request) => {
         customerId = criado.data.id
       }
 
+      // A ASSINATURA sempre nasce com o valor CHEIO do plano — o cupom nunca
+      // vira desconto permanente. (Achado real: antes disso, `value` aqui já
+      // saía com o valor do cupom, e a assinatura cobrava esse valor pra
+      // sempre — só corrigido manualmente, por acidente, em 2 contas durante
+      // uma migração de conta Asaas. Isso teria se repetido em qualquer conta
+      // nova que usasse cupom.) O desconto do cupom, quando existe, é
+      // aplicado só na 1ª fatura logo abaixo — depois disso cobra cheio.
       const amanha = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
       const sub = await asaasFetch('/subscriptions', {
         method: 'POST',
         body: JSON.stringify({
           customer: customerId,
           billingType: 'UNDEFINED',
-          value: valorFinal,
+          value: planoCfg.value,
           cycle: planoCfg.cycle,
           nextDueDate: amanha,
-          description: cupomRow ? `${planoCfg.descricao} (cupom ${cupomRow.codigo})` : planoCfg.descricao,
+          description: cupomRow ? `${planoCfg.descricao} (cupom ${cupomRow.codigo} só na 1ª fatura)` : planoCfg.descricao,
         }),
       })
       if (!sub.ok) return json({ error: sub.data?.errors?.[0]?.description || 'Erro ao criar assinatura na Asaas' }, 400)
@@ -413,13 +441,34 @@ Deno.serve(async (req: Request) => {
       }
 
       const pagamentos = await asaasFetch(`/payments?subscription=${sub.data.id}`)
-      const checkoutUrl = pagamentos.data?.data?.[0]?.invoiceUrl
+      const primeiraFatura = pagamentos.data?.data?.[0]
+      let checkoutUrl = primeiraFatura?.invoiceUrl
+
+      // Sobrescreve só ESSA fatura (a 1ª) com o valor do cupom — a assinatura
+      // em si continua no valor cheio, então a 2ª fatura em diante já sai
+      // certa sozinha, sem precisar de nenhuma correção manual depois.
+      if (cupomRow && primeiraFatura?.id) {
+        const ajuste = await asaasFetch(`/payments/${primeiraFatura.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ value: valorFinal }),
+        })
+        if (ajuste.ok) {
+          checkoutUrl = ajuste.data?.invoiceUrl ?? checkoutUrl
+        } else {
+          // Não deixa o cliente pagar cheio silenciosamente quando o desconto
+          // prometido não pôde ser aplicado — cancela a assinatura recém-criada
+          // na Asaas (nada foi salvo no nosso banco ainda) e devolve erro claro.
+          await asaasFetch(`/subscriptions/${sub.data.id}`, { method: 'DELETE' })
+          console.error('erro ao aplicar cupom na 1a fatura:', JSON.stringify(ajuste.data))
+          return json({ error: ajuste.data?.errors?.[0]?.description || 'Não foi possível aplicar o cupom. Tente novamente ou fale com o suporte.' }, 400)
+        }
+      }
 
       const { error: insErr } = await sb.from('asaas_assinaturas').insert({
         asaas_customer_id: customerId,
         asaas_subscription_id: sub.data.id,
         email, nome, telefone, cpf: cpfLimpo,
-        plano, valor: valorFinal,
+        plano, valor: planoCfg.value,
         cupom_usado: cupomRow?.codigo ?? null,
         status: 'pendente',
         termos_aceito_em: new Date().toISOString(),
@@ -449,48 +498,106 @@ Deno.serve(async (req: Request) => {
       const hoje = new Date().toISOString().slice(0, 10)
       if (c.valido_ate < hoje) return json({ error: 'Este cupom expirou.' }, 400)
       if (c.max_usos !== null && c.usos_atuais >= c.max_usos) return json({ error: 'Este cupom já atingiu o limite de usos.' }, 400)
-      return json({ valido: true, valor: parseFloat(c.valor_com_cupom), codigo: codigoNorm })
+      const valorCupom = parseFloat(c.valor_com_cupom)
+      if (valorCupom < 5) return json({ error: 'Cupom configurado com valor abaixo do mínimo permitido (R$5,00). Avise o suporte.' }, 400)
+      return json({ valido: true, valor: valorCupom, codigo: codigoNorm })
     }
 
     // ── CRON: CHECK_TRIAL_EXPIRATIONS (chamado pelo pg_cron, não por usuário) ──
-    // Roda 1x/dia. Acha trials vencidos, bloqueia acesso e manda e-mail
-    // direcionando pra página de pagamento — mesmo que o corretor nunca
-    // mais tente logar (senão só descobriríamos no próximo login dele).
+    // Roda 1x/dia. No último dia exato do teste (validade em
+    // solicitacoes_teste — fonte única, nunca user_metadata), manda e-mail
+    // direcionando pra página de planos, mesmo que o corretor não abra o
+    // app naquele dia. NÃO bane a conta: o bloqueio de acesso já acontece
+    // ao vivo em get_my_status/calcTrialInfo (mesmo padrão do atraso de
+    // pagamento) — o corretor precisa conseguir logar pra ver a tela de
+    // "teste terminou, assine aqui".
+    // (Achado real: antes disso, a checagem usava user_metadata.validade,
+    // que o fluxo atual de criação de teste nunca preenche — o trial nunca
+    // expirava de fato. Corrigido lendo direto de solicitacoes_teste.)
     if (action === 'check_trial_expirations') {
       const cronToken = req.headers.get('x-cron-token')
       const expectedCron = Deno.env.get('CRON_SECRET') ?? ''
       if (!expectedCron || cronToken !== expectedCron) return json({ error: 'Token invalido' }, 401)
 
-      const { data: listData, error: le } = await sb.auth.admin.listUsers({ perPage: 1000 })
-      if (le) return json({ error: le.message }, 500)
+      const { data: testes, error: te } = await sb.from('solicitacoes_teste')
+        .select('id, nome, email, validade, aviso_trial_enviado')
+        .eq('status', 'aprovado')
+      if (te) return json({ error: te.message }, 500)
 
       const hoje = new Date().toISOString().slice(0, 10)
       let notificados = 0
 
-      for (const u of listData.users) {
-        const meta: any = u.user_metadata ?? {}
-        if (meta.tipo !== 'teste' || !meta.validade || meta.trial_notificado) continue
-        if (meta.validade > hoje) continue
+      for (const t of testes ?? []) {
+        if (t.aviso_trial_enviado) continue
+        const info = calcTrialInfo(t.validade, hoje)
+        if (!info || !info.ultimoDia) continue
 
-        await sb.auth.admin.updateUserById(u.id, {
-          ban_duration: '87600h',
-          user_metadata: { ...meta, trial_notificado: true },
-        })
-        await sb.from('user_profiles').update({ status: 'bloqueado' }).eq('id', u.id)
-        await sb.from('events').insert({ user_id: u.id, email: u.email, action: 'trial_expirado_notificado' })
+        await sb.from('solicitacoes_teste').update({ aviso_trial_enviado: true }).eq('id', t.id)
+        await sb.from('events').insert({ email: t.email, action: 'trial_ultimo_dia_notificado', details: { solicitacaoId: t.id } })
 
-        if (BREVO && u.email) {
-          await sendBrevo(BREVO, u.email, meta.nome || u.email,
-            'Seu teste do SimulaPro terminou',
+        if (BREVO && t.email) {
+          await sendBrevo(BREVO, t.email, t.nome || t.email,
+            'Seu teste do SimulaPro termina hoje',
             `<div style="font-family:sans-serif;max-width:480px;margin:0 auto">
               <div style="background:linear-gradient(135deg,#0B3D91,#1565C0);padding:28px 24px;border-radius:8px 8px 0 0;text-align:center">
                 <h2 style="color:#fff;margin:0 0 6px;font-size:20px">🏠 SimulaPro</h2>
               </div>
               <div style="background:#fff;border:1px solid #E8ECF4;padding:28px 24px;border-radius:0 0 8px 8px">
-                <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#0F172A">Olá, ${meta.nome || ''}!</p>
-                <p style="margin:0 0 20px;font-size:14px;color:#334155;line-height:1.6">Seu período de teste no SimulaPro chegou ao fim. Pra continuar usando sem perder o embalo, escolha um plano abaixo — leva menos de 2 minutos.</p>
+                <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#0F172A">Olá, ${t.nome || ''}!</p>
+                <p style="margin:0 0 20px;font-size:14px;color:#334155;line-height:1.6">Hoje é o último dia do seu teste no SimulaPro. A partir de amanhã o acesso fica bloqueado até você assinar — escolha um plano abaixo pra continuar sem perder o embalo, leva menos de 2 minutos.</p>
                 <a href="${APP}/vendas.html#preco" style="display:inline-block;width:100%;background:#0B3D91;color:#fff;padding:14px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;box-sizing:border-box">Ver planos e assinar →</a>
                 <p style="margin:16px 0 0;font-size:12px;color:#94A3B8;text-align:center">Dúvidas? Responda este e-mail ou chama no WhatsApp.</p>
+              </div>
+            </div>`
+          )
+        }
+        notificados++
+      }
+
+      return json({ success: true, notificados })
+    }
+
+    // ── CRON: CHECK_ATRASO_AVISOS (chamado pelo pg_cron, não por usuário) ──
+    // Roda 1x/dia. No último dia da tolerância de atraso (3 dias após o
+    // vencimento), manda e-mail com o link de pagamento — cobre quem não
+    // abre o app naquele dia. A contagem regressiva na tela (get_my_status)
+    // já avisa a cada login; isso aqui garante o aviso mesmo sem login.
+    if (action === 'check_atraso_avisos') {
+      const cronToken = req.headers.get('x-cron-token')
+      const expectedCron = Deno.env.get('CRON_SECRET') ?? ''
+      if (!expectedCron || cronToken !== expectedCron) return json({ error: 'Token invalido' }, 401)
+
+      const { data: atrasados, error: ae } = await sb.from('asaas_assinaturas')
+        .select('id, email, nome, invoice_url, proximo_vencimento, aviso_atraso_enviado')
+        .eq('status', 'atrasado')
+      if (ae) return json({ error: ae.message }, 500)
+
+      const hoje = new Date().toISOString().slice(0, 10)
+      let notificados = 0
+
+      for (const a of atrasados ?? []) {
+        if (a.aviso_atraso_enviado) continue
+        const info = calcAtrasoInfo(a.proximo_vencimento, hoje)
+        if (!info.ultimoDia) continue
+
+        await sb.from('asaas_assinaturas').update({ aviso_atraso_enviado: true }).eq('id', a.id)
+        await sb.from('events').insert({
+          email: a.email, action: 'atraso_ultimo_dia_notificado', details: { assinaturaId: a.id },
+        })
+
+        if (BREVO && a.email) {
+          await sendBrevo(BREVO, a.email, a.nome || a.email,
+            'Último dia para regularizar seu acesso ao SimulaPro',
+            `<div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+              <div style="background:linear-gradient(135deg,#B91C1C,#DC2626);padding:28px 24px;border-radius:8px 8px 0 0;text-align:center">
+                <h2 style="color:#fff;margin:0 0 6px;font-size:20px">⚠️ SimulaPro</h2>
+                <p style="color:rgba(255,255,255,.85);margin:0;font-size:13px">Aviso de pagamento</p>
+              </div>
+              <div style="background:#fff;border:1px solid #E8ECF4;padding:28px 24px;border-radius:0 0 8px 8px">
+                <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#0F172A">Olá, ${a.nome || ''}!</p>
+                <p style="margin:0 0 20px;font-size:14px;color:#334155;line-height:1.6">Hoje é o último dia de acesso ao SimulaPro com o pagamento em aberto. Regularize agora pra continuar usando sem interrupção — a partir de amanhã o acesso fica suspenso até o pagamento ser identificado.</p>
+                ${a.invoice_url ? `<a href="${a.invoice_url}" target="_blank" rel="noopener" style="display:inline-block;width:100%;background:#0B3D91;color:#fff;padding:14px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;box-sizing:border-box">Pagar agora →</a>` : ''}
+                <p style="margin:16px 0 0;font-size:12px;color:#94A3B8;text-align:center">Já pagou? Pode ignorar este e-mail — a confirmação chega em instantes.</p>
               </div>
             </div>`
           )
@@ -526,10 +633,32 @@ Deno.serve(async (req: Request) => {
         .eq('user_id', user.id).maybeSingle()
       const { data: termo } = await sb.from('termos_aceites')
         .select('id').eq('user_id', user.id).eq('versao', TERMOS_VERSAO).maybeSingle()
+
+      // Atraso tem 3 dias de tolerância (acesso liberado com aviso), depois
+      // disso trava o uso dentro do app — sem banir a conta (ver [[feedback]]
+      // de não banir login por atraso; aqui é bloqueio só no nível do app).
+      let atraso: ReturnType<typeof calcAtrasoInfo> | null = null
+      if (perfil?.status === 'atrasado' && assinatura?.proximo_vencimento) {
+        atraso = calcAtrasoInfo(assinatura.proximo_vencimento, new Date().toISOString().slice(0, 10))
+      }
+
+      // Acesso de teste: SEM tolerância extra além do que o admin definiu.
+      // Fonte única é solicitacoes_teste (nunca user_metadata — não fica
+      // sincronizado, era a causa do bug de teste vencido continuar acessando).
+      let trial: ReturnType<typeof calcTrialInfo> = null
+      if (perfil?.status === 'ativo') {
+        const { data: testeRow } = await sb.from('solicitacoes_teste')
+          .select('validade').eq('user_id', user.id).eq('status', 'aprovado').maybeSingle()
+        if (testeRow?.validade) {
+          trial = calcTrialInfo(testeRow.validade, new Date().toISOString().slice(0, 10))
+        }
+      }
+
       return json({
         status: perfil?.status ?? 'ativo', plano: perfil?.plano ?? null, assinatura: assinatura ?? null,
         termosAceitos: !!termo, termosVersao: TERMOS_VERSAO,
         mustChangePassword: !!perfil?.must_change_password,
+        atraso, trial,
       })
     }
 
@@ -803,8 +932,7 @@ Deno.serve(async (req: Request) => {
       const pago = (pagamentos.data?.data ?? []).some((p: any) => p.status === 'CONFIRMED' || p.status === 'RECEIVED')
       if (!pago) return json({ error: 'Nenhum pagamento CONFIRMED/RECEIVED encontrado na Asaas para esta assinatura', payments: pagamentos.data }, 400)
 
-      const subInfo = await asaasFetch(`/subscriptions/${assinatura.asaas_subscription_id}`)
-      const proximoVenc = subInfo.ok ? (subInfo.data?.nextDueDate ?? null) : null
+      const proximoVenc = await calcVencimentoReal(assinatura.asaas_subscription_id)
 
       const senha = gerarSenha()
       const { data: nu, error: ce } = await sb.auth.admin.createUser({
@@ -860,6 +988,45 @@ Deno.serve(async (req: Request) => {
       }
 
       return json({ success: true, userId: nu.user!.id, emailEnviado })
+    }
+
+    // ── REEMITIR_FATURA_ASAAS (temporário) ────────────────────
+    // Atualiza valor e/ou vencimento de uma fatura pendente/vencida —
+    // útil pra faturas velhas travadas num preço antigo (ex: cupom que já
+    // não existe mais) ou vencidas há muito tempo, que precisam de uma
+    // data nova pra o cliente conseguir pagar de novo.
+    if (action === 'reemitir_fatura_asaas') {
+      const { paymentId, novoValor, novoVencimento } = payload
+      if (!paymentId) return json({ error: 'paymentId obrigatório' }, 400)
+      const body: any = {}
+      if (novoValor != null) body.value = novoValor
+      if (novoVencimento) body.dueDate = novoVencimento
+      if (!Object.keys(body).length) return json({ error: 'informe novoValor e/ou novoVencimento' }, 400)
+
+      const r = await asaasFetch(`/payments/${paymentId}`, { method: 'PUT', body: JSON.stringify(body) })
+      if (!r.ok) return json({ error: r.data?.errors?.[0]?.description || 'Erro ao reemitir fatura', detalhe: r.data }, 400)
+
+      await sb.from('audit_log').insert({
+        admin_user_id: user.id, admin_email: user.email, action: 'reemitir_fatura_asaas',
+        alvo: paymentId,
+      })
+      return json({ success: true, payment: r.data })
+    }
+
+    // ── CANCELAR_ASSINATURA_ASAAS (temporário) ────────────────
+    // Cancela uma assinatura direto na Asaas (ex: assinaturas de teste/QA,
+    // ou pedido de cancelamento de um corretor real). Não mexe no nosso
+    // banco nem na conta do corretor — só a Asaas.
+    if (action === 'cancelar_assinatura_asaas') {
+      const { subscriptionId } = payload
+      if (!subscriptionId) return json({ error: 'subscriptionId obrigatório' }, 400)
+      const r = await asaasFetch(`/subscriptions/${subscriptionId}`, { method: 'DELETE' })
+      if (!r.ok) return json({ error: r.data?.errors?.[0]?.description || 'Erro ao cancelar assinatura', detalhe: r.data }, 400)
+      await sb.from('audit_log').insert({
+        admin_user_id: user.id, admin_email: user.email, action: 'cancelar_assinatura_asaas',
+        alvo: subscriptionId,
+      })
+      return json({ success: true })
     }
 
     // ── REATIVAR_WEBHOOK_ASAAS (temporário) ───────────────────
