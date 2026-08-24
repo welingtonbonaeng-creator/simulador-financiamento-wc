@@ -1254,6 +1254,7 @@ async function _confirmarTroca(){
 <div class="pdf-opts" id="ctr_pdfOpts" style="display:none">
   <div class="pdf-opts-title">📄 O que entra no PDF <span>(desative o que não quiser apresentar ao cliente)</span></div>
   <label class="mini-switch"><input type="checkbox" id="ctr_optPdfValorizacao" checked><span class="mini-slider"></span>Projeção de valorização</label>
+  <label class="mini-switch"><input type="checkbox" id="ctr_optPdfDesconto" checked><span class="mini-slider"></span>Desconto solicitado</label>
 </div>
 
 <button class="btn-sim" id="ctr_btnPDF" onclick="ctrGerarPDF()" style="background:linear-gradient(135deg,#1E40AF,#2563EB);display:none;margin-top:.5rem">📄 Exportar Proposta em PDF</button>
@@ -4573,7 +4574,11 @@ async function ctrGerarPDF() {
   const corretor = document.getElementById('ctr_corretor')?.value || '—';
   const hoje     = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
   const optValorizacao = document.getElementById('ctr_optPdfValorizacao')?.checked ?? true;
+  const optDesconto = document.getElementById('ctr_optPdfDesconto')?.checked ?? true;
   const valoriz  = window._ctrValorizacao || null;
+  const vUnidade = pv(document.getElementById('ctr_vUnidade')?.value || '0');
+  const desconto = pv(document.getElementById('ctr_desconto')?.value || '0');
+  const mostrarDesconto = optDesconto && desconto > 0;
 
   const corFase = f => f === 'pré' ? '#EBF5FF' : '#F0FDF4';
   const corBord = f => f === 'pré' ? '#BFDBFE' : '#86EFAC';
@@ -4631,6 +4636,8 @@ async function ctrGerarPDF() {
     <div class="sec">
       <div class="sec-title">Resumo financeiro</div>
       <div class="grid2">
+        ${mostrarDesconto ? `<div class="info-box"><div class="info-lbl">Valor de tabela</div><div class="info-val">${fi(vUnidade)}</div></div>
+        <div class="info-box"><div class="info-lbl">Desconto solicitado</div><div class="info-val" style="color:#C05A00">− ${fi(desconto)}</div></div>` : ''}
         <div class="info-box"><div class="info-lbl">Valor da proposta</div><div class="info-val" style="color:#1B6E3F;font-size:16px">${fi(r.vProposta)}</div></div>
         <div class="info-box"><div class="info-lbl">Distribuição</div><div class="info-val">Pré ${r.pctPre}% · Pós ${r.pctPos}%</div></div>
       </div>
