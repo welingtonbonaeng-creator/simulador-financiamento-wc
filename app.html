@@ -486,6 +486,8 @@ _sb.auth.getSession().then(async function(r){
     if(el)el.textContent=s.user.email;
     var vEl=document.getElementById('validadeSimulacao');
     if(vEl){ var d=new Date(); d.setDate(d.getDate()+7); vEl.value=d.toISOString().split('T')[0]; }
+    var vElCtr=document.getElementById('ctr_validadeSimulacao');
+    if(vElCtr){ var dCtr=new Date(); dCtr.setDate(dCtr.getDate()+7); vElCtr.value=dCtr.toISOString().split('T')[0]; }
   });
   _sb.from('events').insert({user_id:s.user.id,email:s.user.email,action:'page_view',user_agent:navigator.userAgent});
   setInterval(function(){var ss=window._session;if(ss)_sb.from('events').insert({user_id:ss.user.id,email:ss.user.email,action:'heartbeat',user_agent:navigator.userAgent});},120000);
@@ -1108,6 +1110,7 @@ async function _confirmarTroca(){
       <div class="field"><label class="fl">Produto / Empreendimento</label><input class="fi" type="text" id="ctr_produto" placeholder="Ex: Orla Central Niterói"/></div>
       <div class="field"><label class="fl">Tipologia</label><input class="fi" type="text" id="ctr_tipologia" placeholder="Ex: 2 Quartos · 65m²"/></div>
       <div class="field"><label class="fl">Corretor</label><input class="fi" type="text" id="ctr_corretor" placeholder="Ex: João Silva · CRECI 00000"/></div>
+      <div class="field"><label class="fl">Validade da simulação <span style="font-weight:400;font-size:10px;color:#94A3B8">(padrão: 7 dias)</span></label><input class="fi" type="date" id="ctr_validadeSimulacao"/></div>
     </div>
   </div>
 </div>
@@ -4573,6 +4576,10 @@ async function ctrGerarPDF() {
   const tipo     = document.getElementById('ctr_tipologia')?.value || '—';
   const corretor = document.getElementById('ctr_corretor')?.value || '—';
   const hoje     = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const validadeRaw = document.getElementById('ctr_validadeSimulacao')?.value || '';
+  const validadeStr = validadeRaw
+    ? new Date(validadeRaw + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' })
+    : '';
   const optValorizacao = document.getElementById('ctr_optPdfValorizacao')?.checked ?? true;
   const optDesconto = document.getElementById('ctr_optPdfDesconto')?.checked ?? true;
   const valoriz  = window._ctrValorizacao || null;
@@ -4683,6 +4690,13 @@ async function ctrGerarPDF() {
         </div>
       </div>
       <p style="font-size:9px;color:#9CA3AF;margin-top:10px">* Estimativa. Não é garantia de retorno.</p>
+    </div>` : ''}
+    ${validadeStr ? `<div style="display:flex;align-items:center;justify-content:flex-end;background:linear-gradient(135deg,#1B6E3F,#2D9D5C);border-radius:8px;padding:10px 16px;margin:0 32px 16px;color:#fff">
+      <div style="text-align:right">
+        <div style="font-size:8px;opacity:.7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px">Válida até</div>
+        <div style="font-size:12px;font-weight:800">${validadeStr}</div>
+        <div style="font-size:8px;opacity:.6;margin-top:1px">⏰ Condições sujeitas a alteração</div>
+      </div>
     </div>` : ''}
     <div class="ftr">SimulaPro · Uso exclusivo do corretor · Valores estimados · Condições sujeitas à aprovação da construtora</div>
   </div>
