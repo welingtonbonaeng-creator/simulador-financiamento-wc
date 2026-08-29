@@ -3617,7 +3617,7 @@ async function gerarPDF() {
     if (_dtEl && _dtEl.value) _labRef = new Date(_dtEl.value + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     _rmItens.push({ label: 'Reforço ' + i + ' — ' + _labRef, valorBRL: _vRef });
   }
-  if (fluxoMens > 0) _rmItens.push({ label: 'Parcela mensal durante a obra', sub: fluxoMeses + '×', valorBRL: fluxoMens });
+  if (fluxoMens > 0) _rmItens.push({ label: 'Parcela mensal durante a obra (' + fluxoMeses + '×)', sub: 'valor de cada parcela', valorBRL: fluxoMens });
   if (sistemaAtivo === 'sac') {
     _rmItens.push({ label: '1ª parcela após as chaves', sub: (cronoNFin * 12) + ' parcelas · SAC', valorBRL: cronoParcSAC1 });
     if (cronoParcSACult > 0) _rmItens.push({ label: 'Última parcela após as chaves', valorBRL: cronoParcSACult });
@@ -4760,10 +4760,11 @@ async function ctrGerarPDF() {
   );
   _rmItens.push({ header: true, label: 'Fluxo de pagamento' });
   (r.linhas || []).forEach(l => {
+    const _mult = Number(l.qtd) > 1;
     _rmItens.push({
-      label: l.desc + (l.data ? ' — ' + ctrFmtData(l.data) : ''),
-      sub: (l.qtd > 1 ? l.qtd + '×' : ''),
-      valorBRL: l.total,
+      label: l.desc + (_mult ? ' (' + l.qtd + '×)' : '') + (l.data ? ' — ' + ctrFmtData(l.data) : ''),
+      sub: _mult ? 'valor de cada parcela' : '',
+      valorBRL: _mult ? l.valor : l.total,   // parcela unitária quando são várias; total quando é pagamento único
     });
   });
   _rmItens.push(
