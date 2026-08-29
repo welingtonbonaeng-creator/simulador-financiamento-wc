@@ -1551,24 +1551,34 @@ async function _resolverResumoMoeda(prefixo, itens) {
   }
 }
 // Monta o bloco HTML a partir do que o backend devolveu já formatado.
-// variante: 'caixa' (sec-head/eco-line) ou 'construtora' (sec-title/grid2).
+// Card autocontido (estilos inline, sem depender das classes de cada template),
+// com cabeçalhos de seção (it.header) para o corretor e o cliente não se perderem.
+// Vai sempre no FIM do PDF, como adicional — o documento em Real fica intacto.
+// variante: 'caixa' (azul) ou 'construtora' (verde).
 function _blocoResumoMoeda(rm, variante) {
   if (!rm || rm.moeda === 'none' || !Array.isArray(rm.itensFmt) || !rm.itensFmt.length) return '';
   const nomeMoeda = rm.moeda === 'EUR' ? 'Euro (€)' : 'Dólar (US$)';
-  const rodape = 'Convertido pela cotação de ' + rm.data + ' · 1 ' + rm.moeda + ' = ' + rm.rateFmt + ' · Referência informativa, não é valor contratual.';
-  if (variante === 'construtora') {
-    const boxes = rm.itensFmt.map(it => '<div class="info-box"><div class="info-lbl">' + it.label + '</div><div class="info-val">' + it.valorFmt + '</div></div>').join('');
-    return '<div class="sec">'
-      + '<div class="sec-title">🌎 Resumo em ' + nomeMoeda + '</div>'
-      + '<div class="grid2">' + boxes + '</div>'
-      + '<p style="font-size:9px;color:#9CA3AF;margin-top:10px">' + rodape + '</p>'
+  const cor = variante === 'construtora' ? '#1B6E3F' : '#0B3D91';
+  const rodape = 'Convertido pela cotação de ' + rm.data + ' · 1 ' + rm.moeda + ' = ' + rm.rateFmt
+    + ' · Referência informativa: o financiamento e todos os pagamentos são sempre em Real.';
+  const linhas = rm.itensFmt.map(it => {
+    if (it.header) {
+      return '<div class="no-break" style="margin-top:11px;margin-bottom:3px;font-size:9px;font-weight:800;'
+        + 'text-transform:uppercase;letter-spacing:.07em;color:' + cor + '">' + it.label + '</div>';
+    }
+    return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;'
+      + 'padding:4px 0;border-bottom:1px solid #F1F5F9;font-size:10.5px">'
+      + '<span style="color:#374151">' + it.label
+      + (it.sub ? ' <span style="font-size:8.5px;color:#9CA3AF">' + it.sub + '</span>' : '')
+      + '</span>'
+      + '<span style="font-weight:700;color:' + cor + ';white-space:nowrap">' + it.valorFmt + '</span>'
       + '</div>';
-  }
-  const rows = rm.itensFmt.map(it => '<div class="eco-line"><span class="lbl">' + it.label + '</span><span class="val" style="color:#0B3D91">' + it.valorFmt + '</span></div>').join('');
-  return '<div class="sec no-break" style="margin-bottom:10px">'
-    + '<div class="sec-head" style="background:#0B3D91">🌎 Resumo em ' + nomeMoeda + '</div>'
-    + '<div class="sec-body">' + rows
-    + '<div style="font-size:8.5px;color:#9CA3AF;margin-top:6px;padding-left:1px">' + rodape + '</div>'
+  }).join('');
+  return '<div style="margin-top:14px;margin-bottom:10px;border:1.5px solid ' + cor + ';border-radius:8px;overflow:hidden">'
+    + '<div class="no-break" style="background:' + cor + ';color:#fff;padding:8px 12px;font-size:11px;font-weight:800;letter-spacing:.02em">'
+    + '🌎 Resumo em ' + nomeMoeda + ' — referência para o investidor</div>'
+    + '<div style="padding:9px 12px">' + linhas
+    + '<div style="margin-top:9px;font-size:8px;color:#9CA3AF;line-height:1.5">' + rodape + '</div>'
     + '</div></div>';
 }
 function show(id, cls, html) {
@@ -3285,24 +3295,6 @@ async function gerarPDF() {
     parcelaDetalhe = `${d.prazoPrice * 12} parcelas fixas de ${fb(d.parcelaPrice)}`;
   }
 
-  // ── Resumo em moeda estrangeira (opcional) ─────────────────────────
-  // Só repassa valores em R$ que o backend já calculou; a conversão e a
-  // formatação são feitas na action 'resumo_moeda'.
-  const _1aParcela = sistemaAtivo === 'sac' ? d.parcelaSAC1 : d.parcelaPrice;
-  const _rmItens = [
-    { label: 'Valor do imóvel', valorBRL: d.vi },
-    { label: 'Total de entrada', valorBRL: totalEntradaPDF },
-    { label: 'Valor financiado', valorBRL: finPDF },
-    { label: '1ª parcela (após as chaves)', valorBRL: _1aParcela },
-    ...(optValorizacao ? [
-      { label: 'Valor projetado na entrega', valorBRL: vEntrega },
-      { label: 'Ganho estimado', valorBRL: lucro },
-    ] : []),
-  ];
-  const _rm = await _resolverResumoMoeda('opt', _rmItens);
-  if (_rm === null) return; // corretor pediu moeda mas não há cotação
-  const blocoResumoMoeda = _blocoResumoMoeda(_rm, 'caixa');
-
   // ── Cronograma da obra para o PDF ──────────────────────────────────
   {
     const _vi    = d.vi || 0;
@@ -3599,6 +3591,43 @@ async function gerarPDF() {
       </div>
     </div>`;
 
+  // ── Resumo em moeda estrangeira (adicional no FIM do PDF) ──────────
+  // O front só repassa valores em R$ já calculados pelo backend; a conversão
+  // e a formatação ficam 100% na action 'resumo_moeda'. Se moeda='none', o
+  // bloco sai vazio e o PDF fica idêntico ao de sempre.
+  const _rmItens = [
+    { header: true, label: 'Valores da proposta' },
+    { label: 'Valor do imóvel', valorBRL: d.vi },
+    { label: 'Total de entrada', valorBRL: totalEntradaPDF },
+    { label: 'Valor financiado', valorBRL: finPDF },
+  ];
+  if (optValorizacao) _rmItens.push(
+    { label: `Valor projetado na entrega (+${pct}%)`, valorBRL: vEntrega },
+    { label: 'Ganho estimado', valorBRL: lucro },
+  );
+  _rmItens.push({ header: true, label: 'Fluxo de pagamento' });
+  if (fluxoAto > 0)  _rmItens.push({ label: 'Ato (na assinatura)', valorBRL: fluxoAto });
+  if (fluxoFgts > 0) _rmItens.push({ label: 'FGTS utilizado', valorBRL: fluxoFgts });
+  for (let i = 1; i <= fluxoQtdRef; i++) {
+    const _dtEl = document.getElementById('dtRef' + i);
+    const _vlEl = document.getElementById('vlRef' + i);
+    const _vRef = _vlEl ? pv(_vlEl.value) : 0;
+    if (_vRef <= 0) continue;
+    let _labRef = 'mês ' + Math.round(fluxoMeses / Math.max(fluxoQtdRef, 1) * i) + ' da obra';
+    if (_dtEl && _dtEl.value) _labRef = new Date(_dtEl.value + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    _rmItens.push({ label: 'Reforço ' + i + ' — ' + _labRef, valorBRL: _vRef });
+  }
+  if (fluxoMens > 0) _rmItens.push({ label: 'Parcela mensal durante a obra', sub: fluxoMeses + '×', valorBRL: fluxoMens });
+  if (sistemaAtivo === 'sac') {
+    _rmItens.push({ label: '1ª parcela após as chaves', sub: (cronoNFin * 12) + ' parcelas · SAC', valorBRL: cronoParcSAC1 });
+    if (cronoParcSACult > 0) _rmItens.push({ label: 'Última parcela após as chaves', valorBRL: cronoParcSACult });
+  } else {
+    _rmItens.push({ label: 'Parcela fixa após as chaves', sub: (cronoNFin * 12) + '× · PRICE', valorBRL: cronoParcPrice });
+  }
+  const _rm = await _resolverResumoMoeda('opt', _rmItens);
+  if (_rm === null) return; // corretor pediu moeda mas não há cotação
+  const blocoResumoMoeda = _blocoResumoMoeda(_rm, 'caixa');
+
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -3756,8 +3785,6 @@ async function gerarPDF() {
   <div class="id-cell destaque-cell"><div class="id-lbl">Metragem</div><div class="id-val vd">${metragem || '—'}</div></div>
 </div>
 
-${blocoResumoMoeda}
-
 <!-- PARCELA MORANDO — destaque topo -->
 <div class="parcela-banner no-break">
   <div class="pb-left">
@@ -3851,6 +3878,8 @@ ${htmlLinha2}
     ${secCapacidadeObra}
   </div>
 </div>
+
+${blocoResumoMoeda}
 
 <div style="background:#FEF9C3;border:1px solid #F59E0B;border-radius:5px;padding:8px 12px;margin-bottom:8px;font-size:9px;color:#78350F;text-align:center;line-height:1.6">
   ⚠️ <strong>SIMULAÇÃO — Os valores apresentados são estimativas e podem ter variações de acordo com a aprovação do banco.</strong><br>
@@ -4713,19 +4742,35 @@ async function ctrGerarPDF() {
   const desconto = pv(document.getElementById('ctr_desconto')?.value || '0');
   const mostrarDesconto = optDesconto && desconto > 0;
 
-  // ── Resumo em moeda estrangeira (opcional) ─────────────────────────
-  // Só repassa valores em R$ já calculados pelo backend; conversão e
-  // formatação ficam na action 'resumo_moeda'.
-  const _rmItens = [
-    { label: 'Valor da proposta', valorBRL: r.vProposta },
-    { label: 'Total pré-chaves', valorBRL: r.totalPre },
-    { label: 'Total pós-chaves', valorBRL: r.totalPos },
+  // ── Resumo em moeda estrangeira (adicional no FIM do PDF) ──────────
+  // O front só repassa valores em R$ já calculados pelo backend; a conversão
+  // e a formatação ficam 100% na action 'resumo_moeda'. moeda='none' => bloco
+  // vazio e PDF idêntico ao de sempre.
+  const _rmItens = [{ header: true, label: 'Valores da proposta' }];
+  if (mostrarDesconto) {
+    _rmItens.push(
+      { label: 'Valor de tabela', valorBRL: vUnidade },
+      { label: 'Desconto solicitado', valorBRL: -desconto },
+    );
+  }
+  _rmItens.push({ label: 'Valor da proposta', valorBRL: r.vProposta });
+  if (optValorizacao && valoriz) _rmItens.push(
+    { label: 'Valor na entrega', valorBRL: valoriz.valorFuturo },
+    { label: 'Ganho estimado', valorBRL: valoriz.ganho },
+  );
+  _rmItens.push({ header: true, label: 'Fluxo de pagamento' });
+  (r.linhas || []).forEach(l => {
+    _rmItens.push({
+      label: l.desc + (l.data ? ' — ' + ctrFmtData(l.data) : ''),
+      sub: (l.qtd > 1 ? l.qtd + '×' : ''),
+      valorBRL: l.total,
+    });
+  });
+  _rmItens.push(
+    { label: 'Total pré-chaves', sub: r.pctPre + '%', valorBRL: r.totalPre },
+    { label: 'Total pós-chaves', sub: r.pctPos + '%', valorBRL: r.totalPos },
     { label: 'Total geral', valorBRL: r.grandTotal },
-    ...((optValorizacao && valoriz) ? [
-      { label: 'Valor na entrega', valorBRL: valoriz.valorFuturo },
-      { label: 'Ganho estimado', valorBRL: valoriz.ganho },
-    ] : []),
-  ];
+  );
   const _rm = await _resolverResumoMoeda('ctr_opt', _rmItens);
   if (_rm === null) return; // corretor pediu moeda mas não há cotação
   const blocoResumoMoeda = _blocoResumoMoeda(_rm, 'construtora');
@@ -4792,7 +4837,6 @@ async function ctrGerarPDF() {
         <div class="info-box"><div class="info-lbl">Distribuição</div><div class="info-val">Pré ${r.pctPre}% · Pós ${r.pctPos}%</div></div>
       </div>
     </div>
-    ${blocoResumoMoeda}
     <div class="sec">
       <div class="sec-title">Fluxo de pagamento</div>
       <table><thead><tr><th>Parcela</th><th style="text-align:center">Qtd</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Total</th><th>Reajuste</th></tr></thead>
@@ -4835,6 +4879,7 @@ async function ctrGerarPDF() {
       </div>
       <p style="font-size:9px;color:#9CA3AF;margin-top:10px">* Estimativa. Não é garantia de retorno.</p>
     </div>` : ''}
+    ${blocoResumoMoeda ? `<div style="margin:0 32px 4px">${blocoResumoMoeda}</div>` : ''}
     ${validadeStr ? `<div style="display:flex;align-items:center;justify-content:flex-end;background:linear-gradient(135deg,#1B6E3F,#2D9D5C);border-radius:8px;padding:10px 16px;margin:0 32px 16px;color:#fff">
       <div style="text-align:right">
         <div style="font-size:8px;opacity:.7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px">Válida até</div>

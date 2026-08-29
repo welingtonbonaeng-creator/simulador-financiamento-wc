@@ -877,9 +877,17 @@ Deno.serve(async (req) => {
     }
     const fmt = new Intl.NumberFormat(moeda === 'EUR' ? 'de-DE' : 'en-US',
       { style: 'currency', currency: moeda, maximumFractionDigits: 0 });
+    // Cada item é ou um cabeçalho de seção ({header:true, label}) — passa direto —
+    // ou um valor ({label, valorBRL, sub?}) que o backend converte e formata.
     const itensFmt = itens
-      .filter((it) => it && it.valorBRL != null && isFinite(Number(it.valorBRL)))
-      .map((it) => ({ label: String(it.label ?? ''), valorFmt: fmt.format(Number(it.valorBRL) / rate) }));
+      .filter((it) => it && (it.header === true || (it.valorBRL != null && isFinite(Number(it.valorBRL)))))
+      .map((it) => it.header === true
+        ? { header: true, label: String(it.label ?? '') }
+        : {
+            label: String(it.label ?? ''),
+            valorFmt: fmt.format(Number(it.valorBRL) / rate),
+            ...(it.sub ? { sub: String(it.sub) } : {}),
+          });
     return new Response(JSON.stringify({ moeda, rate, rateFmt: fmtCambio(rate), data, itensFmt }),
       { headers: { ...CORS, 'Content-Type': 'application/json' } });
   }
