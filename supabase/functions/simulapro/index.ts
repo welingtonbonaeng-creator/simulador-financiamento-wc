@@ -613,6 +613,56 @@ function corsHeaders(origin: string | null) {
   };
 }
 
+/* ── Câmbio de mercado (dado público) — usado só no bloco opcional
+   "Resumo em moeda estrangeira" do PDF. Fica no backend para o frontend
+   não ter NENHUMA aritmética de conversão de moeda.
+   Tenta provedores em cascata (o ambiente do Edge não alcança todos). ── */
+function _isoParaBr(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : new Date().toLocaleDateString('pt-BR');
+}
+async function _cambioFrankfurter() {
+  const r = await fetch('https://api.frankfurter.dev/v1/latest?base=BRL&symbols=USD,EUR');
+  if (!r.ok) throw new Error('frankfurter ' + r.status);
+  const d: any = await r.json();
+  const USD = 1 / parseFloat(d?.rates?.USD);
+  const EUR = 1 / parseFloat(d?.rates?.EUR);
+  if (!(USD > 0) || !(EUR > 0)) throw new Error('frankfurter payload');
+  return { USD, EUR, data: _isoParaBr(d?.date) };
+}
+async function _cambioErApi() {
+  const r = await fetch('https://open.er-api.com/v6/latest/BRL');
+  if (!r.ok) throw new Error('er-api ' + r.status);
+  const d: any = await r.json();
+  const USD = 1 / parseFloat(d?.rates?.USD);
+  const EUR = 1 / parseFloat(d?.rates?.EUR);
+  if (!(USD > 0) || !(EUR > 0)) throw new Error('er-api payload');
+  const dt = d?.time_last_update_utc ? new Date(d.time_last_update_utc) : new Date();
+  return { USD, EUR, data: `${String(dt.getUTCDate()).padStart(2, '0')}/${String(dt.getUTCMonth() + 1).padStart(2, '0')}/${dt.getUTCFullYear()}` };
+}
+async function _cambioAwesome() {
+  const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL');
+  if (!r.ok) throw new Error('awesome ' + r.status);
+  const d: any = await r.json();
+  const USD = parseFloat(d?.USDBRL?.bid);
+  const EUR = parseFloat(d?.EURBRL?.bid);
+  if (!(USD > 0) || !(EUR > 0)) throw new Error('awesome payload');
+  const cd: string = d?.USDBRL?.create_date || '';
+  const data = cd ? `${cd.slice(8, 10)}/${cd.slice(5, 7)}/${cd.slice(0, 4)}` : new Date().toLocaleDateString('pt-BR');
+  return { USD, EUR, data };
+}
+export async function fetchCambioBRL(): Promise<{ USD: number; EUR: number; data: string }> {
+  const provedores = [_cambioFrankfurter, _cambioErApi, _cambioAwesome];
+  let ultimoErro: unknown = null;
+  for (const p of provedores) {
+    try { return await p(); } catch (e) { ultimoErro = e; }
+  }
+  throw ultimoErro ?? new Error('cambio indisponivel');
+}
+export function fmtCambio(r: number): string {
+  return 'R$ ' + new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(r);
+}
+
 // Só sobe o servidor quando o arquivo roda como entrypoint direto (deploy real).
 // Isso permite importar as funções puras nos testes sem abrir porta HTTP.
 if (import.meta.main) {
@@ -788,6 +838,49 @@ Deno.serve(async (req) => {
     const valorFuturo  = vi * (1 + pct);
     const lucro        = valorFuturo - vi - (seguroTotal || 0);
     return new Response(JSON.stringify({ entradaTotal, valorFuturo, lucro }),
+      { headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+
+  /* ── cotacao: USD-BRL / EUR-BRL já formatados para o painel do PDF ── */
+  if (body.action === 'cotacao') {
+    try {
+      const c = await fetchCambioBRL();
+      return new Response(JSON.stringify({
+        USD: c.USD, EUR: c.EUR, USDFmt: fmtCambio(c.USD), EURFmt: fmtCambio(c.EUR), data: c.data,
+      }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+    } catch (_e) {
+      return new Response(JSON.stringify({ error: 'Cotação indisponível no momento.' }),
+        { status: 502, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    }
+  }
+
+  /* ── resumo_moeda: converte os valores-âncora (que o backend já calculou)
+     para USD/EUR e devolve JÁ FORMATADO. O frontend só monta o HTML —
+     nenhuma conta de conversão sai do backend. ── */
+  if (body.action === 'resumo_moeda') {
+    const moeda: 'USD' | 'EUR' = body.moeda === 'EUR' ? 'EUR' : 'USD';
+    const itens: any[] = Array.isArray(body.itens) ? body.itens : [];
+    let rate = 0, data = '';
+    const rateManual = Number(body.rateManual);
+    if (isFinite(rateManual) && rateManual > 0) {
+      rate = rateManual;
+      data = new Date().toLocaleDateString('pt-BR') + ' (informada pelo corretor)';
+    } else {
+      try {
+        const c = await fetchCambioBRL();
+        rate = moeda === 'EUR' ? c.EUR : c.USD;
+        data = c.data;
+      } catch (_e) {
+        return new Response(JSON.stringify({ error: 'Cotação indisponível no momento.' }),
+          { status: 502, headers: { ...CORS, 'Content-Type': 'application/json' } });
+      }
+    }
+    const fmt = new Intl.NumberFormat(moeda === 'EUR' ? 'de-DE' : 'en-US',
+      { style: 'currency', currency: moeda, maximumFractionDigits: 0 });
+    const itensFmt = itens
+      .filter((it) => it && it.valorBRL != null && isFinite(Number(it.valorBRL)))
+      .map((it) => ({ label: String(it.label ?? ''), valorFmt: fmt.format(Number(it.valorBRL) / rate) }));
+    return new Response(JSON.stringify({ moeda, rate, rateFmt: fmtCambio(rate), data, itensFmt }),
       { headers: { ...CORS, 'Content-Type': 'application/json' } });
   }
 

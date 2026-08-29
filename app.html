@@ -1016,6 +1016,20 @@ async function _confirmarTroca(){
     <label class="mini-switch"><input type="checkbox" id="optPdfEconomia" checked><span class="mini-slider"></span>Economia com o programa</label>
     <label class="mini-switch"><input type="checkbox" id="optPdfValorizacao" checked><span class="mini-slider"></span>Projeção de valorização</label>
     <label class="mini-switch"><input type="checkbox" id="optPdfCapacidadeObra" checked><span class="mini-slider"></span>Capacidade de pagamento — período de obra</label>
+    <div style="border-top:1px solid #E2E8F0;margin-top:8px;padding-top:8px">
+      <div class="pdf-opts-title" style="margin-bottom:6px">🌎 Resumo em moeda estrangeira <span>(comparativo para investidor — o PDF segue em Real)</span></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <select id="optResumoMoeda" onchange="_atualizarCotacaoUI('opt')" style="font-size:11.5px;padding:4px 8px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;color:var(--texto2)">
+          <option value="none">Não incluir</option>
+          <option value="USD">Dólar (US$)</option>
+          <option value="EUR">Euro (€)</option>
+        </select>
+        <span id="optCotacaoLabel" style="font-size:11px;color:var(--texto3)"></span>
+      </div>
+      <div id="optCotacaoManualWrap" style="display:none;margin-top:6px;font-size:11px;color:var(--texto3)">
+        Cotação manual: R$ <input id="optCotacaoManual" type="text" inputmode="decimal" placeholder="5,43" style="width:64px;font-size:11px;padding:3px 6px;border:1px solid #CBD5E1;border-radius:5px"/> por 1 <span id="optCotacaoManualCur">USD</span>
+      </div>
+    </div>
   </div>
 
   <!-- BOTÃO PDF -->
@@ -1258,6 +1272,20 @@ async function _confirmarTroca(){
   <div class="pdf-opts-title">📄 O que entra no PDF <span>(desative o que não quiser apresentar ao cliente)</span></div>
   <label class="mini-switch"><input type="checkbox" id="ctr_optPdfValorizacao" checked><span class="mini-slider"></span>Projeção de valorização</label>
   <label class="mini-switch"><input type="checkbox" id="ctr_optPdfDesconto" checked><span class="mini-slider"></span>Desconto solicitado</label>
+  <div style="border-top:1px solid #E2E8F0;margin-top:8px;padding-top:8px">
+    <div class="pdf-opts-title" style="margin-bottom:6px">🌎 Resumo em moeda estrangeira <span>(comparativo para investidor — o PDF segue em Real)</span></div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <select id="ctr_optResumoMoeda" onchange="_atualizarCotacaoUI('ctr_opt')" style="font-size:11.5px;padding:4px 8px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;color:var(--texto2)">
+        <option value="none">Não incluir</option>
+        <option value="USD">Dólar (US$)</option>
+        <option value="EUR">Euro (€)</option>
+      </select>
+      <span id="ctr_optCotacaoLabel" style="font-size:11px;color:var(--texto3)"></span>
+    </div>
+    <div id="ctr_optCotacaoManualWrap" style="display:none;margin-top:6px;font-size:11px;color:var(--texto3)">
+      Cotação manual: R$ <input id="ctr_optCotacaoManual" type="text" inputmode="decimal" placeholder="5,43" style="width:64px;font-size:11px;padding:3px 6px;border:1px solid #CBD5E1;border-radius:5px"/> por 1 <span id="ctr_optCotacaoManualCur">USD</span>
+    </div>
+  </div>
 </div>
 
 <button class="btn-sim" id="ctr_btnPDF" onclick="ctrGerarPDF()" style="background:linear-gradient(135deg,#1E40AF,#2563EB);display:none;margin-top:.5rem">📄 Exportar Proposta em PDF</button>
@@ -1465,6 +1493,84 @@ function setVal(id, v) {
 }
 function fb(v) { if (isNaN(v) || v == null) return '—'; return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
 function fi(v) { if (isNaN(v) || v == null) return '—'; return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESUMO EM MOEDA ESTRANGEIRA (USD/EUR) — comparativo opcional no PDF
+   O corretor escolhe a moeda; o PDF continua 100% em Real e português
+   e ganha um bloco a mais com os valores-âncora convertidos.
+   TODA a aritmética (buscar cotação, dividir, formatar) roda no backend
+   (actions 'cotacao' e 'resumo_moeda' em simulapro/index.ts). O front
+   só lê o <select>, manda os valores em R$ que o backend já calculou,
+   e monta a string HTML com o que o servidor devolveu já formatado.
+   ═══════════════════════════════════════════════════════════════════ */
+function _parseRate(s) {
+  if (!s) return 0;
+  const n = parseFloat(String(s).replace(',', '.').replace(/[^\d.]/g, ''));
+  return isFinite(n) && n > 0 ? n : 0;
+}
+// Rótulo de cotação no painel do PDF; mostra o campo manual se a API cair.
+// prefixo: 'opt' (fluxo Caixa) ou 'ctr_opt' (fluxo Construtora).
+async function _atualizarCotacaoUI(prefixo) {
+  const moeda = document.getElementById(prefixo + 'ResumoMoeda')?.value || 'none';
+  const lbl = document.getElementById(prefixo + 'CotacaoLabel');
+  const manualWrap = document.getElementById(prefixo + 'CotacaoManualWrap');
+  const manualCur = document.getElementById(prefixo + 'CotacaoManualCur');
+  if (!lbl) return;
+  if (moeda === 'none') { lbl.textContent = ''; if (manualWrap) manualWrap.style.display = 'none'; return; }
+  if (manualCur) manualCur.textContent = moeda;
+  lbl.textContent = 'buscando cotação…';
+  let c = null;
+  try {
+    const cache = window._cotacaoCache;
+    if (cache && (Date.now() - cache.ts) < 30 * 60 * 1000) c = cache;
+    else { c = await _calcBackend('cotacao', {}); c.ts = Date.now(); window._cotacaoCache = c; }
+  } catch (e) { c = null; }
+  if (c && c[moeda] > 0) {
+    lbl.textContent = '1 ' + moeda + ' = ' + c[moeda + 'Fmt'] + ' · ' + c.data;
+    if (manualWrap) manualWrap.style.display = 'none';
+  } else {
+    lbl.textContent = '⚠️ não consegui buscar — informe a cotação manualmente:';
+    if (manualWrap) manualWrap.style.display = '';
+  }
+}
+// Chama o backend para converter os valores-âncora. itens: [{label, valorBRL}]
+// (valores que o backend JÁ calculou — o front só repassa). Retorna
+// {moeda:'none'} | {moeda, rateFmt, data, itensFmt} | null (sem cotação).
+async function _resolverResumoMoeda(prefixo, itens) {
+  const moeda = document.getElementById(prefixo + 'ResumoMoeda')?.value || 'none';
+  if (moeda === 'none') return { moeda: 'none' };
+  const rateManual = _parseRate(document.getElementById(prefixo + 'CotacaoManual')?.value);
+  try {
+    const d = await _calcBackend('resumo_moeda', { moeda, itens, rateManual });
+    return { moeda: d.moeda, rateFmt: d.rateFmt, data: d.data, itensFmt: d.itensFmt };
+  } catch (e) {
+    const wrap = document.getElementById(prefixo + 'CotacaoManualWrap');
+    if (wrap) wrap.style.display = '';
+    alert('Não consegui buscar a cotação do ' + moeda + ' automaticamente. Informe a cotação manualmente no painel "Resumo em moeda estrangeira" e gere o PDF de novo.');
+    return null;
+  }
+}
+// Monta o bloco HTML a partir do que o backend devolveu já formatado.
+// variante: 'caixa' (sec-head/eco-line) ou 'construtora' (sec-title/grid2).
+function _blocoResumoMoeda(rm, variante) {
+  if (!rm || rm.moeda === 'none' || !Array.isArray(rm.itensFmt) || !rm.itensFmt.length) return '';
+  const nomeMoeda = rm.moeda === 'EUR' ? 'Euro (€)' : 'Dólar (US$)';
+  const rodape = 'Convertido pela cotação de ' + rm.data + ' · 1 ' + rm.moeda + ' = ' + rm.rateFmt + ' · Referência informativa, não é valor contratual.';
+  if (variante === 'construtora') {
+    const boxes = rm.itensFmt.map(it => '<div class="info-box"><div class="info-lbl">' + it.label + '</div><div class="info-val">' + it.valorFmt + '</div></div>').join('');
+    return '<div class="sec">'
+      + '<div class="sec-title">🌎 Resumo em ' + nomeMoeda + '</div>'
+      + '<div class="grid2">' + boxes + '</div>'
+      + '<p style="font-size:9px;color:#9CA3AF;margin-top:10px">' + rodape + '</p>'
+      + '</div>';
+  }
+  const rows = rm.itensFmt.map(it => '<div class="eco-line"><span class="lbl">' + it.label + '</span><span class="val" style="color:#0B3D91">' + it.valorFmt + '</span></div>').join('');
+  return '<div class="sec no-break" style="margin-bottom:10px">'
+    + '<div class="sec-head" style="background:#0B3D91">🌎 Resumo em ' + nomeMoeda + '</div>'
+    + '<div class="sec-body">' + rows
+    + '<div style="font-size:8.5px;color:#9CA3AF;margin-top:6px;padding-left:1px">' + rodape + '</div>'
+    + '</div></div>';
+}
 function show(id, cls, html) {
   const e = document.getElementById(id);
   if (!e) return;
@@ -3179,6 +3285,24 @@ async function gerarPDF() {
     parcelaDetalhe = `${d.prazoPrice * 12} parcelas fixas de ${fb(d.parcelaPrice)}`;
   }
 
+  // ── Resumo em moeda estrangeira (opcional) ─────────────────────────
+  // Só repassa valores em R$ que o backend já calculou; a conversão e a
+  // formatação são feitas na action 'resumo_moeda'.
+  const _1aParcela = sistemaAtivo === 'sac' ? d.parcelaSAC1 : d.parcelaPrice;
+  const _rmItens = [
+    { label: 'Valor do imóvel', valorBRL: d.vi },
+    { label: 'Total de entrada', valorBRL: totalEntradaPDF },
+    { label: 'Valor financiado', valorBRL: finPDF },
+    { label: '1ª parcela (após as chaves)', valorBRL: _1aParcela },
+    ...(optValorizacao ? [
+      { label: 'Valor projetado na entrega', valorBRL: vEntrega },
+      { label: 'Ganho estimado', valorBRL: lucro },
+    ] : []),
+  ];
+  const _rm = await _resolverResumoMoeda('opt', _rmItens);
+  if (_rm === null) return; // corretor pediu moeda mas não há cotação
+  const blocoResumoMoeda = _blocoResumoMoeda(_rm, 'caixa');
+
   // ── Cronograma da obra para o PDF ──────────────────────────────────
   {
     const _vi    = d.vi || 0;
@@ -3631,6 +3755,8 @@ async function gerarPDF() {
   <div class="id-cell"><div class="id-lbl">Tipologia</div><div class="id-val">${tipologia}</div></div>
   <div class="id-cell destaque-cell"><div class="id-lbl">Metragem</div><div class="id-val vd">${metragem || '—'}</div></div>
 </div>
+
+${blocoResumoMoeda}
 
 <!-- PARCELA MORANDO — destaque topo -->
 <div class="parcela-banner no-break">
@@ -4587,6 +4713,23 @@ async function ctrGerarPDF() {
   const desconto = pv(document.getElementById('ctr_desconto')?.value || '0');
   const mostrarDesconto = optDesconto && desconto > 0;
 
+  // ── Resumo em moeda estrangeira (opcional) ─────────────────────────
+  // Só repassa valores em R$ já calculados pelo backend; conversão e
+  // formatação ficam na action 'resumo_moeda'.
+  const _rmItens = [
+    { label: 'Valor da proposta', valorBRL: r.vProposta },
+    { label: 'Total pré-chaves', valorBRL: r.totalPre },
+    { label: 'Total pós-chaves', valorBRL: r.totalPos },
+    { label: 'Total geral', valorBRL: r.grandTotal },
+    ...((optValorizacao && valoriz) ? [
+      { label: 'Valor na entrega', valorBRL: valoriz.valorFuturo },
+      { label: 'Ganho estimado', valorBRL: valoriz.ganho },
+    ] : []),
+  ];
+  const _rm = await _resolverResumoMoeda('ctr_opt', _rmItens);
+  if (_rm === null) return; // corretor pediu moeda mas não há cotação
+  const blocoResumoMoeda = _blocoResumoMoeda(_rm, 'construtora');
+
   const corFase = f => f === 'pré' ? '#EBF5FF' : '#F0FDF4';
   const corBord = f => f === 'pré' ? '#BFDBFE' : '#86EFAC';
   const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)};border-left:3px solid ${corBord(l.fase)}">
@@ -4649,6 +4792,7 @@ async function ctrGerarPDF() {
         <div class="info-box"><div class="info-lbl">Distribuição</div><div class="info-val">Pré ${r.pctPre}% · Pós ${r.pctPos}%</div></div>
       </div>
     </div>
+    ${blocoResumoMoeda}
     <div class="sec">
       <div class="sec-title">Fluxo de pagamento</div>
       <table><thead><tr><th>Parcela</th><th style="text-align:center">Qtd</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Total</th><th>Reajuste</th></tr></thead>
