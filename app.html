@@ -4666,10 +4666,10 @@ async function ctrSimular() {
         <div style="font-size:15px;font-weight:800;color:#14532D">${fi(r.totalPos)}</div>
         <div style="font-size:10px;color:#64748B">${r.pctPos}%</div>
       </div>
-      <div style="background:${ok?'#F0FDF4':'#FEF2F2'};border-radius:8px;padding:12px;text-align:center;border:1.5px solid ${ok?'#86EFAC':'#FECACA'}">
-        <div style="font-size:10px;font-weight:700;color:${ok?'#14532D':'#991B1B'};text-transform:uppercase;margin-bottom:4px">Total geral</div>
-        <div style="font-size:15px;font-weight:800;color:${ok?'#14532D':'#991B1B'}">${fi(r.grandTotal)}</div>
-        <div style="font-size:10px;color:${ok?'#14532D':'#991B1B'}">${ok?'✅ Fecha':'⚠️ Diferença: '+fi(r.grandTotal-r.vProposta)}</div>
+      <div style="background:${ok?'#0F172A':'#FEF2F2'};border-radius:8px;padding:12px;text-align:center;border:1.5px solid ${ok?'#334155':'#FECACA'}">
+        <div style="font-size:10px;font-weight:700;color:${ok?'#fff':'#991B1B'};text-transform:uppercase;margin-bottom:4px;opacity:${ok?'.75':'1'}">Total geral</div>
+        <div style="font-size:15px;font-weight:800;color:${ok?'#fff':'#991B1B'}">${fi(r.grandTotal)}</div>
+        <div style="font-size:10px;color:${ok?'#94A3B8':'#991B1B'}">${ok?'✅ Fecha':'⚠️ Diferença: '+fi(r.grandTotal-r.vProposta)}</div>
       </div>
     </div>
     ${r.warnings?.length ? `<div style="background:#FEF3E8;border:1px solid #FED7AA;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:12px;color:#92400E">⚠️ ${r.warnings.join(' | ')}</div>` : ''}
@@ -4854,10 +4854,10 @@ async function ctrGerarPDF() {
           <div class="split-val" style="color:#14532D">${fi(r.totalPos)}</div>
           <div class="split-sub" style="color:#64748B">${r.pctPos}%</div>
         </div>
-        <div class="split-box" style="background:${ok?'#F0FDF4':'#FEF2F2'};border:1.5px solid ${ok?'#86EFAC':'#FECACA'}">
-          <div class="split-lbl" style="color:${ok?'#14532D':'#991B1B'}">Total</div>
-          <div class="split-val" style="color:${ok?'#14532D':'#991B1B'}">${fi(r.grandTotal)}</div>
-          <div class="split-sub" style="color:${ok?'#14532D':'#991B1B'}">${ok?'✅ Fecha':'⚠️ Diferença'}</div>
+        <div class="split-box" style="background:${ok?'#0F172A':'#FEF2F2'};border:1.5px solid ${ok?'#334155':'#FECACA'}">
+          <div class="split-lbl" style="color:${ok?'#fff':'#991B1B'};opacity:${ok?'.75':'1'}">Total</div>
+          <div class="split-val" style="color:${ok?'#fff':'#991B1B'}">${fi(r.grandTotal)}</div>
+          <div class="split-sub" style="color:${ok?'#94A3B8':'#991B1B'}">${ok?'✅ Fecha':'⚠️ Diferença'}</div>
         </div>
       </div>
       ${r.warnings?.length?`<div style="background:#FEF3E8;border-radius:8px;padding:10px;margin-top:12px;font-size:11px;color:#92400E">⚠️ ${r.warnings.join(' | ')}</div>`:''}
