@@ -4627,8 +4627,9 @@ async function ctrSimular() {
   window._ctrResult = r;
 
   // Render tabela
-  const corFase = f => f === 'pré' ? '#EBF5FF' : '#F0FDF4';
-  const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)}">
+  const corFase = f => f === 'pré' ? '#DBEAFE' : '#DCFCE7';
+  const corFaseBord = f => f === 'pré' ? '#2563EB' : '#16A34A';
+  const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)};border-left:4px solid ${corFaseBord(l.fase)}">
     <td style="padding:8px 12px;font-size:12px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtData(l.data) : ''}</td>
     <td style="padding:8px 12px;text-align:center;font-size:12px;font-family:'DM Mono',monospace">${l.qtd}×</td>
     <td style="padding:8px 12px;text-align:right;font-size:12px;font-family:'DM Mono',monospace">${fi(l.valor)}</td>
@@ -4776,9 +4777,9 @@ async function ctrGerarPDF() {
   if (_rm === null) return; // corretor pediu moeda mas não há cotação
   const blocoResumoMoeda = _blocoResumoMoeda(_rm, 'construtora');
 
-  const corFase = f => f === 'pré' ? '#EBF5FF' : '#F0FDF4';
-  const corBord = f => f === 'pré' ? '#BFDBFE' : '#86EFAC';
-  const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)};border-left:3px solid ${corBord(l.fase)}">
+  const corFase = f => f === 'pré' ? '#DBEAFE' : '#DCFCE7';
+  const corBord = f => f === 'pré' ? '#2563EB' : '#16A34A';
+  const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)};border-left:4px solid ${corBord(l.fase)}">
     <td style="padding:7px 10px;font-size:11px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtData(l.data) : ''}</td>
     <td style="padding:7px 10px;text-align:center;font-size:11px;font-family:monospace">${l.qtd}×</td>
     <td style="padding:7px 10px;text-align:right;font-size:11px;font-family:monospace">${fi(l.valor)}</td>
