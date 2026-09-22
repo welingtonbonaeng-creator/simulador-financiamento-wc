@@ -2420,8 +2420,9 @@ function onObra(skipPreview) {
     const restoM = Math.max(0, meses - usedM);
     const restoV = restoM > 0 ? Math.max(0, saldoParaParcelas - usedV) / restoM : 0;
     totM = usedV + restoM * restoV;
-    mens = meses > 0 ? totM / meses : 0; // média para compatibilidade com PDF
-    document.getElementById('mensalObra').value = mens > 0 ? mens.toFixed(2) : '0';
+    mens = meses > 0 ? totM / meses : 0; // média para compatibilidade com telas que só leem 1 valor
+    if (mens > 0) setVal('mensalObra', mens);
+    else document.getElementById('mensalObra').value = '';
     if (totM > 0) setVal('totalMensOb', totM);
     else document.getElementById('totalMensOb').value = '';
     renderGruposObra();
@@ -3340,8 +3341,21 @@ async function gerarPDF() {
       }
       _rows += `<tr><td style="padding:5px 9px;color:#374151">📅 Reforço ${i} — ${refLabel}</td><td style="padding:5px 9px;text-align:right;font-weight:700">${fb(_vlrIndiv)}</td></tr>`;
     }
-    if (_mens > 0)
+    if (_obraCustomMode && _obraCustomGrupos.length > 0) {
+      // Modo personalizado: uma linha por grupo configurado (mesma quebra da tela),
+      // nunca a média achatada em uma linha só.
+      const _usedM  = _obraCustomGrupos.reduce((s,g) => s + g.meses, 0);
+      const _usedV  = _obraCustomGrupos.reduce((s,g) => s + (g.meses * g.valor), 0);
+      const _restoM = Math.max(0, _obraMesesTotal - _usedM);
+      const _restoV = _restoM > 0 ? Math.max(0, _obraSaldoTotal - _usedV) / _restoM : 0;
+      _obraCustomGrupos.forEach((g, i) => {
+        _rows += `<tr><td style="padding:5px 9px;color:#374151">📆 Grupo ${i+1}: ${g.meses}× parcelas mensais de obra</td><td style="padding:5px 9px;text-align:right;font-weight:700">${g.meses} × ${fb(g.valor)} = ${fb(g.meses * g.valor)}</td></tr>`;
+      });
+      if (_restoM > 0)
+        _rows += `<tr><td style="padding:5px 9px;color:#374151">📆 Restante: ${_restoM}× parcelas mensais de obra</td><td style="padding:5px 9px;text-align:right;font-weight:700">${_restoM} × ${fb(_restoV)} = ${fb(_restoM * _restoV)}</td></tr>`;
+    } else if (_mens > 0) {
       _rows += `<tr><td style="padding:5px 9px;color:#374151">📆 ${_meses}× parcelas mensais de obra</td><td style="padding:5px 9px;text-align:right;font-weight:700">${_meses} × ${fb(_mens)} = ${fb(_totM)}</td></tr>`;
+    }
 
     window._cronoLinhasPDF  = _rows;
     window._cronoNFinPDF    = _prazoFin;
