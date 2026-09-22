@@ -1016,20 +1016,6 @@ async function _confirmarTroca(){
     <label class="mini-switch"><input type="checkbox" id="optPdfEconomia" checked><span class="mini-slider"></span>Economia com o programa</label>
     <label class="mini-switch"><input type="checkbox" id="optPdfValorizacao" checked><span class="mini-slider"></span>Projeção de valorização</label>
     <label class="mini-switch"><input type="checkbox" id="optPdfCapacidadeObra" checked><span class="mini-slider"></span>Capacidade de pagamento — período de obra</label>
-    <div style="border-top:1px solid #E2E8F0;margin-top:8px;padding-top:8px">
-      <div class="pdf-opts-title" style="margin-bottom:6px">🌎 Resumo em moeda estrangeira <span>(comparativo para investidor — o PDF segue em Real)</span></div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <select id="optResumoMoeda" onchange="_atualizarCotacaoUI('opt')" style="font-size:11.5px;padding:4px 8px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;color:var(--texto2)">
-          <option value="none">Não incluir</option>
-          <option value="USD">Dólar (US$)</option>
-          <option value="EUR">Euro (€)</option>
-        </select>
-        <span id="optCotacaoLabel" style="font-size:11px;color:var(--texto3)"></span>
-      </div>
-      <div id="optCotacaoManualWrap" style="display:none;margin-top:6px;font-size:11px;color:var(--texto3)">
-        Cotação manual: R$ <input id="optCotacaoManual" type="text" inputmode="decimal" placeholder="5,43" style="width:64px;font-size:11px;padding:3px 6px;border:1px solid #CBD5E1;border-radius:5px"/> por 1 <span id="optCotacaoManualCur">USD</span>
-      </div>
-    </div>
   </div>
 
   <!-- BOTÃO PDF -->
@@ -3605,42 +3591,9 @@ async function gerarPDF() {
       </div>
     </div>`;
 
-  // ── Resumo em moeda estrangeira (adicional no FIM do PDF) ──────────
-  // O front só repassa valores em R$ já calculados pelo backend; a conversão
-  // e a formatação ficam 100% na action 'resumo_moeda'. Se moeda='none', o
-  // bloco sai vazio e o PDF fica idêntico ao de sempre.
-  const _rmItens = [
-    { header: true, label: 'Valores da proposta' },
-    { label: 'Valor do imóvel', valorBRL: d.vi },
-    { label: 'Total de entrada', valorBRL: totalEntradaPDF },
-    { label: 'Valor financiado', valorBRL: finPDF },
-  ];
-  if (optValorizacao) _rmItens.push(
-    { label: `Valor projetado na entrega (+${pct}%)`, valorBRL: vEntrega },
-    { label: 'Ganho estimado', valorBRL: lucro },
-  );
-  _rmItens.push({ header: true, label: 'Fluxo de pagamento' });
-  if (fluxoAto > 0)  _rmItens.push({ label: 'Ato (na assinatura)', valorBRL: fluxoAto });
-  if (fluxoFgts > 0) _rmItens.push({ label: 'FGTS utilizado', valorBRL: fluxoFgts });
-  for (let i = 1; i <= fluxoQtdRef; i++) {
-    const _dtEl = document.getElementById('dtRef' + i);
-    const _vlEl = document.getElementById('vlRef' + i);
-    const _vRef = _vlEl ? pv(_vlEl.value) : 0;
-    if (_vRef <= 0) continue;
-    let _labRef = 'mês ' + Math.round(fluxoMeses / Math.max(fluxoQtdRef, 1) * i) + ' da obra';
-    if (_dtEl && _dtEl.value) _labRef = new Date(_dtEl.value + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-    _rmItens.push({ label: 'Reforço ' + i + ' — ' + _labRef, valorBRL: _vRef });
-  }
-  if (fluxoMens > 0) _rmItens.push({ label: 'Parcela mensal durante a obra (' + fluxoMeses + '×)', sub: 'valor de cada parcela', valorBRL: fluxoMens });
-  if (sistemaAtivo === 'sac') {
-    _rmItens.push({ label: '1ª parcela após as chaves', sub: (cronoNFin * 12) + ' parcelas · SAC', valorBRL: cronoParcSAC1 });
-    if (cronoParcSACult > 0) _rmItens.push({ label: 'Última parcela após as chaves', valorBRL: cronoParcSACult });
-  } else {
-    _rmItens.push({ label: 'Parcela fixa após as chaves', sub: (cronoNFin * 12) + '× · PRICE', valorBRL: cronoParcPrice });
-  }
-  const _rm = await _resolverResumoMoeda('opt', _rmItens);
-  if (_rm === null) return; // corretor pediu moeda mas não há cotação
-  const blocoResumoMoeda = _blocoResumoMoeda(_rm, 'caixa');
+  // Resumo em moeda estrangeira é exclusivo do fluxo Construtora (ver ctrGerarPDF) —
+  // no fluxo Caixa o PDF nunca leva esse bloco.
+  const blocoResumoMoeda = '';
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
