@@ -1559,8 +1559,8 @@ function _blocoResumoMoeda(rm, variante) {
       + '<span style="font-weight:700;color:' + cor + ';white-space:nowrap">' + it.valorFmt + '</span>'
       + '</div>';
   }).join('');
-  return '<div style="margin-top:14px;margin-bottom:10px;border:1.5px solid ' + cor + ';border-radius:8px;overflow:hidden">'
-    + '<div class="no-break" style="background:' + cor + ';color:#fff;padding:8px 12px;font-size:11px;font-weight:800;letter-spacing:.02em">'
+  return '<div class="no-break" style="margin-top:14px;margin-bottom:10px;border:1.5px solid ' + cor + ';border-radius:8px;overflow:hidden">'
+    + '<div style="background:' + cor + ';color:#fff;padding:8px 12px;font-size:11px;font-weight:800;letter-spacing:.02em">'
     + '🌎 Resumo em ' + nomeMoeda + ' — referência para o investidor</div>'
     + '<div style="padding:9px 12px">' + linhas
     + '<div style="margin-top:9px;font-size:8px;color:#9CA3AF;line-height:1.5">' + rodape + '</div>'
@@ -3853,7 +3853,7 @@ ${blocoResumoMoeda}
 </div>
 
 ${(nomeCorretor || validadeStr) ? `
-<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,#0B3D91,#1565C0);border-radius:8px;padding:10px 16px;margin-bottom:8px;color:#fff">
+<div class="no-break" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,#0B3D91,#1565C0);border-radius:8px;padding:10px 16px;margin-bottom:8px;color:#fff">
   ${nomeCorretor ? `<div style="display:flex;align-items:center;gap:8px">
     <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">👤</div>
     <div>
@@ -3869,7 +3869,7 @@ ${(nomeCorretor || validadeStr) ? `
 </div>
 ` : ''}
 
-<div class="footer">
+<div class="footer no-break">
   SimulaPro · Simulador de Financiamento Imobiliário · Uso profissional · Simulação estimada — consulte um especialista para proposta oficial.
 </div>
 
@@ -4848,14 +4848,14 @@ async function ctrGerarPDF() {
       <p style="font-size:9px;color:#9CA3AF;margin-top:10px">* Estimativa. Não é garantia de retorno.</p>
     </div>` : ''}
     ${blocoResumoMoeda ? `<div style="margin:0 32px 4px">${blocoResumoMoeda}</div>` : ''}
-    ${validadeStr ? `<div style="display:flex;align-items:center;justify-content:flex-end;background:linear-gradient(135deg,#1B6E3F,#2D9D5C);border-radius:8px;padding:10px 16px;margin:0 32px 16px;color:#fff">
+    ${validadeStr ? `<div class="no-break" style="display:flex;align-items:center;justify-content:flex-end;background:linear-gradient(135deg,#1B6E3F,#2D9D5C);border-radius:8px;padding:10px 16px;margin:0 32px 16px;color:#fff">
       <div style="text-align:right">
         <div style="font-size:8px;opacity:.7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px">Válida até</div>
         <div style="font-size:12px;font-weight:800">${validadeStr}</div>
         <div style="font-size:8px;opacity:.6;margin-top:1px">⏰ Condições sujeitas a alteração</div>
       </div>
     </div>` : ''}
-    <div class="ftr">SimulaPro · Uso exclusivo do corretor · Valores estimados · Condições sujeitas à aprovação da construtora</div>
+    <div class="ftr no-break">SimulaPro · Uso exclusivo do corretor · Valores estimados · Condições sujeitas à aprovação da construtora</div>
   </div>
   </body></html>`;
 
