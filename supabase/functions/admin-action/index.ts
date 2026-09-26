@@ -36,7 +36,7 @@ async function sendBrevo(apiKey: string, to: string, toName: string, subject: st
 }
 
 const APP = 'https://simulapro.app.br'
-const TERMOS_VERSAO = '1.0'
+const TERMOS_VERSAO = '1.1'
 
 function clientIp(req: Request) {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
