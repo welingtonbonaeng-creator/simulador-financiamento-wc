@@ -1122,7 +1122,7 @@ async function _confirmarTroca(){
       <div class="field"><label class="fl">Valor da Unidade</label><input class="fi" type="text" id="ctr_vUnidade" placeholder="R$ 0,00" oninput="M(this,event);ctrRecalc()"/></div>
       <div class="field"><label class="fl">Desconto Solicitado</label><input class="fi" type="text" id="ctr_desconto" placeholder="R$ 0,00" oninput="M(this,event);ctrRecalc()"/></div>
       <div class="field"><label class="fl">Valor da Proposta</label><input class="fi" type="text" id="ctr_vProposta" readonly placeholder="—" style="font-weight:700;background:var(--cinza1)"/></div>
-      <div class="field"><label class="fl">Renda Bruta do Cliente <span style="font-weight:400;font-size:10px;color:var(--texto3)">(limite anuais)</span></label><input class="fi" type="text" id="ctr_renda" placeholder="R$ 0,00" oninput="M(this,event)"/></div>
+      <div class="field"><label class="fl">Renda Bruta do Cliente <span style="font-weight:400;font-size:10px;color:var(--texto3)">(referência p/ reforços)</span></label><input class="fi" type="text" id="ctr_renda" placeholder="R$ 0,00" oninput="M(this,event);ctrRecalc()"/></div>
     </div>
     <div class="sub">Distribuição Pré / Pós</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
@@ -1177,7 +1177,7 @@ async function _confirmarTroca(){
       <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ctr_ckAP" onchange="ctrToggle('ctr_ap');if(this.checked&&!document.querySelector('#ctr_ap_lista > div'))ctrAddAnual('pre');ctrRecalc()"/> Ativar</label>
     </div>
     <div id="ctr_ap" style="display:none">
-      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Valor máximo por reforço: renda bruta do cliente</div>
+      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Reforço acima da renda bruta do cliente fica sinalizado</div>
       <div id="ctr_ap_lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
       <button type="button" onclick="ctrAddAnual('pre')" style="width:100%;padding:8px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;margin-bottom:8px">＋ Adicionar reforço</button>
       <div class="ctr-total-hint" id="ctr_hintAP">Total: R$ 0,00 · Reajuste: INCC</div>
@@ -1228,7 +1228,7 @@ async function _confirmarTroca(){
       <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ctr_ckAO" onchange="ctrToggle('ctr_ao');if(this.checked&&!document.querySelector('#ctr_ao_lista > div'))ctrAddAnual('pos');ctrRecalc()"/> Ativar</label>
     </div>
     <div id="ctr_ao" style="display:none">
-      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Valor máximo por reforço: renda bruta do cliente</div>
+      <div style="font-size:10px;color:var(--texto3);margin-bottom:6px">Reforço acima da renda bruta do cliente fica sinalizado</div>
       <div id="ctr_ao_lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
       <button type="button" onclick="ctrAddAnual('pos')" style="width:100%;padding:8px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;margin-bottom:8px">＋ Adicionar reforço</button>
       <div class="ctr-total-hint" id="ctr_hintAO">Total: R$ 0,00 · Reajuste: IGPM + PRICE</div>
@@ -4438,7 +4438,8 @@ function ctrAddAnual(fase, defData, defValor, forceId) {
       'oninput="M(this,event);ctrRecalc()" ' +
       'style="height:40px;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 10px;font-size:13px;font-family:\'Sora\',sans-serif;width:100%;outline:none"/>' +
     '<button onclick="ctrRemoveAnual(\'' + fase + '\',' + id + ')" title="Remover" ' +
-      'style="height:40px;width:36px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;font-size:14px;cursor:pointer;color:#991B1B;padding:0">✕</button>';
+      'style="height:40px;width:36px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;font-size:14px;cursor:pointer;color:#991B1B;padding:0">✕</button>' +
+    '<div id="' + prefix + '_w_' + id + '" style="display:none;grid-column:1/-1;margin-top:-4px;font-size:10px;font-weight:600;color:#B45309">● Acima da renda bruta do cliente</div>';
   document.getElementById(prefix + '_lista').appendChild(wrap);
 }
 
@@ -4456,8 +4457,23 @@ function ctrGetAnuaisLista(fase) {
     const id = r.id.replace(prefix + '_row_', '');
     const data = document.getElementById(prefix + '_d_' + id)?.value || '';
     const valor = pv(document.getElementById(prefix + '_v_' + id)?.value || '0');
-    return { data, valor };
+    return { id, data, valor };
   }).filter(x => x.valor > 0);
+}
+
+/* Destaque sutil (âmbar) nos reforços acima da renda bruta — não bloqueia.
+   Quem decide quais linhas estão acima é o backend (acimaRendaPre/Pos). */
+function ctrMarcarAcimaRenda(fase, idsAcima) {
+  const prefix = fase === 'pre' ? 'ctr_ap' : 'ctr_ao';
+  const acima = new Set((idsAcima || []).map(String));
+  document.querySelectorAll('#' + prefix + '_lista > div').forEach(r => {
+    const id = r.id.replace(prefix + '_row_', '');
+    const on = acima.has(id);
+    const inp = document.getElementById(prefix + '_v_' + id);
+    const aviso = document.getElementById(prefix + '_w_' + id);
+    if (inp) { inp.style.borderColor = on ? '#F59E0B' : '#E2E8F0'; inp.style.background = on ? '#FFFBEB' : ''; }
+    if (aviso) aviso.style.display = on ? '' : 'none';
+  });
 }
 
 function ctrFmtData(data) {
@@ -4488,6 +4504,7 @@ function _buildCtrRawPayload() {
     qtdM2POS: parseInt(document.getElementById('ctr_qtdM2POS')?.value) || 0,
     vM2POS:   pv(document.getElementById('ctr_vM2POS')?.value || '0'),
     qtdMP:    parseInt(document.getElementById('ctr_qtdMP')?.value) || 1,
+    rendaCliente: pv(document.getElementById('ctr_renda')?.value || '0'),
   };
 }
 
@@ -4547,6 +4564,9 @@ async function _doCtrRecalc() {
   if (elSO) { elSO.textContent = fi(r.saldoPos); elSO.style.color = Math.abs(r.saldoPos) < 1 ? 'var(--verde)' : 'var(--vermelho)'; }
   const sbxO = document.getElementById('ctr_saldoPosBox');
   if (sbxO) sbxO.style.background = Math.abs(r.saldoPos) < 1 ? 'var(--verdeClaro)' : 'var(--cinza1)';
+
+  ctrMarcarAcimaRenda('pre', r.acimaRendaPre);
+  ctrMarcarAcimaRenda('pos', r.acimaRendaPos);
 }
 
 async function ctrSimular() {
@@ -4596,14 +4616,15 @@ async function ctrSimular() {
   const corFase = f => f === 'pré' ? '#DBEAFE' : '#DCFCE7';
   const corFaseBord = f => f === 'pré' ? '#2563EB' : '#16A34A';
   const rows = r.linhas.map(l => `<tr style="background:${corFase(l.fase)};border-left:4px solid ${corFaseBord(l.fase)}">
-    <td style="padding:8px 12px;font-size:12px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtData(l.data) : ''}</td>
+    <td style="padding:8px 12px;font-size:12px;font-weight:600">${l.desc}${l.data ? ' — ' + ctrFmtData(l.data) : ''}${l.acimaRenda ? ' <span title="Acima da renda bruta do cliente" style="color:#B45309">●</span>' : ''}</td>
     <td style="padding:8px 12px;text-align:center;font-size:12px;font-family:'DM Mono',monospace">${l.qtd}×</td>
-    <td style="padding:8px 12px;text-align:right;font-size:12px;font-family:'DM Mono',monospace">${fi(l.valor)}</td>
+    <td style="padding:8px 12px;text-align:right;font-size:12px;font-family:'DM Mono',monospace${l.acimaRenda ? ';color:#B45309;font-weight:700' : ''}">${fi(l.valor)}</td>
     <td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;font-family:'DM Mono',monospace">${fi(l.total)}</td>
     <td style="padding:8px 12px;font-size:10px;color:#6B7280">${l.reajuste}</td>
   </tr>`).join('');
 
   const ok = Math.abs(r.grandTotal - r.vProposta) < 1;
+  const temAcimaRenda = r.linhas.some(l => l.acimaRenda);
   document.getElementById('ctr_resContent').innerHTML = `
     <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse">
@@ -4622,7 +4643,7 @@ async function ctrSimular() {
         </tr></tfoot>
       </table>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:${r.warnings?.length?'0':'8px'}">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:${temAcimaRenda?'0':'8px'}">
       <div style="background:#EBF5FF;border-radius:8px;padding:12px;text-align:center">
         <div style="font-size:10px;font-weight:700;color:#1E40AF;text-transform:uppercase;margin-bottom:4px">Pré-chaves</div>
         <div style="font-size:15px;font-weight:800;color:#1E40AF">${fi(r.totalPre)}</div>
@@ -4639,7 +4660,7 @@ async function ctrSimular() {
         <div style="font-size:10px;color:${ok?'#94A3B8':'#991B1B'}">${ok?'✅ Fecha':'⚠️ Diferença: '+fi(r.grandTotal-r.vProposta)}</div>
       </div>
     </div>
-    ${r.warnings?.length ? `<div style="background:#FEF3E8;border:1px solid #FED7AA;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:12px;color:#92400E">⚠️ ${r.warnings.join(' | ')}</div>` : ''}
+    ${temAcimaRenda ? `<div style="margin-top:10px;font-size:11px;color:#B45309"><span>●</span> Reforço acima da renda bruta do cliente</div>` : ''}
     <div style="margin-top:16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
         <span style="font-size:13px;font-weight:700;color:#4A2C8A">📈 Projeção de Valorização</span>

@@ -428,7 +428,7 @@ export function calcularConstrutora(body: any) {
     if (g.qtd && g.valor) linhas.push({ tipo:'mensal_pre', desc:`Mensais pré-chaves${i>0?' (Reforço)':''}`, qtd:g.qtd, fase:'pré', valor:g.valor, total:g.qtd*g.valor, reajuste:'INCC' })
   })
   _anuaisPre.forEach(it => {
-    if (it.valor) linhas.push({ tipo:'anual_pre', desc:'Reforço pré-chaves', qtd:1, fase:'pré', valor:it.valor, total:it.valor, reajuste:'INCC', data: it.data })
+    if (it.valor) linhas.push({ tipo:'anual_pre', desc:'Reforço pré-chaves', qtd:1, fase:'pré', valor:it.valor, total:it.valor, reajuste:'INCC', data: it.data, acimaRenda: !!rendaCliente && it.valor > rendaCliente })
   })
   if (totalChaves)
     linhas.push({ tipo:'chaves',     desc:'Parcela de chaves',       qtd:1,                fase:'pré', valor:totalChaves,       total:totalChaves,  reajuste:'INCC' })
@@ -436,7 +436,7 @@ export function calcularConstrutora(body: any) {
     if (g.qtd && g.valor) linhas.push({ tipo:'mensal_pos', desc:`Mensais pós-chaves${i>0?' (Reforço)':''}`, qtd:g.qtd, fase:'pós', valor:g.valor, total:g.qtd*g.valor, reajuste:'IGPM + PRICE' })
   })
   _anuaisPos.forEach(it => {
-    if (it.valor) linhas.push({ tipo:'anual_pos', desc:'Reforço pós-chaves', qtd:1, fase:'pós', valor:it.valor, total:it.valor, reajuste:'IGPM + PRICE', data: it.data })
+    if (it.valor) linhas.push({ tipo:'anual_pos', desc:'Reforço pós-chaves', qtd:1, fase:'pós', valor:it.valor, total:it.valor, reajuste:'IGPM + PRICE', data: it.data, acimaRenda: !!rendaCliente && it.valor > rendaCliente })
   })
 
   return { vProposta, pctPre:pctPreN, pctPos:pctPosN, vPre, vPos, totalPre, totalPos, saldoPre, saldoPos, grandTotal: totalPre + totalPos, warnings, linhas }
@@ -451,6 +451,7 @@ export function calcularConstrutoraPreview(body: any) {
     vUnidade, desconto, pctPre, ato,
     usaG2, qtdM2, vM2, usaAP, anuaisPreLista, usaCH, vCH, qtdM1,
     usaAO, anuaisPosLista, usaG2POS, qtdM2POS, vM2POS, qtdMP,
+    rendaCliente,
   } = body
 
   const vProposta = Math.max(0, (vUnidade || 0) - (desconto || 0))
@@ -479,7 +480,15 @@ export function calcularConstrutoraPreview(body: any) {
   const totalPos = _qtdMP * vMP + _totalAO + _qtdM2POS * _vM2POS
   const saldoPos = Math.round(vPos - totalPos)
 
+  // Reforço acima da renda bruta não é bloqueado — só sinalizado. Devolve os
+  // ids das linhas (id vem do frontend) pra tela destacar o campo certo.
+  const _acima = (lista: any[]) => rendaCliente
+    ? (lista || []).filter((it: any) => (it.valor || 0) > rendaCliente).map((it: any) => it.id)
+    : []
+
   return {
+    acimaRendaPre: usaAP ? _acima(anuaisPreLista) : [],
+    acimaRendaPos: usaAO ? _acima(anuaisPosLista) : [],
     vProposta, pctPre: pctPreN, pctPos: pctPosN, vPre, vPos,
     vM1, vMP, totalPre: Math.round(totalPre), saldoPre, totalPos: Math.round(totalPos), saldoPos,
     hintM1: Math.round(_qtdM1 * vM1), hintM2: Math.round(_qtdM2 * _vM2), hintAP: Math.round(_totalAP),
