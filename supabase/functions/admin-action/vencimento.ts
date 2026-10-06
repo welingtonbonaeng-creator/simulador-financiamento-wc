@@ -77,3 +77,21 @@ export function calcTrialInfo(validade: string | null, hojeISO: string): TrialIn
     vencido: diasRestantes < 0,
   }
 }
+
+/* Desconto temporário por assinatura (ex: cupom concedido a um corretor
+   específico por alguns meses). A assinatura na Asaas continua no valor
+   CHEIO — o desconto é aplicado fatura a fatura, só nas que ainda estão em
+   aberto e cuja competência (vencimento original) cai até `descontoAte`.
+   Passou da data, as faturas seguintes saem cheias sozinhas, sem ninguém
+   precisar lembrar de reverter nada. Devolve só as que precisam de ajuste. */
+export function faturasParaDesconto<T extends { status: string; dueDate: string; originalDueDate?: string | null; value: number }>(
+  pagamentos: T[],
+  descontoValor: number,
+  descontoAte: string,
+): T[] {
+  return pagamentos.filter(p =>
+    (p.status === 'PENDING' || p.status === 'OVERDUE') &&
+    (p.originalDueDate || p.dueDate) <= descontoAte &&
+    Number(p.value) !== descontoValor
+  )
+}

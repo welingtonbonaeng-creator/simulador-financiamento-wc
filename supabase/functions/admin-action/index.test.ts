@@ -132,3 +132,28 @@ Deno.test("calcTrialInfo - vencido há muito tempo: continua vencido", () => {
   assertEquals(r?.vencido, true);
   assertEquals(r?.avisar, false);
 });
+
+// ── Desconto temporário por assinatura (SERPA30: R$30 até dez/2026) ──
+import { faturasParaDesconto } from "./vencimento.ts";
+
+Deno.test("faturasParaDesconto - ajusta só faturas em aberto com competência até a data limite", () => {
+  const pagamentos = [
+    { id: 'ago', status: 'RECEIVED', dueDate: '2026-08-17', value: 70 },  // já paga: nunca mexe
+    { id: 'set', status: 'OVERDUE',  dueDate: '2026-09-17', value: 70 },  // atrasada: entra
+    { id: 'out', status: 'PENDING',  dueDate: '2026-10-17', value: 70 },  // entra
+    { id: 'dez', status: 'PENDING',  dueDate: '2026-12-17', value: 70 },  // último mês: entra
+    { id: 'jan', status: 'PENDING',  dueDate: '2027-01-17', value: 70 },  // depois do limite: cheia
+  ];
+  assertEquals(faturasParaDesconto(pagamentos, 30, '2026-12-31').map(p => p.id), ['set', 'out', 'dez']);
+});
+
+Deno.test("faturasParaDesconto - idempotente: fatura já no valor do desconto não é reajustada", () => {
+  const pagamentos = [{ status: 'PENDING', dueDate: '2026-10-17', value: 30 }];
+  assertEquals(faturasParaDesconto(pagamentos, 30, '2026-12-31').length, 0);
+});
+
+Deno.test("faturasParaDesconto - vale a competência original, mesmo se o vencimento foi prorrogado", () => {
+  const dezProrrogada = { status: 'PENDING', dueDate: '2027-01-05', originalDueDate: '2026-12-17', value: 70 };
+  const janAntecipada = { status: 'PENDING', dueDate: '2026-12-30', originalDueDate: '2027-01-17', value: 70 };
+  assertEquals(faturasParaDesconto([dezProrrogada, janAntecipada], 30, '2026-12-31'), [dezProrrogada]);
+});

@@ -1,7 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { S3Client, GetObjectCommand } from 'npm:@aws-sdk/client-s3@3'
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3'
-import { escolherVencimentoReal, calcAtrasoInfo, calcTrialInfo } from './vencimento.ts'
+import { escolherVencimentoReal, calcAtrasoInfo, calcTrialInfo, faturasParaDesconto } from './vencimento.ts'
 
 const ALLOWED_ORIGINS = [
   'https://simulapro.app.br',
@@ -606,6 +606,50 @@ Deno.serve(async (req: Request) => {
       }
 
       return json({ success: true, notificados })
+    }
+
+    // ── CRON: APLICAR_DESCONTOS_TEMPORARIOS (chamado pelo pg_cron) ──
+    // Roda 1x/dia. Pra cada assinatura com desconto temporário cadastrado
+    // (asaas_assinaturas.desconto_valor + desconto_ate), ajusta o valor das
+    // faturas em aberto cuja competência cai dentro do prazo. A assinatura
+    // na Asaas NUNCA muda de valor — então, passado o prazo, as faturas
+    // novas já saem cheias sozinhas (mesmo princípio do cupom de 1ª fatura).
+    if (action === 'aplicar_descontos_temporarios') {
+      const cronToken = req.headers.get('x-cron-token')
+      const expectedCron = Deno.env.get('CRON_SECRET') ?? ''
+      if (!expectedCron || cronToken !== expectedCron) return json({ error: 'Token invalido' }, 401)
+
+      const { data: comDesconto, error: de } = await sb.from('asaas_assinaturas')
+        .select('id, email, asaas_subscription_id, desconto_valor, desconto_ate, cupom_usado, status')
+        .not('desconto_valor', 'is', null).not('desconto_ate', 'is', null).neq('status', 'cancelado')
+      if (de) return json({ error: de.message }, 500)
+
+      const ajustadas: any[] = []
+      const erros: any[] = []
+      for (const a of comDesconto ?? []) {
+        const valor = parseFloat(a.desconto_valor)
+        if (!(valor >= 5)) { erros.push({ email: a.email, erro: 'desconto abaixo do mínimo da Asaas (R$5)' }); continue }
+        const pg = await asaasFetch(`/payments?subscription=${a.asaas_subscription_id}&limit=100`)
+        if (!pg.ok) { erros.push({ email: a.email, erro: 'falha ao listar faturas' }); continue }
+
+        for (const p of faturasParaDesconto(pg.data?.data ?? [], valor, a.desconto_ate) as any[]) {
+          // Fatura já vencida: a Asaas só aceita editar se vier junto um
+          // vencimento de hoje em diante — dá 3 dias pra pagar no valor novo.
+          const novoVenc = p.status === 'OVERDUE' ? new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10) : undefined
+          const r = await asaasFetch(`/payments/${p.id}`, { method: 'PUT', body: JSON.stringify({ value: valor, ...(novoVenc ? { dueDate: novoVenc } : {}) }) })
+          if (!r.ok) {
+            erros.push({ email: a.email, paymentId: p.id, erro: r.data?.errors?.[0]?.description || 'falha ao ajustar fatura' })
+            continue
+          }
+          ajustadas.push({ email: a.email, paymentId: p.id, vencimento: p.dueDate, de: p.value, para: valor })
+          await sb.from('events').insert({
+            email: a.email, action: 'desconto_temporario_aplicado',
+            details: { assinaturaId: a.id, paymentId: p.id, vencimento: p.dueDate, de: p.value, para: valor, cupom: a.cupom_usado },
+          })
+        }
+      }
+
+      return json({ success: true, ajustadas, erros })
     }
 
     // ── A PARTIR DAQUI: requer autenticação ───────────────────
